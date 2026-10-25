@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "CP-HEM-1.0",
+  "updatedAt": "2026-10-25",
+  "compressor": {
+    "clearanceExponent": 1.15,
+    "residualLoss": 0.025,
+    "etaMin": 0.32,
+    "etaMax": 0.95,
+    "etaWarnLow": 0.45,
+    "etaWarnHigh": 0.92,
+    "maxPressureRatio": 12
+  },
+  "capillary": {
+    "frictionTurbulentCoefficient": 0.316,
+    "frictionTurbulentExponent": 0.25,
+    "frictionLaminarCoefficient": 64,
+    "criticalReynolds": 2300,
+    "inletLossCoefficient": 0.5,
+    "pressureSteps": 96,
+    "minLengthM": 0.12,
+    "maxLengthM": 7.5,
+    "designLengthM": 1.8,
+    "lengthRangeM": [0.35, 4.5],
+    "blendPressureWeight": 0.5,
+    "tubeRoughnessMm": 0.0015,
+    "twoPhaseMultiplierCoefficient": 0.3,
+    "viscosityModel": "mass-weighted-dynamic"
+  },
+  "learning": {
+    "minimumCalibrationSamples": 2,
+    "minimumRefrigerantSamples": 2,
+    "maxAbsLogCorrection": 0.3,
+    "shrinkagePrior": 3,
+    "recencyHalfLifeDays": 540,
+    "maxSimilarCases": 4,
+    "minimumSimilarity": 0.38
+  },
+  "uncertainty": {
+    "nameplateCapacity": 0.05,
+    "displacement": 0.015,
+    "rpm": 0.01,
+    "temperature": 0.5,
+    "properties": 0.015,
+    "etaExtrapolationBase": 0.055,
+    "capillaryModel": 0.11,
+    "diameterTolerance": 0.025,
+    "calibrationBase": 0.065,
+    "calibrationMinimum": 0.025,
+    "confidenceScale": 100,
+    "highThresholdPct": 8,
+    "goodThresholdPct": 13,
+    "moderateThresholdPct": 20
+  },
+  "fingerprint": {
+    "algorithm": "fnv1a-32",
+    "salt": "capilarpro-v1",
+    "displayLength": 8
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-25",
+  "sourceNote": "Las condiciones de referencia son las habituales de cada norma. Para un equipo concreto manda siempre la placa del fabricante.",
+  "standards": [
+    {
+      "id": "ahri540",
+      "name": "ASHRAE / AHRI 540",
+      "shortName": "AHRI 540",
+      "evapC": 7.2,
+      "condC": 54.4,
+      "superheatK": 11.1,
+      "subcoolK": 8.3,
+      "reference": "AHRI Standard 540 — Positive Displacement Refrigerant Compressors",
+      "description": "Condición de rating típica para compresores de desplazamiento positivo. Punto de rocío 7,2 °C, descarga 54,4 °C, recalentamiento 11,1 K y subenfriamiento 8,3 K.",
+      "isDefault": true
+    },
+    {
+      "id": "en12900",
+      "name": "EN 12900",
+      "shortName": "EN 12900",
+      "evapC": 7.2,
+      "condC": 54.4,
+      "superheatK": 10,
+      "subcoolK": 0,
+      "reference": "EN 12900 — Refrigerant compressors, rating conditions",
+      "description": "Condición europea de referencia a 7,2 / 54,4 °C con 10 K de recalentamiento y líquido saturado.",
+      "isDefault": false
+    },
+    {
+      "id": "ahri-legacy",
+      "name": "AHRI histórico / ARI",
+      "shortName": "AHRI legado",
+      "evapC": -6.7,
+      "condC": 40.6,
+      "superheatK": 11.1,
+      "subcoolK": 0,
+      "reference": "ARI Standard 520 legacy rating point",
+      "description": "Punto histórico de baja temperatura (-6,7 / 40,6 °C) habitual en catálogos antiguos de compresores herméticos.",
+      "isDefault": false
+    },
+    {
+      "id": "custom",
+      "name": "Condición personalizada",
+      "shortName": "Personalizada",
+      "evapC": 7.2,
+      "condC": 54.4,
+      "superheatK": 10,
+      "subcoolK": 5,
+      "reference": "Datos de placa del fabricante",
+      "description": "Introduce exactamente las condiciones a las que el fabricante declara la capacidad.",
+      "isDefault": false
+    }
+  ]
+}

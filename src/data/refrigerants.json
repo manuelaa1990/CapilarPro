@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-25",
+  "propertySource": "CoolProp 6.6.0 · HEOS · tablas generadas a 1 K",
+  "refrigerants": [
+    {
+      "id": "R134a",
+      "name": "R-134a",
+      "family": "HFC",
+      "safety": "A1",
+      "gwp": 1430,
+      "odp": 0,
+      "criticalTempC": 101.06,
+      "glideK": 0,
+      "color": "#36b7d6",
+      "applications": "Refrigeración comercial y doméstica, chillers, automoción.",
+      "notes": "Fluido puro. Ampliamente disponible; en Europa su uso nuevo está restringido por F-Gas."
+    },
+    {
+      "id": "R600a",
+      "name": "R-600a",
+      "family": "HC",
+      "safety": "A3",
+      "gwp": 3,
+      "odp": 0,
+      "criticalTempC": 134.66,
+      "glideK": 0,
+      "color": "#f0a54a",
+      "applications": "Doméstico, exhibición y pequeña refrigeración comercial.",
+      "notes": "Isobutano. Muy inflamable: respeta la carga máxima y la normativa de instalación."
+    },
+    {
+      "id": "R404A",
+      "name": "R-404A",
+      "family": "HFC blend",
+      "safety": "A1",
+      "gwp": 3922,
+      "odp": 0,
+      "criticalTempC": 72.14,
+      "glideK": 0.5,
+      "color": "#8a7cf0",
+      "applications": "Baja y media temperatura comercial, congelación.",
+      "notes": "Mezcla zeotrópica. El modelo promedia la pequeña glide; evita usarlo en nuevas instalaciones por su GWP."
+    },
+    {
+      "id": "R290",
+      "name": "R-290",
+      "family": "HC",
+      "safety": "A3",
+      "gwp": 3,
+      "odp": 0,
+      "criticalTempC": 96.74,
+      "glideK": 0,
+      "color": "#56c271",
+      "applications": "Refrigeración comercial, bombas de calor y equipos compactos.",
+      "notes": "Propano. Excelente eficiencia; requiere instalación y ventilación según normativa ATEX."
+    },
+    {
+      "id": "R22",
+      "name": "R-22",
+      "family": "HCFC",
+      "safety": "A1",
+      "gwp": 1810,
+      "odp": 0.055,
+      "criticalTempC": 96.15,
+      "glideK": 0,
+      "color": "#b8c24a",
+      "applications": "Equipos existentes y mantenimiento.",
+      "notes": "HCFC en eliminación progresiva. Se incluye para servicio de instalaciones legacy."
+    },
+    {
+      "id": "R507A",
+      "name": "R-507A",
+      "family": "HFC blend",
+      "safety": "A1",
+      "gwp": 3985,
+      "odp": 0,
+      "criticalTempC": 70.62,
+      "glideK": 0.1,
+      "color": "#e1779b",
+      "applications": "Baja temperatura industrial y comercial.",
+      "notes": "Mezcla casi azeotrópica. Sustituto histórico del R-502; GWP muy elevado."
+    }
+  ]
+}
