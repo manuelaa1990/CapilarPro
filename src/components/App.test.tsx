@@ -25,6 +25,19 @@ describe('CapilarPro', () => {
     expect(screen.getAllByText(/R134a/i).length).toBeGreaterThan(0)
   })
 
+  it('permite editar el código o modelo del compresor', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const compressorLabel = screen.getByRole('textbox', {
+      name: /Código o modelo del compresor/i,
+    })
+    await user.clear(compressorLabel)
+    await user.type(compressorLabel, 'QD110H')
+
+    expect(compressorLabel).toHaveValue('QD110H')
+  })
+
   it('navega al historial y carga los casos de demostración', async () => {
     const user = userEvent.setup()
     render(<App />)

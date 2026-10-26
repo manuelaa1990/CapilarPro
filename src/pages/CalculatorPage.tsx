@@ -403,6 +403,24 @@ export const CalculatorPage = () => {
                 </div>
               )}
 
+              <div className="mt-4">
+                <label className="field-label" htmlFor="compressor-label">
+                  Código o modelo del compresor
+                </label>
+                <div className="input-shell">
+                  <input
+                    id="compressor-label"
+                    type="text"
+                    value={input.compressorLabel}
+                    onChange={(event) =>
+                      updateInput({ compressorLabel: event.target.value })
+                    }
+                    placeholder="Ej. QD110H"
+                    className="input-base"
+                  />
+                </div>
+              </div>
+
               <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {refrigerants.map((item) => {
                   const active = item.id === input.refrigerantId
@@ -441,22 +459,6 @@ export const CalculatorPage = () => {
                     </button>
                   )
                 })}
-              </div>
-
-              <div className="mt-5">
-                <label className="field-label" htmlFor="compressor-label">
-                  Código o modelo del compresor
-                </label>
-                <input
-                  id="compressor-label"
-                  type="text"
-                  value={input.compressorLabel}
-                  onChange={(event) =>
-                    updateInput({ compressorLabel: event.target.value })
-                  }
-                  placeholder="Ej. QD110H (opcional)"
-                  className="input-base mt-1.5 w-full"
-                />
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-3">
