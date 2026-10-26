@@ -6,6 +6,7 @@ import { CalculatorPage } from './pages/CalculatorPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ModelPage } from './pages/ModelPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { NeonStatusProvider } from './store/NeonStatus'
 
 const RoutedPage = () => {
   const { tab, settings } = useApp()
@@ -71,9 +72,11 @@ class ErrorBoundary extends Component<
 export const App = () => (
   <ErrorBoundary>
     <AppProvider>
-      <Layout>
-        <RoutedPage />
-      </Layout>
+      <NeonStatusProvider>
+        <Layout>
+          <RoutedPage />
+        </Layout>
+      </NeonStatusProvider>
     </AppProvider>
   </ErrorBoundary>
 )

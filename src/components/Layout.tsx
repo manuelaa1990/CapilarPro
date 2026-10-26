@@ -12,6 +12,7 @@ import type { ReactNode } from 'react'
 import type { TabId } from '../types'
 import { Logo } from './Logo'
 import { useApp } from '../store/useApp'
+import { useNeonStatus } from '../store/neonStatusContext'
 
 const navItems: Array<{
   id: TabId
@@ -27,6 +28,8 @@ const navItems: Array<{
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { tab, navigate, settings, cases, learned, storageMode } = useApp()
+  const { status } = useNeonStatus()
+  const neonConnected = status === 'connected'
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
@@ -145,7 +148,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-900/[0.07] bg-frost-100/90 px-5 py-3 backdrop-blur-xl lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-900/[0.07] bg-frost-100/90 px-5 py-3 backdrop-blur-xl lg:px-9 xl:px-12">
           <button
             type="button"
             onClick={() => navigate('calculator')}
@@ -154,9 +157,24 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             <Logo name={settings.appName} compact />
           </button>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-full border border-ink-900/10 bg-white px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-ink-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-mint-500" />
-              Neon opcional
+            <span
+              role="status"
+              aria-label={neonConnected ? '🟢 Neon Conectado' : '🟡 Modo Local'}
+              className={clsx(
+                'flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-[9px] font-bold tracking-wide sm:text-[10px]',
+                neonConnected
+                  ? 'border-mint-500/25 text-mint-700'
+                  : 'border-amber-500/25 text-amber-700',
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={clsx(
+                  'h-1.5 w-1.5 rounded-full',
+                  neonConnected ? 'bg-mint-500' : 'bg-amber-500',
+                )}
+              />
+              <span>{neonConnected ? 'Neon Conectado' : 'Modo Local'}</span>
             </span>
             <button
               type="button"

@@ -13,6 +13,9 @@ describe('CapilarPro', () => {
     render(<App />)
 
     expect(
+      await screen.findByRole('status', { name: '🟡 Modo Local' }),
+    ).toBeInTheDocument()
+    expect(
       screen.getByRole('heading', { name: /Del dato de placa al capilar/i }),
     ).toBeInTheDocument()
     expect(await screen.findByText('Recomendación primaria')).toBeInTheDocument()
