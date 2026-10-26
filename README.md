@@ -19,14 +19,15 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 ## Funciones principales
 
 - **Anclaje a placa**: capacidad en W o BTU/h, desplazamiento en cm³/rev o in³/rev, frecuencia de red (50/60 Hz) y condiciones de referencia editables. El motor normaliza las unidades antes del cálculo.
-- **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap. y cond. según ASHRAE, EN 12900 o GB/T. El recalentamiento se deriva de temperatura de retorno menos evaporación, y el subenfriamiento de condensación menos ambiente; ambos valores quedan editables.
+- **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap. y cond. según ASHRAE, EN 12900 o GB/T. El recalentamiento de ensayo se deriva de temperatura de retorno menos evaporación y el subenfriamiento de condensación menos ambiente; ambos son de solo lectura salvo que el usuario habilite la edición manual.
+- **Punto de diseño**: evaporación y condensación objetivo con deslizadores e introducción exacta, temperatura de retorno y ambiente; el motor deriva el SH operativo y avisa si el salto térmico del condensador es bajo.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
 - **Incertidumbre honesta**: propagación RSS de modelo, capacidad, tolerancia dimensional, evidencia y propiedades.
 - **Aprendizaje local**: mediana robusta de residuos logarítmicos con contracción bayesiana y sugerencias por similitud.
 - **Historial y evidencias**: longitud instalada, evaporación medida, capacidad real y notas.
 - **Datos portables**: exportación/importación JSON y almacenamiento en `localStorage`.
-- **Sincronización opcional con Neon**: guarda compresores y soluciones en segundo plano; ante fallos de red conserva el cálculo en el historial local.
+- **Sincronización opcional con Neon**: guarda compresores y soluciones en segundo plano; ante fallos de red conserva el cálculo en el historial local. Antes de publicar, aplica las migraciones SQL de `migrations/` en Neon.
 - **Interfaz en español**, responsive y con panel de resultados fijo en escritorio.
 
 ## Refrigerantes y normas

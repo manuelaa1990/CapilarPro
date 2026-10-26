@@ -71,7 +71,6 @@ const TemperatureControl = ({
   max,
   refrigerantId,
   phase,
-  tone,
 }: {
   label: string
   value: number
@@ -80,10 +79,15 @@ const TemperatureControl = ({
   max: number
   refrigerantId: RefrigerantId
   phase: 'bubble' | 'dew'
-  tone: 'mint' | 'ember'
 }) => {
   const percent = ((value - min) / (max - min)) * 100
   const pressure = pressureAt(refrigerantId, value, phase)
+  const [text, setText] = useState(String(value))
+  useEffect(() => {
+    if (Number.parseFloat(text) !== value) setText(String(value))
+    // Sync exact text only when the external temperature changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
   return (
     <div className="rounded-2xl border border-ink-900/[0.07] bg-frost-50/80 p-4">
       <div className="flex items-start justify-between gap-2">
@@ -95,16 +99,30 @@ const TemperatureControl = ({
               Ajusta el deslizador o el valor exacto.
             </InfoTip>
           </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span
-              className={clsx(
-                'font-display text-[31px] font-semibold leading-none tracking-[-0.045em]',
-                tone === 'mint' ? 'text-ink-950' : 'text-ink-950',
-              )}
-            >
-              {fmt(value, 1)}
+          <div className="input-shell mt-1 max-w-32">
+            <input
+              type="number"
+              aria-label={`${label} exact value`}
+              value={text}
+              min={min}
+              max={max}
+              step={0.1}
+              onChange={(event) => {
+                const nextText = event.target.value
+                setText(nextText)
+                const next = Number.parseFloat(nextText)
+                if (Number.isFinite(next)) {
+                  onChange(Math.min(max, Math.max(min, next)))
+                }
+              }}
+              onBlur={() => {
+                if (!Number.isFinite(Number.parseFloat(text))) setText(String(value))
+              }}
+              className="input-base py-1.5 text-[17px]"
+            />
+            <span className="shrink-0 border-l border-ink-900/10 px-2.5 text-[11px] font-bold text-ink-600">
+              °C
             </span>
-            <span className="font-mono text-[12px] text-ink-600">°C</span>
           </div>
         </div>
         <div className="text-right">
@@ -115,6 +133,75 @@ const TemperatureControl = ({
             {pressure > 0 ? fmtKpa(pressure) : '—'}
           </div>
         </div>
+      </div>
+      <input
+        className="range-input mt-4"
+        style={{ '--fill': `${percent}%` } as CSSProperties}
+        type="range"
+        min={min}
+        max={max}
+        step={0.5}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        aria-label={label}
+      />
+      <div className="mt-1.5 flex justify-between font-mono text-[8px] text-ink-600">
+        <span>{fmt(min, 0)} °C</span>
+        <span>{fmt(max, 0)} °C</span>
+      </div>
+    </div>
+  )
+}
+
+const AuxiliaryTemperatureControl = ({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string
+  value: number
+  onChange: (value: number) => void
+  min: number
+  max: number
+}) => {
+  const percent = ((value - min) / (max - min)) * 100
+  const [text, setText] = useState(String(value))
+  useEffect(() => {
+    if (Number.parseFloat(text) !== value) setText(String(value))
+    // Sync exact text only when the external temperature changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+  return (
+    <div className="rounded-2xl border border-ink-900/[0.07] bg-frost-50/80 p-4">
+      <label className="field-label" htmlFor={`${label}-number`}>
+        {label}
+      </label>
+      <div className="input-shell mt-1 max-w-36">
+        <input
+          id={`${label}-number`}
+          type="number"
+          value={text}
+          min={min}
+          max={max}
+          step={0.1}
+          onChange={(event) => {
+            const nextText = event.target.value
+            setText(nextText)
+            const next = Number.parseFloat(nextText)
+            if (Number.isFinite(next)) {
+              onChange(Math.min(max, Math.max(min, next)))
+            }
+          }}
+          onBlur={() => {
+            if (!Number.isFinite(Number.parseFloat(text))) setText(String(value))
+          }}
+          className="input-base py-1.5 text-[16px]"
+        />
+        <span className="shrink-0 border-l border-ink-900/10 px-2.5 text-[11px] font-bold text-ink-600">
+          °C
+        </span>
       </div>
       <input
         className="range-input mt-4"
@@ -194,6 +281,7 @@ export const CalculatorPage = () => {
   } = useApp()
   const [showDetails, setShowDetails] = useState(false)
   const [advanced, setAdvanced] = useState(settings.showAdvanced)
+  const [manualReferenceValues, setManualReferenceValues] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [toastIsError, setToastIsError] = useState(false)
   const autoSavedFingerprints = useRef(new Set<string>())
@@ -372,7 +460,10 @@ export const CalculatorPage = () => {
                   onValueChange={(compressorLabel) =>
                     updateInput({ compressorId: 'custom', compressorLabel })
                   }
-                  onSelectCompressor={chooseCompressor}
+                  onSelectCompressor={(id) => {
+                    setManualReferenceValues(false)
+                    chooseCompressor(id)
+                  }}
                 />
               </div>
 
@@ -380,7 +471,10 @@ export const CalculatorPage = () => {
                 <SelectField
                   label="Estándar de ensayo"
                   value={input.standardId}
-                  onChange={(value) => chooseStandard(value as StandardId)}
+                  onChange={(value) => {
+                    setManualReferenceValues(false)
+                    chooseStandard(value as StandardId)
+                  }}
                   hint={standard.shortName === 'Personalizada' ? 'Define el punto exacto abajo.' : standard.reference}
                 >
                   {standards.map((item) => (
@@ -393,9 +487,10 @@ export const CalculatorPage = () => {
                 <SelectField
                     label="Aplicación"
                     value={input.application}
-                    onChange={(value) =>
-                      chooseApplication(value as CalculationInput['application'])
-                    }
+                  onChange={(value) => {
+                    setManualReferenceValues(false)
+                    chooseApplication(value as CalculationInput['application'])
+                  }}
                     hint="Define el rango: baja, media o alta temperatura."
                 >
                     <option value="LBP">LBP · baja temperatura</option>
@@ -455,12 +550,32 @@ export const CalculatorPage = () => {
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(96px,0.48fr)] items-end gap-2">
                   <NumberField
                     label="Capacidad declarada"
                     value={input.ratedCapacity}
                     onChange={(value) => updateInput({ ratedCapacity: value })}
-                    unit={input.capacityUnit}
+                    unit=""
+                    trailing={
+                      <select
+                        aria-label="Unidad de capacidad"
+                        value={input.capacityUnit}
+                        onChange={(event) => {
+                          const capacityUnit = event.target.value as CapacityUnit
+                          updateInput({
+                            ratedCapacity: convertCapacity(
+                              input.ratedCapacity,
+                              input.capacityUnit,
+                              capacityUnit,
+                            ),
+                            capacityUnit,
+                          })
+                        }}
+                        className="h-full shrink-0 border-l border-ink-900/10 bg-transparent px-3 text-[11px] font-bold text-ink-700 outline-none focus:bg-mint-50"
+                      >
+                        <option value="W">W</option>
+                        <option value="BTU/h">BTU/h</option>
+                      </select>
+                    }
                     min={
                       input.capacityUnit === 'W'
                         ? 20
@@ -474,31 +589,32 @@ export const CalculatorPage = () => {
                     step={input.capacityUnit === 'W' ? 5 : 10}
                     tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
                   />
-                  <SelectField
-                    label="Unidad de capacidad"
-                    value={input.capacityUnit}
-                    onChange={(value) => {
-                      const capacityUnit = value as CapacityUnit
-                      updateInput({
-                        ratedCapacity: convertCapacity(
-                          input.ratedCapacity,
-                          input.capacityUnit,
-                          capacityUnit,
-                        ),
-                        capacityUnit,
-                      })
-                    }}
-                  >
-                    <option value="W">W</option>
-                    <option value="BTU/h">BTU/h</option>
-                  </SelectField>
-                </div>
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(96px,0.48fr)] items-end gap-2">
                   <NumberField
                     label="Desplazamiento"
                     value={input.displacement}
                     onChange={(value) => updateInput({ displacement: value })}
-                    unit={input.displacementUnit}
+                    unit=""
+                    trailing={
+                      <select
+                        aria-label="Unidad de desplazamiento"
+                        value={input.displacementUnit}
+                        onChange={(event) => {
+                          const displacementUnit = event.target.value as DisplacementUnit
+                          updateInput({
+                            displacement: convertDisplacement(
+                              input.displacement,
+                              input.displacementUnit,
+                              displacementUnit,
+                            ),
+                            displacementUnit,
+                          })
+                        }}
+                        className="h-full shrink-0 border-l border-ink-900/10 bg-transparent px-3 text-[11px] font-bold text-ink-700 outline-none focus:bg-mint-50"
+                      >
+                        <option value="cm³/rev">cm³/rev</option>
+                        <option value="in³/rev">in³/rev</option>
+                      </select>
+                    }
                     min={
                       input.displacementUnit === 'cm³/rev'
                         ? 0.2
@@ -512,41 +628,39 @@ export const CalculatorPage = () => {
                     step={input.displacementUnit === 'cm³/rev' ? 0.1 : 0.01}
                     tip="Volumen geométrico barrido por revolución. Está en la placa o en el catálogo técnico."
                   />
-                  <SelectField
-                    label="Unidad de desplazamiento"
-                    value={input.displacementUnit}
-                    onChange={(value) => {
-                      const displacementUnit = value as DisplacementUnit
-                      updateInput({
-                        displacement: convertDisplacement(
-                          input.displacement,
-                          input.displacementUnit,
-                          displacementUnit,
-                        ),
-                        displacementUnit,
-                      })
-                    }}
-                  >
-                    <option value="cm³/rev">cm³/rev</option>
-                    <option value="in³/rev">in³/rev</option>
-                  </SelectField>
-                </div>
-                <SelectField
-                  label="Frecuencia de red"
-                  value={String(input.frequencyHz)}
-                  onChange={(value) => updateInput({ frequencyHz: Number(value) })}
-                  hint="Compresor hermético estándar de 2 polos."
-                >
-                  <option value="60">60 Hz (3600 RPM)</option>
-                  <option value="50">50 Hz (3000 RPM)</option>
-                </SelectField>
+                  <div>
+                    <label className="field-label" htmlFor="frequency-hz">
+                      Frecuencia de red
+                    </label>
+                    <div className="input-shell">
+                      <select
+                        id="frequency-hz"
+                        value={String(input.frequencyHz)}
+                        onChange={(event) =>
+                          updateInput({ frequencyHz: Number(event.target.value) })
+                        }
+                        className="h-full w-full appearance-none bg-transparent px-3.5 py-2.5 text-[13px] font-medium text-ink-950 outline-none"
+                      >
+                        <option value="60">60 Hz (3600 RPM)</option>
+                        <option value="50">50 Hz (3000 RPM)</option>
+                      </select>
+                    </div>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-ink-600">
+                      Compresor hermético estándar de 2 polos.
+                    </p>
+                  </div>
               </div>
 
               <div className="mt-4 rounded-2xl border border-ink-900/[0.06] bg-frost-50/70 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-700">
+                  <div>
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-700">
                     <Thermometer size={12} />
-                    Punto de referencia de la placa
+                    Estándar de ensayo
+                    </div>
+                    <p className="mt-1 text-[10px] text-ink-600">
+                      Los valores se asignan según el estándar y la aplicación seleccionados.
+                    </p>
                   </div>
                   <span className="rounded-full bg-white px-2.5 py-1 font-mono text-[9px] text-ink-600">
                     {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
@@ -637,6 +751,7 @@ export const CalculatorPage = () => {
                     min={0}
                     max={200}
                     step={0.1}
+                    readOnly={!manualReferenceValues}
                     inputClassName="py-2 text-[13px]"
                   />
                   <NumberField
@@ -647,14 +762,28 @@ export const CalculatorPage = () => {
                     min={0}
                     max={100}
                     step={0.1}
+                    readOnly={!manualReferenceValues}
                     inputClassName="py-2 text-[13px]"
                   />
                 </div>
                 <p className="mt-2.5 flex items-start gap-1.5 text-[10px] leading-relaxed text-ink-600">
                   <Info size={11} className="mt-0.5 shrink-0" />
-                  Al editar un valor de referencia se cambia la norma a
-                  “Personalizada”: el anclaje siempre usa lo que declares aquí.
+                  {manualReferenceValues
+                    ? 'Editando valores personalizados. El estándar no se aplicará a estos campos.'
+                    : 'Valores calculados según el estándar. Modificar solo si la hoja técnica del compresor especifica condiciones de ensayo diferentes.'}
                 </p>
+                <button
+                  type="button"
+                  className="btn-ghost mt-1 text-[10px]"
+                  aria-pressed={manualReferenceValues}
+                  onClick={() =>
+                    setManualReferenceValues((editable) => !editable)
+                  }
+                >
+                  {manualReferenceValues
+                    ? 'Usar valores calculados'
+                    : '¿Tienes otros datos? Editar manualmente'}
+                </button>
               </div>
             </div>
           </Card>
@@ -682,12 +811,18 @@ export const CalculatorPage = () => {
                 <TemperatureControl
                   label="Evaporación objetivo"
                   value={input.targetEvapC}
-                  onChange={(value) => updateInput({ targetEvapC: value })}
-                  min={Math.max(-45, refrigerantLimits.minDesignEvapC)}
+                  onChange={(value) =>
+                    updateInput({
+                      targetEvapC: value,
+                      targetReturnGasTempC:
+                        input.targetReturnGasTempC +
+                        (value - input.targetEvapC),
+                    })
+                  }
+                  min={Math.max(-40, refrigerantLimits.minDesignEvapC)}
                   max={Math.min(15, refrigerantLimits.maxC)}
                   refrigerantId={input.refrigerantId}
                   phase="dew"
-                  tone="mint"
                 />
                 <TemperatureControl
                   label="Condensación objetivo"
@@ -697,7 +832,6 @@ export const CalculatorPage = () => {
                   max={Math.min(65, refrigerantLimits.maxDesignCondC)}
                   refrigerantId={input.refrigerantId}
                   phase="bubble"
-                  tone="ember"
                 />
               </div>
 
@@ -713,6 +847,9 @@ export const CalculatorPage = () => {
                       updateInput({
                         targetEvapC: preset.evap,
                         targetCondC: preset.cond,
+                        targetReturnGasTempC:
+                          input.targetReturnGasTempC +
+                          (preset.evap - input.targetEvapC),
                       })
                     }
                     className={clsx(
@@ -731,17 +868,66 @@ export const CalculatorPage = () => {
                 ))}
               </div>
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <NumberField
-                  label="Recalentamiento de aspiración"
-                  value={input.targetSuperheatK}
-                  onChange={(value) => updateInput({ targetSuperheatK: value })}
-                  unit="K"
-                  min={0}
-                  max={50}
-                  step={0.1}
-                  hint="Temperatura del gas a la entrada del compresor por encima de la saturación."
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <AuxiliaryTemperatureControl
+                  label="Temperatura de Retorno de gas"
+                  value={input.targetReturnGasTempC}
+                  onChange={(targetReturnGasTempC) =>
+                    updateInput({ targetReturnGasTempC })
+                  }
+                  min={Math.max(-55, input.targetEvapC)}
+                  max={100}
                 />
+                <AuxiliaryTemperatureControl
+                  label="Temperatura Ambiente"
+                  value={input.targetAmbientTempC}
+                  onChange={(targetAmbientTempC) =>
+                    updateInput({ targetAmbientTempC })
+                  }
+                  min={-20}
+                  max={60}
+                />
+              </div>
+              <div
+                className={clsx(
+                  'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-[11px]',
+                  input.targetReturnGasTempC < input.targetEvapC
+                    ? 'bg-red-50 text-red-700'
+                    : 'bg-mint-50 text-mint-800',
+                )}
+                role="status"
+              >
+                <span>
+                  SH calculado:{' '}
+                  {fmt(
+                    input.targetReturnGasTempC - input.targetEvapC,
+                    1,
+                  )}{' '}
+                  K
+                </span>
+                <span>
+                  Salto condensador:{' '}
+                  {fmt(
+                    input.targetCondC - input.targetAmbientTempC,
+                    1,
+                  )}{' '}
+                  K
+                </span>
+              </div>
+              {input.targetReturnGasTempC < input.targetEvapC && (
+                <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">
+                  La temperatura de retorno debe ser igual o superior a la
+                  evaporación para calcular el sobrecalentamiento.
+                </p>
+              )}
+              {input.targetCondC - input.targetAmbientTempC < 5 && (
+                <p role="alert" className="mt-2 text-[11px] font-medium text-amber-700">
+                  Salto térmico bajo entre ambiente y condensación. Verifica la
+                  ventilación y el punto de condensación.
+                </p>
+              )}
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <NumberField
                   label="Subenfriamiento de líquido"
                   value={input.targetSubcoolK}

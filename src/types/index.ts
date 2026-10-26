@@ -90,6 +90,8 @@ export interface CalculationInput {
   refSubcoolK: number
   targetEvapC: number
   targetCondC: number
+  targetReturnGasTempC: number
+  targetAmbientTempC: number
   targetSuperheatK: number
   targetSubcoolK: number
   lHxM?: number

@@ -26,6 +26,23 @@ describe('validación del formulario', () => {
     }
   })
 
+  it('migrates saved operation points and derives return-gas temperature from legacy SH', () => {
+    const legacyInput: Record<string, unknown> = {
+      ...defaultInput(),
+      targetEvapC: -10,
+      targetSuperheatK: 12,
+    }
+    delete legacyInput.targetReturnGasTempC
+    delete legacyInput.targetAmbientTempC
+
+    const result = calculationInputSchema.safeParse(legacyInput)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.targetReturnGasTempC).toBe(2)
+      expect(result.data.targetAmbientTempC).toBe(32.2)
+    }
+  })
+
   it('migrates RPM from previously saved cases to a supported frequency', () => {
     const legacyInput: Record<string, unknown> = { ...defaultInput(), rpm: 2900 }
     delete legacyInput.frequencyHz

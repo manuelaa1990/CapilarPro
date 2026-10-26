@@ -75,6 +75,8 @@ describe('CapilarPro', () => {
     const [capacity, displacement] = screen.getAllByRole('spinbutton')
     expect(capacity).toHaveValue(1300)
     expect(displacement).toHaveValue(15.3)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(25)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(22.2)
   })
 
   it('guarda los nombres personalizados recientes sin autocompletar la placa', async () => {
@@ -189,10 +191,30 @@ describe('CapilarPro', () => {
     const user = userEvent.setup()
     render(<App />)
 
+    const superheat = screen.getByLabelText('Recalentamiento')
+    const subcooling = screen.getByLabelText('Subenfriamiento')
+    expect(superheat).toHaveAttribute('readonly')
+    expect(subcooling).toHaveAttribute('readonly')
+    expect(
+      screen.getByText(
+        /Valores calculados según el estándar\. Modificar solo si la hoja técnica/i,
+      ),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', {
+        name: '¿Tienes otros datos? Editar manualmente',
+      }),
+    )
+    expect(superheat).not.toHaveAttribute('readonly')
+    await user.clear(superheat)
+    await user.type(superheat, '12')
+    expect(superheat).toHaveValue(12)
+
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Estándar de ensayo' }),
       'en12900',
     )
+    expect(superheat).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(5)
     expect(screen.getByLabelText('Cond. referencia')).toHaveValue(50)
 
@@ -258,5 +280,28 @@ describe('CapilarPro', () => {
     })
     expect(screen.getByText('3 de 3')).toBeInTheDocument()
     expect(screen.getAllByText('Validados').length).toBeGreaterThan(0)
+  })
+
+  it('calcula SH de operación desde retorno y muestra alerta de bajo salto del condensador', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(screen.getByText('SH calculado: 10,0 K')).toBeInTheDocument()
+
+    const returnGas = screen.getByRole('spinbutton', {
+      name: 'Temperatura de Retorno de gas',
+    })
+    await user.clear(returnGas)
+    await user.type(returnGas, '12')
+    expect(screen.getByText('SH calculado: 17,0 K')).toBeInTheDocument()
+
+    const ambient = screen.getByRole('spinbutton', {
+      name: 'Temperatura Ambiente',
+    })
+    await user.clear(ambient)
+    await user.type(ambient, '42')
+    expect(
+      screen.getByText(/Salto térmico bajo entre ambiente y condensación/),
+    ).toBeInTheDocument()
   })
 })

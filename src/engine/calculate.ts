@@ -84,6 +84,17 @@ const warningsFor = (
     })
   }
 
+  const condenserApproachC =
+    input.targetCondC - input.targetAmbientTempC
+  if (condenserApproachC < 5) {
+    warnings.push({
+      code: 'low-condenser-approach',
+      severity: 'warning',
+      title: 'Salto térmico del condensador bajo',
+      message: `La condensación supera el ambiente solo ${condenserApproachC.toFixed(1)} K. Verifica el flujo de aire y la temperatura ambiente.`,
+    })
+  }
+
   if (ratioJump > 0.75) {
     warnings.push({
       code: 'far-extrapolation',
@@ -144,6 +155,14 @@ export const calculate = (
   input: CalculationInput,
   options: CalculateOptions = {},
 ): CalculationResult => {
+  const targetSuperheatK =
+    input.targetReturnGasTempC - input.targetEvapC
+  if (targetSuperheatK < 0) {
+    throw new Error(
+      'La temperatura de retorno del gas debe ser igual o mayor que la evaporación objetivo',
+    )
+  }
+  const calculationInput = { ...input, targetSuperheatK }
   const refrigerant = refrigerantById(input.refrigerantId)
   const standard = standardById(input.standardId)
   const referenceSaturation = saturationAtTemperature(
@@ -179,7 +198,7 @@ export const calculate = (
   const targetSuction = superheatedVaporState(
     input.refrigerantId,
     targetSaturation.pressureKPa,
-    input.targetEvapC + input.targetSuperheatK,
+    input.targetReturnGasTempC,
   )
   const referenceLiquid = subcooledLiquidState(
     input.refrigerantId,
@@ -262,8 +281,8 @@ export const calculate = (
   const base: Omit<CalculationResult, 'warnings'> = {
     version: appMeta.modelVersion,
     calculatedAt: (options.now ?? new Date()).toISOString(),
-    fingerprint: fingerprintOf(input),
-    input,
+    fingerprint: fingerprintOf(calculationInput),
+    input: calculationInput,
     refrigerant,
     standard,
     referenceSaturation: asSaturationPoint(referenceSaturation),
@@ -293,7 +312,7 @@ export const calculate = (
     },
   }
 
-  return { ...base, warnings: warningsFor(input, base) }
+  return { ...base, warnings: warningsFor(calculationInput, base) }
 }
 
 export const saturationPreview = (fluid: CalculationInput['refrigerantId'], tempC: number) =>

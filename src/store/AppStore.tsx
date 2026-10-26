@@ -220,35 +220,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ? input.refrigerantId
       : compressor.refrigerants[0]
     const standard = getStandard(compressor.standardId)
-    setInput((current) => ({
-      ...current,
-      compressorId: compressor.id,
-      compressorLabel: `${compressor.brand} ${compressor.model}`,
-      refrigerantId,
-      standardId: compressor.standardId,
-      application: applicationForEvap(compressor.ratedEvapC),
-      frequencyHz: frequencyForRpm(compressor.rpm),
-      ratedCapacity: wattsToCapacity(
-        compressor.ratedCapacityW,
-        current.capacityUnit,
-      ),
-      displacement: cubicCentimetersToDisplacement(
-        compressor.displacementCm3Rev,
-        current.displacementUnit,
-      ),
-      refEvapC: compressor.ratedEvapC,
-      refCondC: compressor.ratedCondC,
-      refSuperheatK: compressor.ratedSuperheatK,
-      refSubcoolK: compressor.ratedSubcoolK,
-      targetEvapC:
+    setInput((current) => {
+      const targetEvapC =
         compressor.standardId === 'custom'
           ? current.targetEvapC
-          : compressor.ratedEvapC + 12,
-      targetCondC:
-        compressor.standardId === 'custom'
-          ? current.targetCondC
-          : Math.min(standard.condC - 8, 48),
-    }))
+          : compressor.ratedEvapC + 12
+      return {
+        ...current,
+        compressorId: compressor.id,
+        compressorLabel: `${compressor.brand} ${compressor.model}`,
+        refrigerantId,
+        standardId: compressor.standardId,
+        application: applicationForEvap(compressor.ratedEvapC),
+        frequencyHz: frequencyForRpm(compressor.rpm),
+        ratedCapacity: wattsToCapacity(
+          compressor.ratedCapacityW,
+          current.capacityUnit,
+        ),
+        displacement: cubicCentimetersToDisplacement(
+          compressor.displacementCm3Rev,
+          current.displacementUnit,
+        ),
+        refEvapC: compressor.ratedEvapC,
+        refCondC: compressor.ratedCondC,
+        ...deriveReferenceSuperheatAndSubcooling({
+          ...current,
+          refEvapC: compressor.ratedEvapC,
+          refCondC: compressor.ratedCondC,
+        }),
+        targetEvapC,
+        targetReturnGasTempC:
+          current.targetReturnGasTempC +
+          (targetEvapC - current.targetEvapC),
+        targetCondC:
+          compressor.standardId === 'custom'
+            ? current.targetCondC
+            : Math.min(standard.condC - 8, 48),
+      }
+    })
   }, [input.refrigerantId])
 
   const chooseRefrigerant = useCallback((id: RefrigerantId) => {
@@ -275,35 +284,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return
     }
     const standard = getStandard(replacement.standardId)
-    setInput((current) => ({
-      ...current,
-      refrigerantId: id,
-      compressorId: replacement.id,
-      compressorLabel: `${replacement.brand} ${replacement.model}`,
-      standardId: replacement.standardId,
-      application: applicationForEvap(replacement.ratedEvapC),
-      frequencyHz: frequencyForRpm(replacement.rpm),
-      ratedCapacity: wattsToCapacity(
-        replacement.ratedCapacityW,
-        current.capacityUnit,
-      ),
-      displacement: cubicCentimetersToDisplacement(
-        replacement.displacementCm3Rev,
-        current.displacementUnit,
-      ),
-      refEvapC: replacement.ratedEvapC,
-      refCondC: replacement.ratedCondC,
-      refSuperheatK: replacement.ratedSuperheatK,
-      refSubcoolK: replacement.ratedSubcoolK,
-      targetEvapC:
+    setInput((current) => {
+      const targetEvapC =
         replacement.standardId === 'custom'
           ? current.targetEvapC
-          : replacement.ratedEvapC + 12,
-      targetCondC:
-        replacement.standardId === 'custom'
-          ? current.targetCondC
-          : Math.min(standard.condC - 8, 48),
-    }))
+          : replacement.ratedEvapC + 12
+      return {
+        ...current,
+        refrigerantId: id,
+        compressorId: replacement.id,
+        compressorLabel: `${replacement.brand} ${replacement.model}`,
+        standardId: replacement.standardId,
+        application: applicationForEvap(replacement.ratedEvapC),
+        frequencyHz: frequencyForRpm(replacement.rpm),
+        ratedCapacity: wattsToCapacity(
+          replacement.ratedCapacityW,
+          current.capacityUnit,
+        ),
+        displacement: cubicCentimetersToDisplacement(
+          replacement.displacementCm3Rev,
+          current.displacementUnit,
+        ),
+        refEvapC: replacement.ratedEvapC,
+        refCondC: replacement.ratedCondC,
+        ...deriveReferenceSuperheatAndSubcooling({
+          ...current,
+          refEvapC: replacement.ratedEvapC,
+          refCondC: replacement.ratedCondC,
+        }),
+        targetEvapC,
+        targetReturnGasTempC:
+          current.targetReturnGasTempC +
+          (targetEvapC - current.targetEvapC),
+        targetCondC:
+          replacement.standardId === 'custom'
+            ? current.targetCondC
+            : Math.min(standard.condC - 8, 48),
+      }
+    })
   }, [input.compressorId])
 
   const chooseStandard = useCallback((id: StandardId) => {

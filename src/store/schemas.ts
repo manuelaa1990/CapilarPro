@@ -60,7 +60,9 @@ const calculationInputObjectSchema = z
     refSubcoolK: z.number().min(0).max(100),
     targetEvapC: z.number().min(-55).max(20),
     targetCondC: z.number().min(20).max(67),
-    targetSuperheatK: z.number().min(0).max(50),
+    targetReturnGasTempC: z.number().min(-55).max(100),
+    targetAmbientTempC: z.number().min(-20).max(60),
+    targetSuperheatK: z.number().min(0).max(200),
     targetSubcoolK: z.number().min(0).max(30),
     installedDiameterMm: nullablePositive(0.3, 3.5),
     installedLengthM: nullablePositive(0.1, 10),
@@ -107,6 +109,18 @@ export const calculationInputSchema = z
       ambientTempC: migrated.ambientTempC ?? 32.2,
       returnGasTempC: migrated.returnGasTempC ?? 32.2,
     }
+    if (migrated.targetReturnGasTempC === undefined) {
+      migrated = {
+        ...migrated,
+        targetReturnGasTempC:
+          (typeof migrated.targetEvapC === 'number' ? migrated.targetEvapC : -5) +
+          (typeof migrated.targetSuperheatK === 'number' ? migrated.targetSuperheatK : 10),
+      }
+    }
+    migrated = {
+      ...migrated,
+      targetAmbientTempC: migrated.targetAmbientTempC ?? 32.2,
+    }
     return migrated
   }, calculationInputObjectSchema)
   .superRefine((value, context) => {
@@ -137,6 +151,13 @@ export const calculationInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ['targetCondC'],
         message: 'La condensación debe superar la evaporación al menos 8 K',
+      })
+    }
+    if (value.targetReturnGasTempC < value.targetEvapC) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetReturnGasTempC'],
+        message: 'El retorno de gas debe ser igual o mayor que la evaporación',
       })
     }
     if (value.refCondC - value.refEvapC < 8) {
@@ -275,6 +296,8 @@ export const defaultInput = (): CalculationInput => {
     refSubcoolK: seed.refCondC - 32.2,
     targetEvapC: seed.targetEvapC,
     targetCondC: seed.targetCondC,
+    targetReturnGasTempC: seed.targetEvapC + seed.targetSuperheatK,
+    targetAmbientTempC: 32.2,
     targetSuperheatK: seed.targetSuperheatK,
     targetSubcoolK: seed.targetSubcoolK,
     installedDiameterMm: null,

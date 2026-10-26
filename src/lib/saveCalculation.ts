@@ -31,6 +31,8 @@ interface PendingCalculation {
     fingerprint_hash: string
     t_evap_c: number
     t_cond_c: number
+    t_return_gas_c: number
+    t_ambient_c: number
     sh_k: number
     sc_k: number
     l_hx_m: number
@@ -130,7 +132,9 @@ export const saveCalculation = async (
       fingerprint_hash: fingerprintHash,
       t_evap_c: input.targetEvapC,
       t_cond_c: input.targetCondC,
-      sh_k: input.targetSuperheatK,
+      t_return_gas_c: input.targetReturnGasTempC,
+      t_ambient_c: input.targetAmbientTempC,
+      sh_k: result.input.targetSuperheatK,
       sc_k: input.targetSubcoolK,
       l_hx_m: input.lHxM ?? 0,
       d_cap_mm: result.capillary.diameterMm,

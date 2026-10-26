@@ -137,6 +137,15 @@ describe('cálculo completo', () => {
     expect(second.uncertainty).toEqual(first.uncertainty)
   })
 
+  it('calcula el SH operativo desde la temperatura de retorno de gas', () => {
+    const result = calculateWith({
+      targetEvapC: -10,
+      targetReturnGasTempC: 2,
+      targetSuperheatK: 40,
+    })
+    expect(result.input.targetSuperheatK).toBe(12)
+  })
+
   it('rechaza un salto térmico insuficiente', () => {
     expect(() => calculateWith({ targetCondC: 1 })).toThrow(/8 K/)
   })
@@ -168,6 +177,7 @@ describe('cálculo completo', () => {
         refSuperheatK: compressor.ratedSuperheatK,
         refSubcoolK: compressor.ratedSubcoolK,
         targetEvapC: compressor.ratedEvapC + 5,
+        targetReturnGasTempC: compressor.ratedEvapC + 15,
         targetCondC: 42,
       })
       expect(Number.isFinite(result.capillary.lengthM)).toBe(true)

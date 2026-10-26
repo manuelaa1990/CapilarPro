@@ -69,6 +69,7 @@ export const NumberField = ({
   value,
   onChange,
   unit,
+  trailing,
   min,
   max,
   step = 0.1,
@@ -76,6 +77,7 @@ export const NumberField = ({
   tip,
   error,
   disabled,
+  readOnly,
   className,
   inputClassName,
 }: {
@@ -83,6 +85,7 @@ export const NumberField = ({
   value: number
   onChange: (value: number) => void
   unit: string
+  trailing?: ReactNode
   min?: number
   max?: number
   step?: number
@@ -90,6 +93,7 @@ export const NumberField = ({
   tip?: string
   error?: string
   disabled?: boolean
+  readOnly?: boolean
   className?: string
   inputClassName?: string
 }) => {
@@ -117,6 +121,7 @@ export const NumberField = ({
           'input-shell',
           error && 'border-red-400 focus-within:border-red-500 focus-within:ring-red-500/10',
           disabled && 'opacity-50',
+          readOnly && 'border-dashed bg-frost-50',
         )}
       >
         <input
@@ -128,6 +133,7 @@ export const NumberField = ({
           max={max}
           step={step}
           disabled={disabled}
+          readOnly={readOnly}
           aria-invalid={Boolean(error)}
           onChange={(event) => {
             const next = event.target.value
@@ -138,11 +144,17 @@ export const NumberField = ({
           onBlur={() => {
             if (!Number.isFinite(Number.parseFloat(text))) setText(String(value))
           }}
-          className={clsx('input-base', inputClassName)}
+          className={clsx(
+            'input-base',
+            readOnly && 'cursor-default text-ink-700',
+            inputClassName,
+          )}
         />
-        <span className="shrink-0 border-l border-ink-900/10 px-3 text-[11px] font-bold uppercase tracking-wide text-ink-600">
-          {unit}
-        </span>
+        {trailing ?? (
+          <span className="shrink-0 border-l border-ink-900/10 px-3 text-[11px] font-bold uppercase tracking-wide text-ink-600">
+            {unit}
+          </span>
+        )}
       </div>
       {(hint || error) && (
         <p
