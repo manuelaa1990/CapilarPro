@@ -96,7 +96,17 @@ const queuePendingCalculation = (payload: PendingCalculation) => {
 }
 
 const messageOf = (error: unknown) =>
-  error instanceof Error ? error.message : 'Error desconocido en Neon Data API'
+  error instanceof Error
+    ? error.message
+    : typeof error === 'object' &&
+        error !== null &&
+        'message' in error &&
+        typeof error.message === 'string'
+      ? error.message
+      : 'Error desconocido en Neon Data API'
+
+export const confidenceToDatabase = (confidenceScore: number) =>
+  confidenceScore / 100
 
 export const saveCalculation = async (
   result: CalculationResult,
@@ -142,7 +152,7 @@ export const saveCalculation = async (
       eta_v: result.compressor.etaVolumetricTarget,
       m_dot_kg_s: result.compressor.massFlowKgS,
       q_calc_btu: result.compressor.capacityW * WATTS_TO_BTU_PER_HOUR,
-      confidence: result.uncertainty.confidenceScore,
+      confidence: confidenceToDatabase(result.uncertainty.confidenceScore),
       uncertainty_pct: result.uncertainty.totalPct,
     }
     payload = { compressor, solution }

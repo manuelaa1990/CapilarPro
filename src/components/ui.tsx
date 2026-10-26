@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Info, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
+import { formatDecimalInput, limitDecimalInput } from '../lib/format'
 
 export const Card = ({
   children,
@@ -98,11 +99,11 @@ export const NumberField = ({
   inputClassName?: string
 }) => {
   const id = useId()
-  const [text, setText] = useState(String(value))
+  const [text, setText] = useState(formatDecimalInput(value))
 
   useEffect(() => {
     if (Number.parseFloat(text) !== value) {
-      setText(Number.isFinite(value) ? String(value) : '')
+      setText(formatDecimalInput(value))
     }
     // El texto solo se sincroniza cuando el valor externo cambia de verdad.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,13 +137,15 @@ export const NumberField = ({
           readOnly={readOnly}
           aria-invalid={Boolean(error)}
           onChange={(event) => {
-            const next = event.target.value
+            const next = limitDecimalInput(event.target.value)
             setText(next)
             const parsed = Number.parseFloat(next)
             if (Number.isFinite(parsed)) onChange(parsed)
           }}
           onBlur={() => {
-            if (!Number.isFinite(Number.parseFloat(text))) setText(String(value))
+            if (!Number.isFinite(Number.parseFloat(text))) {
+              setText(formatDecimalInput(value))
+            }
           }}
           className={clsx(
             'input-base',

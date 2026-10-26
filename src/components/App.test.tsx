@@ -178,13 +178,38 @@ describe('CapilarPro', () => {
       'in³/rev',
     )
 
-    expect(screen.getByRole('spinbutton', { name: /Capacidad declarada/ })).toHaveValue(
-      1300 * 3.412,
-    )
+    const capacityInput = screen.getByRole('spinbutton', {
+      name: /Capacidad declarada/,
+    }) as HTMLInputElement
+    expect(Number(capacityInput.value)).toBe(4435.6)
     const displacementInput = screen.getByRole('spinbutton', {
       name: /Desplazamiento/,
     }) as HTMLInputElement
-    expect(Number(displacementInput.value)).toBeCloseTo(15.3 / 16.387, 8)
+    expect(Number(displacementInput.value)).toBe(0.93)
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Unidad de capacidad' }),
+      'W',
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Unidad de desplazamiento' }),
+      'cm³/rev',
+    )
+    expect(Number(capacityInput.value)).toBe(1300)
+    expect(Number(displacementInput.value)).toBe(15.3)
+  })
+
+  it('limita los campos numéricos a dos decimales', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const evaporation = screen.getByRole('spinbutton', {
+      name: 'Evaporación objetivo',
+    })
+    await user.clear(evaporation)
+    await user.type(evaporation, '-10.345')
+
+    expect(evaporation).toHaveValue(-10.35)
   })
 
   it('actualiza las condiciones de referencia por norma y aplicación', async () => {

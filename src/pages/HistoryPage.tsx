@@ -19,7 +19,14 @@ import clsx from 'clsx'
 import type { SavedCase } from '../types'
 import { saturationAtTemperature } from '../engine/properties'
 import { predictLengthForDiameter } from '../engine/capillary'
-import { fmt, fmtDate, fmtDateTime, fmtKW } from '../lib/format'
+import {
+  fmt,
+  fmtDate,
+  fmtDateTime,
+  fmtKW,
+  formatDecimalInput,
+  limitDecimalInput,
+} from '../lib/format'
 import { useApp } from '../store/useApp'
 import { Badge, Card } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
@@ -135,23 +142,27 @@ const ActualModal = ({
     if (!item) return
     const actual = item.actual
     setDiameter(
-      String(
+      formatDecimalInput(
         actual?.diameterMm ??
           item.result.input.installedDiameterMm ??
           item.result.capillary.diameterMm,
       ),
     )
     setLength(
-      String(
+      formatDecimalInput(
         actual?.lengthM ??
           item.result.input.installedLengthM ??
           Number(item.result.capillary.lengthM.toFixed(2)),
       ),
     )
-    setEvap(actual?.measuredEvapC !== null && actual?.measuredEvapC !== undefined ? String(actual.measuredEvapC) : '')
+    setEvap(
+      actual?.measuredEvapC !== null && actual?.measuredEvapC !== undefined
+        ? formatDecimalInput(actual.measuredEvapC)
+        : '',
+    )
     setCapacity(
       actual?.measuredCapacityW !== null && actual?.measuredCapacityW !== undefined
-        ? String(actual.measuredCapacityW)
+        ? formatDecimalInput(actual.measuredCapacityW)
         : '',
     )
     setNotes(actual?.notes ?? '')
@@ -256,7 +267,9 @@ const ActualModal = ({
                   type="number"
                   step="0.01"
                   value={diameter}
-                  onChange={(event) => setDiameter(event.target.value)}
+                  onChange={(event) =>
+                    setDiameter(limitDecimalInput(event.target.value))
+                  }
                   className="input-base"
                 />
                 <span className="border-l border-ink-900/10 px-3 text-[10px] font-bold text-ink-600">
@@ -274,7 +287,9 @@ const ActualModal = ({
                   type="number"
                   step="0.01"
                   value={length}
-                  onChange={(event) => setLength(event.target.value)}
+                  onChange={(event) =>
+                    setLength(limitDecimalInput(event.target.value))
+                  }
                   className="input-base"
                 />
                 <span className="border-l border-ink-900/10 px-3 text-[10px] font-bold text-ink-600">
@@ -315,7 +330,9 @@ const ActualModal = ({
                   step="0.1"
                   placeholder="Opcional"
                   value={evap}
-                  onChange={(event) => setEvap(event.target.value)}
+                  onChange={(event) =>
+                    setEvap(limitDecimalInput(event.target.value))
+                  }
                   className="input-base"
                 />
                 <span className="border-l border-ink-900/10 px-3 text-[10px] font-bold text-ink-600">
@@ -334,7 +351,9 @@ const ActualModal = ({
                   step="1"
                   placeholder="Opcional"
                   value={capacity}
-                  onChange={(event) => setCapacity(event.target.value)}
+                  onChange={(event) =>
+                    setCapacity(limitDecimalInput(event.target.value))
+                  }
                   className="input-base"
                 />
                 <span className="border-l border-ink-900/10 px-3 text-[10px] font-bold text-ink-600">
