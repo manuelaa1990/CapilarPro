@@ -1,6 +1,6 @@
 # CapilarPro
 
-Dimensionado de tubos capilares para refrigeración por compresión, anclado a los datos reales de la placa del compresor, con física trazable, incertidumbre declarada y aprendizaje local. **100 % cliente**: sin backend, sin cuentas y sin telemetría.
+Dimensionado de tubos capilares para refrigeración por compresión, anclado a los datos reales de la placa del compresor, con física trazable, incertidumbre declarada y aprendizaje local. El cálculo se ejecuta en el navegador; la sincronización con Neon es opcional.
 
 ![CapilarPro](docs/screenshot.png)
 
@@ -25,6 +25,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 - **Aprendizaje local**: mediana robusta de residuos logarítmicos con contracción bayesiana y sugerencias por similitud.
 - **Historial y evidencias**: longitud instalada, evaporación medida, capacidad real y notas.
 - **Datos portables**: exportación/importación JSON y almacenamiento en `localStorage`.
+- **Sincronización opcional con Neon**: guarda compresores y soluciones en segundo plano; ante fallos de red conserva el cálculo en el historial local.
 - **Interfaz en español**, responsive y con panel de resultados fijo en escritorio.
 
 ## Refrigerantes y normas
@@ -93,6 +94,7 @@ La mediana ponderada por recencia evita que un caso atípico arrastre el modelo.
 - Vite 6
 - TailwindCSS
 - Zod
+- `@neondatabase/neon-js` para sincronización opcional
 - Vitest + Testing Library
 - `localStorage` + exportación/importación JSON
 - Datos generados con CoolProp 6.6.0 HEOS
@@ -164,10 +166,11 @@ El `base: './'` de Vite permite servir la app desde la raíz o desde una subruta
 ## Privacidad y persistencia
 
 - Todo el cálculo ocurre en el navegador.
-- No hay llamadas de red para calcular, guardar ni aprender.
-- El historial y los ajustes se guardan en `localStorage`.
+- Si Neon está configurado, las especificaciones del compresor y las condiciones/resultados de diseño se envían a Neon Data API; el motor no depende de esa conexión.
+- El historial y los ajustes se guardan en `localStorage`. Si falla la sincronización, el cálculo se incorpora al historial local.
+- Un `owner_id` aleatorio se conserva en `localStorage` y se adjunta a las soluciones. Es un identificador del navegador, no una identidad autenticada; las políticas RLS deben permitir el acceso anónimo requerido y no tratar ese valor enviado por el cliente como prueba de autorización.
 - El usuario puede exportar un respaldo JSON, importarlo en otro equipo o borrar todo desde Ajustes.
-- No se envían datos a ningún servidor, servicio de analítica o API de terceros.
+- No se envían datos a servicios de analítica. La sincronización remota usa Neon cuando está habilitada y configurada.
 
 ## Límites de ingeniería
 

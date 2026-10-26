@@ -14,5 +14,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+ClaveAPINEON.txt
 
 # Generated property data is versioned on purpose.

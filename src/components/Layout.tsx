@@ -127,9 +127,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             <div className="flex items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-[10px] text-white/60">
               <ShieldCheck size={13} className="text-mint-400/70" />
               <span className="leading-tight">
-                100 % local · {storageMode}
+                Cálculo local · {storageMode}
                 <br />
-                Sin servidor ni cuentas
+                Sincronización Neon opcional
               </span>
             </div>
 
@@ -156,7 +156,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 rounded-full border border-ink-900/10 bg-white px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-ink-600">
               <span className="h-1.5 w-1.5 rounded-full bg-mint-500" />
-              Local
+              Neon opcional
             </span>
             <button
               type="button"

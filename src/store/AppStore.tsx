@@ -35,6 +35,7 @@ import {
 } from './userData'
 import { defaultInput, defaultSettings } from './schemas'
 import { fingerprintOf } from '../engine/fingerprint'
+import { getOrCreateOwnerId } from '../lib/saveCalculation'
 
 const parseTab = (): TabId => {
   const raw = window.location.hash.replace(/^#\/?/, '')
@@ -89,6 +90,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const mode = useMemo(() => storageMode(), [])
 
   useEffect(() => {
+    try {
+      getOrCreateOwnerId()
+    } catch (error) {
+      console.error('No se pudo preparar el identificador local de Neon.', error)
+    }
     const onHash = () => setTab(parseTab())
     window.addEventListener('hashchange', onHash)
     setHydrated(true)
@@ -238,9 +244,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const saveCurrentCase = useCallback(
-    (source: SavedCase['source'] = 'calculation') => {
-      if (!resultState.result) return null
-      const current = resultState.result
+    (
+      source: SavedCase['source'] = 'calculation',
+      resultOverride?: CalculationResult,
+    ) => {
+      const current = resultOverride ?? resultState.result
+      if (!current) return null
       let saved: SavedCase | null = null
       setCases((previous) => {
         const existing = previous.find(

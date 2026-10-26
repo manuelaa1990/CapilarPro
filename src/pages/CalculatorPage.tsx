@@ -1,10 +1,11 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
   Check,
   ChevronDown,
   CircleAlert,
+  Cloud,
   CloudOff,
   Database,
   Gauge,
@@ -26,6 +27,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ResultCard } from '../components/ResultCard'
 import { LearningCard } from '../components/LearningCard'
 import { BreakdownModal } from '../components/BreakdownModal'
+import { saveCalculation } from '../lib/saveCalculation'
 
 const presets = [
   { label: 'Conservación', evap: -5, cond: 45, hint: 'Media temperatura' },
@@ -170,6 +172,25 @@ export const CalculatorPage = () => {
   const [showDetails, setShowDetails] = useState(false)
   const [advanced, setAdvanced] = useState(settings.showAdvanced)
   const [toast, setToast] = useState<string | null>(null)
+  const [toastIsError, setToastIsError] = useState(false)
+  const autoSavedFingerprints = useRef(new Set<string>())
+
+  useEffect(() => {
+    if (!result || autoSavedFingerprints.current.has(result.fingerprint)) return
+
+    autoSavedFingerprints.current.add(result.fingerprint)
+    void saveCalculation(result).then((savedRemotely) => {
+      if (savedRemotely) return
+      setToastIsError(true)
+      setToast('Guardado localmente. No se pudo sincronizar con Neon.')
+      window.setTimeout(() => setToast(null), 4200)
+    }).catch((error: unknown) => {
+      console.error('No se pudo guardar el cálculo ni en Neon ni localmente.', error)
+      setToastIsError(true)
+      setToast('No se pudo guardar el cálculo localmente.')
+      window.setTimeout(() => setToast(null), 4200)
+    })
+  }, [result])
 
   const compressor = compressors.find((item) => item.id === input.compressorId)
   const standard = standards.find((item) => item.id === input.standardId) ?? standards[0]
@@ -187,6 +208,7 @@ export const CalculatorPage = () => {
 
   const save = () => {
     saveCurrentCase()
+    setToastIsError(false)
     setToast('Caso guardado. La memoria local se actualizará si registras la longitud real.')
     window.setTimeout(() => setToast(null), 4200)
   }
@@ -237,8 +259,8 @@ export const CalculatorPage = () => {
           CoolProp HEOS
         </Badge>
         <Badge>
-          <CloudOff size={11} />
-          Sin servidor
+          <Cloud size={11} />
+          Neon opcional
         </Badge>
         <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-ink-600 md:flex">
           <span className="h-1 w-1 rounded-full bg-frost-300" />
@@ -791,7 +813,11 @@ export const CalculatorPage = () => {
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink-950 px-4 py-2.5 text-[11px] font-semibold text-white shadow-float lg:bottom-8">
-          <Check size={14} className="text-mint-300" />
+          {toastIsError ? (
+            <CloudOff size={14} className="text-amber-300" />
+          ) : (
+            <Check size={14} className="text-mint-300" />
+          )}
           {toast}
         </div>
       )}

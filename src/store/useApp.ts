@@ -24,7 +24,10 @@ export interface AppStore {
   chooseRefrigerant: (id: RefrigerantId) => void
   chooseCompressor: (id: string) => void
   chooseStandard: (id: StandardId) => void
-  saveCurrentCase: (source?: SavedCase['source']) => SavedCase | null
+  saveCurrentCase: (
+    source?: SavedCase['source'],
+    result?: CalculationResult,
+  ) => SavedCase | null
   recordActual: (
     caseId: string,
     actual: {

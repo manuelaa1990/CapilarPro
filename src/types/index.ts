@@ -66,6 +66,7 @@ export interface CalculationInput {
   targetCondC: number
   targetSuperheatK: number
   targetSubcoolK: number
+  lHxM?: number
   installedDiameterMm: number | null
   installedLengthM: number | null
   notes: string
