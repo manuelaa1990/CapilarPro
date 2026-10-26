@@ -9,7 +9,11 @@ import { compressorById, compressors, defaults, solutions } from '../data/catalo
 import { calculate } from '../engine/calculate'
 import { predictLengthForDiameter } from '../engine/capillary'
 import { saturationAtTemperature } from '../engine/properties'
-import { applyStandard, getStandard } from '../engine/standards'
+import {
+  getStandard,
+  getStandardConditions,
+  standardNameForId,
+} from '../engine/standards'
 import type {
   ActualOutcome,
   AppSettings,
@@ -46,6 +50,27 @@ const parseTab = (): TabId => {
 const tabHash = (tab: TabId) => (tab === 'calculator' ? '#/' : `#/${tab}`)
 
 const nowIso = () => new Date().toISOString()
+const applicationForEvap = (
+  temperatureC: number,
+): CalculationInput['application'] =>
+  temperatureC <= -20 ? 'LBP' : temperatureC <= 0 ? 'MBP' : 'HBP'
+
+const referenceConditionsFor = (
+  standardId: StandardId,
+  application: CalculationInput['application'],
+) => {
+  const conditions = getStandardConditions(
+    application,
+    standardNameForId(standardId),
+  )
+  if (!conditions) return {}
+  return {
+    refEvapC: conditions.tEvapRef,
+    refCondC: conditions.tCondRef,
+    refSuperheatK: conditions.shRef,
+    refSubcoolK: conditions.scRef,
+  }
+}
 
 const makeId = () =>
   `case-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
@@ -176,6 +201,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       compressorLabel: `${compressor.brand} ${compressor.model}`,
       refrigerantId,
       standardId: compressor.standardId,
+      application: applicationForEvap(compressor.ratedEvapC),
       ratedCapacityW: compressor.ratedCapacityW,
       displacementCm3Rev: compressor.displacementCm3Rev,
       refEvapC: compressor.ratedEvapC,
@@ -194,6 +220,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [input.refrigerantId])
 
   const chooseRefrigerant = useCallback((id: RefrigerantId) => {
+    if (input.compressorId === 'custom') {
+      setInput((current) => ({
+        ...current,
+        refrigerantId: id,
+      }))
+      return
+    }
     const currentCompressor = compressorById(input.compressorId)
     if (currentCompressor?.refrigerants.includes(id)) {
       setInput((current) => ({
@@ -216,6 +249,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       compressorId: replacement.id,
       compressorLabel: `${replacement.brand} ${replacement.model}`,
       standardId: replacement.standardId,
+      application: applicationForEvap(replacement.ratedEvapC),
       ratedCapacityW: replacement.ratedCapacityW,
       displacementCm3Rev: replacement.displacementCm3Rev,
       refEvapC: replacement.ratedEvapC,
@@ -237,9 +271,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setInput((current) => ({
       ...current,
       standardId: id,
-      ...applyStandard(id, current),
+      ...referenceConditionsFor(id, current.application),
     }))
   }, [])
+
+  const chooseApplication = useCallback(
+    (application: CalculationInput['application']) => {
+      setInput((current) => ({
+        ...current,
+        application,
+        ...referenceConditionsFor(current.standardId, application),
+      }))
+    },
+    [],
+  )
 
   const saveCurrentCase = useCallback(
     (
@@ -334,6 +379,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         compressorId: compressor.id,
         compressorLabel: `${compressor.brand} ${compressor.model}`,
         standardId: compressor.standardId,
+        application: applicationForEvap(compressor.ratedEvapC),
         ratedCapacityW: compressor.ratedCapacityW,
         displacementCm3Rev: compressor.displacementCm3Rev,
         refEvapC: compressor.ratedEvapC,
@@ -433,6 +479,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     chooseRefrigerant,
     chooseCompressor,
     chooseStandard,
+    chooseApplication,
     saveCurrentCase,
     recordActual,
     deleteCase,

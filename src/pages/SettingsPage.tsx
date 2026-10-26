@@ -399,7 +399,7 @@ export const SettingsPage = () => {
                 ['Versión', appMeta.version],
                 ['Motor', appMeta.modelVersion],
                 ['Propiedades', appMeta.propertySource],
-                ['Normas', 'AHRI 540 · EN 12900 · legacy · custom'],
+                ['Normas', 'ASHRAE · EN 12900 · GB/T · legacy · custom'],
                 ['Licencia', 'MIT'],
               ].map(([key, value]) => (
                 <div key={key} className="flex items-start justify-between gap-3">

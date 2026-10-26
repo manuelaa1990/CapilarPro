@@ -24,6 +24,7 @@ export interface AppStore {
   chooseRefrigerant: (id: RefrigerantId) => void
   chooseCompressor: (id: string) => void
   chooseStandard: (id: StandardId) => void
+  chooseApplication: (application: CalculationInput['application']) => void
   saveCurrentCase: (
     source?: SavedCase['source'],
     result?: CalculationResult,

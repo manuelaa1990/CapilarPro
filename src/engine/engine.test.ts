@@ -9,7 +9,7 @@ import {
 } from './capillary'
 import { fingerprintOf } from './fingerprint'
 import { saturationAtPressure, saturationAtTemperature } from './properties'
-import { applyStandard } from './standards'
+import { applyStandard, getStandardConditions } from './standards'
 import { estimateUncertainty } from './uncertainty'
 import { anchorVolumetricEfficiency } from './volumetricEfficiency'
 
@@ -265,6 +265,29 @@ describe('incertidumbre', () => {
 })
 
 describe('normas', () => {
+  it('devuelve las condiciones por norma y aplicación', () => {
+    expect(getStandardConditions('LBP', 'ASHRAE')).toEqual({
+      tEvapRef: -23.3,
+      tCondRef: 54.4,
+      shRef: 55.5,
+      scRef: 0,
+    })
+    expect(getStandardConditions('MBP', 'EN 12900')).toEqual({
+      tEvapRef: -10,
+      tCondRef: 40,
+      shRef: 20,
+      scRef: 0,
+    })
+    expect(getStandardConditions('HBP', 'GB/T')).toEqual({
+      tEvapRef: 7,
+      tCondRef: 55,
+      shRef: 20,
+      scRef: 0,
+    })
+    expect(getStandardConditions('HBP', 'Personalizada')).toBeNull()
+    expect(getStandardConditions('XYZ', 'ASHRAE')).toBeNull()
+  })
+
   it('aplica las condiciones de una norma no personalizada', () => {
     const current = defaultInput()
     const applied = applyStandard('en12900', current)

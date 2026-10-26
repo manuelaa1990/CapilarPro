@@ -40,6 +40,18 @@
       "isDefault": false
     },
     {
+      "id": "gb-t",
+      "name": "GB/T",
+      "shortName": "GB/T",
+      "evapC": 7,
+      "condC": 55,
+      "superheatK": 20,
+      "subcoolK": 0,
+      "reference": "Condiciones de referencia aproximadas para GB/T",
+      "description": "Condiciones de referencia orientativas por aplicación para la norma GB/T.",
+      "isDefault": false
+    },
+    {
       "id": "custom",
       "name": "Condición personalizada",
       "shortName": "Personalizada",

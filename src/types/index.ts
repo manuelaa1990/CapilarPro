@@ -1,6 +1,13 @@
 export type RefrigerantId = 'R134a' | 'R600a' | 'R404A' | 'R290' | 'R22' | 'R507A'
 
-export type StandardId = 'ahri540' | 'en12900' | 'ahri-legacy' | 'custom'
+export type StandardId =
+  | 'ahri540'
+  | 'en12900'
+  | 'ahri-legacy'
+  | 'gb-t'
+  | 'custom'
+
+export type CompressorApplication = 'LBP' | 'MBP' | 'HBP'
 
 export type TabId = 'calculator' | 'history' | 'model' | 'settings'
 
@@ -55,6 +62,7 @@ export interface CalculationInput {
   compressorId: string
   compressorLabel: string
   standardId: StandardId
+  application: CompressorApplication
   ratedCapacityW: number
   displacementCm3Rev: number
   frequencyHz: number

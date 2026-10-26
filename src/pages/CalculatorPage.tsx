@@ -17,7 +17,12 @@ import {
   Thermometer,
 } from 'lucide-react'
 import clsx from 'clsx'
-import type { CalculationWarning, RefrigerantId, StandardId } from '../types'
+import type {
+  CalculationInput,
+  CalculationWarning,
+  RefrigerantId,
+  StandardId,
+} from '../types'
 import { compressors, refrigerantById, refrigerants, standards } from '../data/catalog'
 import { saturationAtTemperature } from '../engine/properties'
 import { fmt, fmtKpa, fmtKW } from '../lib/format'
@@ -164,6 +169,7 @@ export const CalculatorPage = () => {
     chooseCompressor,
     chooseRefrigerant,
     chooseStandard,
+    chooseApplication,
     updateInput,
     saveCurrentCase,
     navigate,
@@ -341,8 +347,9 @@ export const CalculatorPage = () => {
                 }
               />
 
-              <div className="mt-5 grid gap-4 sm:grid-cols-[1.35fr_1fr]">
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_0.8fr]">
                 <SelectField
+                  className="sm:col-span-2 xl:col-span-1"
                   label="Compresor de la biblioteca"
                   value={input.compressorId}
                   onChange={chooseCompressor}
@@ -384,6 +391,19 @@ export const CalculatorPage = () => {
                       {item.name}
                     </option>
                   ))}
+                </SelectField>
+
+                <SelectField
+                    label="Aplicación"
+                    value={input.application}
+                    onChange={(value) =>
+                      chooseApplication(value as CalculationInput['application'])
+                    }
+                    hint="Define el rango: baja, media o alta temperatura."
+                >
+                    <option value="LBP">LBP · baja temperatura</option>
+                    <option value="MBP">MBP · media temperatura</option>
+                    <option value="HBP">HBP · alta temperatura</option>
                 </SelectField>
               </div>
 
@@ -500,7 +520,7 @@ export const CalculatorPage = () => {
                     Punto de referencia de la placa
                   </div>
                   <span className="rounded-full bg-white px-2.5 py-1 font-mono text-[9px] text-ink-600">
-                    {standard.shortName} · {fmt(standard.evapC, 1)} / {fmt(standard.condC, 1)} °C
+                    {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

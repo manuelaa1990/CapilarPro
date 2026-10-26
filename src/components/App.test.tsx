@@ -38,6 +38,64 @@ describe('CapilarPro', () => {
     expect(compressorLabel).toHaveValue('QD110H')
   })
 
+  it('conserva los datos de placa del compresor personalizado al cambiar de refrigerante', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
+      'custom',
+    )
+
+    const [capacity, displacement] = screen.getAllByRole('spinbutton')
+    await user.clear(capacity)
+    await user.type(capacity, '987')
+    await user.clear(displacement)
+    await user.type(displacement, '12.4')
+    await user.clear(screen.getByLabelText('Evap. referencia'))
+    await user.type(screen.getByLabelText('Evap. referencia'), '-18')
+
+    await user.click(screen.getByRole('button', { name: /R600a/i }))
+
+    expect(
+      screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
+    ).toHaveValue('custom')
+    expect(capacity).toHaveValue(987)
+    expect(displacement).toHaveValue(12.4)
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-18)
+  })
+
+  it('actualiza las condiciones de referencia por norma y aplicación', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Norma del dato de placa' }),
+      'en12900',
+    )
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(5)
+    expect(screen.getByLabelText('Cond. referencia')).toHaveValue(50)
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Aplicación' }),
+      'LBP',
+    )
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-35)
+    expect(screen.getByLabelText('Cond. referencia')).toHaveValue(40)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(20)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(0)
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Norma del dato de placa' }),
+      'custom',
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Aplicación' }),
+      'HBP',
+    )
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-35)
+  })
+
   it('navega al historial y carga los casos de demostración', async () => {
     const user = userEvent.setup()
     render(<App />)

@@ -19,6 +19,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 ## Funciones principales
 
 - **Anclaje a placa**: capacidad, desplazamiento, frecuencia de red (50/60 Hz) y condiciones de referencia editables.
+- **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap., cond., recalentamiento y subenfriamiento según ASHRAE, EN 12900 o GB/T; la condición personalizada conserva los valores manuales.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
 - **Incertidumbre honesta**: propagación RSS de modelo, capacidad, tolerancia dimensional, evidencia y propiedades.

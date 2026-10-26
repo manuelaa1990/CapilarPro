@@ -9,7 +9,14 @@ import type {
 import { compressorById, defaults } from '../data/catalog'
 
 const refrigerantEnum = z.enum(['R134a', 'R600a', 'R404A', 'R290', 'R22', 'R507A'])
-const standardEnum = z.enum(['ahri540', 'en12900', 'ahri-legacy', 'custom'])
+const standardEnum = z.enum([
+  'ahri540',
+  'en12900',
+  'ahri-legacy',
+  'gb-t',
+  'custom',
+])
+const applicationEnum = z.enum(['LBP', 'MBP', 'HBP'])
 
 const nullablePositive = (min: number, max: number) =>
   z
@@ -24,6 +31,7 @@ const calculationInputObjectSchema = z
     compressorId: z.string().min(1),
     compressorLabel: z.string().min(1).max(160),
     standardId: standardEnum,
+    application: applicationEnum,
     ratedCapacityW: z.number().min(20, 'Capacidad demasiado baja').max(250000),
     displacementCm3Rev: z
       .number()
@@ -47,14 +55,25 @@ export const calculationInputSchema = z
   .preprocess((value) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value
     const input = value as Record<string, unknown>
-    if (input.frequencyHz !== undefined || typeof input.rpm !== 'number') {
-      return value
+    let migrated: Record<string, unknown> = input
+    const legacyRpm = input.rpm
+    if (input.frequencyHz === undefined && typeof legacyRpm === 'number') {
+      const legacyInput = { ...migrated }
+      delete legacyInput.rpm
+      migrated = {
+        ...legacyInput,
+        frequencyHz: legacyRpm <= 3300 ? 50 : 60,
+      }
     }
-    const { rpm, ...legacyInput } = input
-    return {
-      ...legacyInput,
-      frequencyHz: rpm <= 3300 ? 50 : 60,
+    if (migrated.application === undefined) {
+      const refEvapC =
+        typeof migrated.refEvapC === 'number' ? migrated.refEvapC : 7
+      migrated = {
+        ...migrated,
+        application: refEvapC <= -20 ? 'LBP' : refEvapC <= 0 ? 'MBP' : 'HBP',
+      }
     }
+    return migrated
   }, calculationInputObjectSchema)
   .superRefine((value, context) => {
     if (value.targetCondC - value.targetEvapC < 8) {
@@ -188,6 +207,8 @@ export const defaultInput = (): CalculationInput => {
       ? `${compressor.brand} ${compressor.model}`
       : 'Compresor personalizado',
     standardId: seed.standardId as StandardId,
+    application:
+      seed.refEvapC <= -20 ? 'LBP' : seed.refEvapC <= 0 ? 'MBP' : 'HBP',
     ratedCapacityW: seed.ratedCapacityW,
     displacementCm3Rev: seed.displacementCm3Rev,
     frequencyHz: 60,

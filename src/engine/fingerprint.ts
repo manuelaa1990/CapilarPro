@@ -26,6 +26,7 @@ export const fingerprintOf = (input: CalculationInput): string => {
     refrigerantId: input.refrigerantId,
     compressorId: input.compressorId,
     standardId: input.standardId,
+    application: input.application,
     ratedCapacityW: normalizeNumber(input.ratedCapacityW, 1),
     displacementCm3Rev: normalizeNumber(input.displacementCm3Rev),
     rpm: normalizeNumber(rpmFromFrequency(input.frequencyHz), 0),
