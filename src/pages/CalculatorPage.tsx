@@ -364,39 +364,18 @@ export const CalculatorPage = () => {
                 }
               />
 
-              <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_0.8fr]">
-                <SelectField
-                  className="sm:col-span-2 xl:col-span-1"
-                  label="Compresor de la biblioteca"
-                  value={input.compressorId}
-                  onChange={chooseCompressor}
-                  hint={
-                    compressor
-                      ? `${compressor.source}`
-                      : 'Introduce los datos reales de la placa del compresor.'
+              <div className="mt-5">
+                <CompressorSearch
+                  compressors={compressors}
+                  value={input.compressorLabel}
+                  onValueChange={(compressorLabel) =>
+                    updateInput({ compressorId: 'custom', compressorLabel })
                   }
-                >
-                  <option value="custom">Compresor personalizado</option>
-                  {Object.entries(
-                    compressors.reduce<Record<string, typeof compressors>>(
-                      (groups, item) => {
-                        groups[item.brand] = [...(groups[item.brand] ?? []), item]
-                        return groups
-                      },
-                      {},
-                    ),
-                  ).map(([brand, items]) => (
-                    <optgroup key={brand} label={brand}>
-                      {items.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.model} · {item.displacementCm3Rev} cm³ ·{' '}
-                          {item.refrigerants.join(' / ')}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </SelectField>
+                  onSelectCompressor={chooseCompressor}
+                />
+              </div>
 
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <SelectField
                   label="Norma del dato de placa"
                   value={input.standardId}
@@ -439,17 +418,6 @@ export const CalculatorPage = () => {
                   </span>
                 </div>
               )}
-
-              <div className="mt-4">
-                <CompressorSearch
-                  compressors={compressors}
-                  value={input.compressorLabel}
-                  onValueChange={(compressorLabel) =>
-                    updateInput({ compressorId: 'custom', compressorLabel })
-                  }
-                  onSelectCompressor={chooseCompressor}
-                />
-              </div>
 
               <div className="mt-5">
                 <SelectField

@@ -22,6 +22,9 @@ describe('CapilarPro', () => {
     expect(screen.getByRole('combobox', { name: 'Frecuencia de red' })).toHaveValue(
       '60',
     )
+    expect(
+      screen.queryByRole('combobox', { name: 'Compresor de la biblioteca' }),
+    ).not.toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Refrigerante' })).toHaveValue(
       'R134a',
     )
@@ -76,9 +79,6 @@ describe('CapilarPro', () => {
     await user.keyboard('{Enter}')
 
     expect(compressorSearch).toHaveValue('Compresor de Juan')
-    expect(
-      screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
-    ).toHaveValue('custom')
     expect(capacity).toHaveValue(1377)
     expect(window.localStorage.getItem('capilarpro:recent_compressors')).toContain(
       'Compresor de Juan',
@@ -95,10 +95,12 @@ describe('CapilarPro', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
-      'custom',
-    )
+    const compressorSearch = screen.getByRole('combobox', {
+      name: /Código o modelo del compresor/i,
+    })
+    await user.clear(compressorSearch)
+    await user.type(compressorSearch, 'QD110H')
+    await user.keyboard('{Enter}')
 
     const [capacity, displacement] = screen.getAllByRole('spinbutton')
     await user.clear(capacity)
@@ -113,9 +115,7 @@ describe('CapilarPro', () => {
       'R600a',
     )
 
-    expect(
-      screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
-    ).toHaveValue('custom')
+    expect(compressorSearch).toHaveValue('QD110H')
     expect(capacity).toHaveValue(987)
     expect(displacement).toHaveValue(12.4)
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-18)
