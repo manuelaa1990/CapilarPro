@@ -98,7 +98,7 @@ export const estimateUncertainty = ({
     },
     {
       id: 'displacement',
-      label: 'Desplazamiento / RPM',
+      label: 'Desplazamiento / frecuencia de red',
       sigmaPct: Math.sqrt(
         config.displacement ** 2 + config.rpm ** 2,
       ) * 100,

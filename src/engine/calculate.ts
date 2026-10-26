@@ -19,6 +19,7 @@ import {
   anchorVolumetricEfficiency,
   pressureRatio,
 } from './volumetricEfficiency'
+import { rpmFromFrequency } from './frequency'
 
 interface CalculateOptions {
   calibration?: CalibrationSummary | null
@@ -190,10 +191,11 @@ export const calculate = (
     throw new Error('El salto entálpico calculado no es válido')
   }
 
+  const rpm = rpmFromFrequency(input.frequencyHz)
   const sweptVolumeM3s =
-    (input.displacementCm3Rev * 1e-6 * input.rpm) / 60
+    (input.displacementCm3Rev * 1e-6 * rpm) / 60
   if (sweptVolumeM3s <= 0) {
-    throw new Error('El desplazamiento y las RPM deben ser positivos')
+    throw new Error('El desplazamiento y la frecuencia deben ser positivos')
   }
 
   const referencePressureRatio = pressureRatio(

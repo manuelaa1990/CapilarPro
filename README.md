@@ -8,7 +8,7 @@ Dimensionado de tubos capilares para refrigeración por compresión, anclado a l
 
 La mayoría de las hojas de cálculo parten de una capacidad nominal genérica y aplican una tabla fija de eficiencia volumétrica. CapilarPro hace lo contrario:
 
-1. Toma desplazamiento, RPM y capacidad **en el punto de referencia de la placa**.
+1. Toma desplazamiento, frecuencia de red (50/60 Hz) y capacidad **en el punto de referencia de la placa**; para el compresor estándar de 2 polos calcula RPM = Hz × 60.
 2. Despeja la eficiencia volumétrica real de ese compresor.
 3. Extrapola la eficiencia al punto de diseño mediante el volumen nocivo.
 4. Resuelve el capilar con un modelo 1D adiabático sobre la curva de saturación.
@@ -18,7 +18,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 
 ## Funciones principales
 
-- **Anclaje a placa**: capacidad, desplazamiento, RPM y condiciones de referencia editables.
+- **Anclaje a placa**: capacidad, desplazamiento, frecuencia de red (50/60 Hz) y condiciones de referencia editables.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
 - **Incertidumbre honesta**: propagación RSS de modelo, capacidad, tolerancia dimensional, evidencia y propiedades.
@@ -43,7 +43,8 @@ Las propiedades de saturación se generan desde **CoolProp 6.6.0 (HEOS)** y se v
 Con el caudal barrido y las propiedades de aspiración/líquido en la referencia:
 
 ```text
-V̇    = Vd · n / 60
+RPM   = frecuencia [Hz] · 60 (compresor de 2 polos)
+V̇    = Vd · RPM / 60
 ηv,ref = Q0,ref / [V̇ · ρs · (hs − hl)]
 ```
 

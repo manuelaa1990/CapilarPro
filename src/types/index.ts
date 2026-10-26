@@ -57,7 +57,7 @@ export interface CalculationInput {
   standardId: StandardId
   ratedCapacityW: number
   displacementCm3Rev: number
-  rpm: number
+  frequencyHz: number
   refEvapC: number
   refCondC: number
   refSuperheatK: number

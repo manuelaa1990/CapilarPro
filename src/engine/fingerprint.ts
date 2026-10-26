@@ -1,5 +1,6 @@
 import { correlations } from '../data/catalog'
 import type { CalculationInput } from '../types'
+import { rpmFromFrequency } from './frequency'
 
 const normalizeNumber = (value: number, decimals = 3) => {
   if (!Number.isFinite(value)) return 'nan'
@@ -27,7 +28,7 @@ export const fingerprintOf = (input: CalculationInput): string => {
     standardId: input.standardId,
     ratedCapacityW: normalizeNumber(input.ratedCapacityW, 1),
     displacementCm3Rev: normalizeNumber(input.displacementCm3Rev),
-    rpm: normalizeNumber(input.rpm, 0),
+    rpm: normalizeNumber(rpmFromFrequency(input.frequencyHz), 0),
     refEvapC: normalizeNumber(input.refEvapC, 2),
     refCondC: normalizeNumber(input.refCondC, 2),
     refSuperheatK: normalizeNumber(input.refSuperheatK, 2),

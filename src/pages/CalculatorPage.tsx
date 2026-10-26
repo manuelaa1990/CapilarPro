@@ -246,10 +246,6 @@ export const CalculatorPage = () => {
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <Badge tone="mint">
-          <ShieldCheck size={11} />
-          Anclado a placa
-        </Badge>
         <Badge>
           <Layers3 size={11} />
           ASHRAE / AHRI 540
@@ -322,60 +318,30 @@ export const CalculatorPage = () => {
               <SectionHeading
                 number="01"
                 eyebrow="Punto de partida"
-                title="Refrigerante y compresor"
-                description="Elige el fluido y el equipo. La biblioteca rellena la placa, pero cada dato es editable."
+                title="Datos del compresor y placa"
+                description="Elige el equipo y el refrigerante, y completa los datos de placa. La biblioteca rellena valores que puedes editar."
                 right={
-                  compressor ? (
-                    <Badge tone="amber">
-                      {compressor.application}
-                    </Badge>
-                  ) : (
-                    <Badge>Personalizado</Badge>
-                  )
+                  <div className="flex items-center gap-3">
+                    {compressor ? (
+                      <Badge tone="amber">{compressor.application}</Badge>
+                    ) : (
+                      <Badge>Personalizado</Badge>
+                    )}
+                    <div className="hidden text-right sm:block">
+                      <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
+                        ηv anclada
+                      </div>
+                      <div className="mt-1 font-mono text-[18px] font-semibold text-mint-700">
+                        {result
+                          ? `${fmt(result.compressor.etaVolumetricRef * 100, 1)} %`
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
                 }
               />
 
-              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {refrigerants.map((item) => {
-                  const active = item.id === input.refrigerantId
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => chooseRefrigerant(item.id)}
-                      className={clsx(
-                        'group relative overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all',
-                        active
-                          ? 'border-ink-950 bg-ink-950 text-white shadow-md'
-                          : 'border-ink-900/10 bg-white text-ink-950 hover:border-ink-900/25 hover:shadow-sm',
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="font-mono text-[13px] font-bold">
-                          {item.id}
-                        </span>
-                        {active && (
-                          <Check size={11} className="ml-auto text-mint-300" />
-                        )}
-                      </div>
-                      <div
-                        className={clsx(
-                          'mt-1 text-[9px]',
-                          active ? 'text-white/60' : 'text-ink-600',
-                        )}
-                      >
-                        {item.safety} · GWP {fmt(item.gwp, 0)}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-[1.35fr_1fr]">
+              <div className="mt-5 grid gap-4 sm:grid-cols-[1.35fr_1fr]">
                 <SelectField
                   label="Compresor de la biblioteca"
                   value={input.compressorId}
@@ -430,36 +396,70 @@ export const CalculatorPage = () => {
                   <span className="font-mono">
                     {fmt(compressor.displacementCm3Rev, 2)} cm³/rev
                   </span>
-                  <span className="font-mono">{fmt(compressor.rpm, 0)} rpm</span>
                   <span className="font-mono">{fmtKW(compressor.ratedCapacityW)}</span>
                   <span className="ml-auto text-[9px] text-ink-600">
                     {compressor.source}
                   </span>
                 </div>
               )}
-            </div>
-          </Card>
 
-          <Card>
-            <div className="p-5 sm:p-6">
-              <SectionHeading
-                number="02"
-                eyebrow="El ancla"
-                title="Datos reales de la placa"
-                description="La capacidad debe corresponder al punto de referencia que introduzcas, no a la capacidad útil de la nevera."
-                right={
-                  <div className="hidden text-right sm:block">
-                    <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
-                      ηv anclada
-                    </div>
-                    <div className="mt-1 font-mono text-[18px] font-semibold text-mint-700">
-                      {result ? `${fmt(result.compressor.etaVolumetricRef * 100, 1)} %` : '—'}
-                    </div>
-                  </div>
-                }
-              />
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {refrigerants.map((item) => {
+                  const active = item.id === input.refrigerantId
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => chooseRefrigerant(item.id)}
+                      className={clsx(
+                        'group relative overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all',
+                        active
+                          ? 'border-ink-950 bg-ink-950 text-white shadow-md'
+                          : 'border-ink-900/10 bg-white text-ink-950 hover:border-ink-900/25 hover:shadow-sm',
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="font-mono text-[13px] font-bold">
+                          {item.id}
+                        </span>
+                        {active && (
+                          <Check size={11} className="ml-auto text-mint-300" />
+                        )}
+                      </div>
+                      <div
+                        className={clsx(
+                          'mt-1 text-[9px]',
+                          active ? 'text-white/60' : 'text-ink-600',
+                        )}
+                      >
+                        {item.safety} · GWP {fmt(item.gwp, 0)}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
 
-              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <div className="mt-5">
+                <label className="field-label" htmlFor="compressor-label">
+                  Código o modelo del compresor
+                </label>
+                <input
+                  id="compressor-label"
+                  type="text"
+                  value={input.compressorLabel}
+                  onChange={(event) =>
+                    updateInput({ compressorLabel: event.target.value })
+                  }
+                  placeholder="Ej. QD110H (opcional)"
+                  className="input-base mt-1.5 w-full"
+                />
+              </div>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 <NumberField
                   label="Capacidad declarada"
                   value={input.ratedCapacityW}
@@ -480,16 +480,15 @@ export const CalculatorPage = () => {
                   step={0.1}
                   tip="Volumen geométrico barrido por revolución. Está en la placa o en el catálogo técnico."
                 />
-                <NumberField
-                  label="Velocidad"
-                  value={input.rpm}
-                  onChange={(value) => updateInput({ rpm: value })}
-                  unit="rpm"
-                  min={300}
-                  max={9000}
-                  step={10}
-                  tip="RPM de trabajo del compresor. No confundir con la frecuencia de red si hay variador."
-                />
+                <SelectField
+                  label="Frecuencia de red"
+                  value={String(input.frequencyHz)}
+                  onChange={(value) => updateInput({ frequencyHz: Number(value) })}
+                  hint="Compresor hermético estándar de 2 polos."
+                >
+                  <option value="60">60 Hz (3600 RPM)</option>
+                  <option value="50">50 Hz (3000 RPM)</option>
+                </SelectField>
               </div>
 
               <div className="mt-4 rounded-2xl border border-ink-900/[0.06] bg-frost-50/70 p-4">
@@ -556,9 +555,9 @@ export const CalculatorPage = () => {
           <Card>
             <div className="p-5 sm:p-6">
               <SectionHeading
-                number="03"
-                eyebrow="El objetivo"
-                title="Punto de diseño"
+                number="02"
+                eyebrow="Punto de diseño"
+                title="Condiciones de operación"
                 description="El capilar se dimensiona para el caudal real que el compresor puede entregar en este punto, no para la capacidad de etiqueta."
                 right={
                   <div className="flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white px-3 py-1.5">

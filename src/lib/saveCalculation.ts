@@ -1,4 +1,5 @@
 import type { CalculationInput, CalculationResult } from '../types'
+import { rpmFromFrequency } from '../engine/frequency'
 import { neonClient } from './neonClient'
 
 const OWNER_ID_KEY = 'capilarpro:owner_id'
@@ -9,6 +10,7 @@ interface PendingCalculation {
   compressor: {
     owner_id: string
     fingerprint_hash: string
+    modelo: string
     refrigerante: string
     vd_cm3: number
     rpm: number
@@ -47,17 +49,19 @@ export const getOrCreateOwnerId = (): string => {
 }
 
 const compressorFingerprint = async (input: CalculationInput) => {
+  const roundTo = (value: number, decimals: number) =>
+    Number(value.toFixed(decimals))
   const stableData = JSON.stringify({
     compressorId: input.compressorId,
     compressorLabel: input.compressorLabel,
     refrigerantId: input.refrigerantId,
-    ratedCapacityW: input.ratedCapacityW,
-    displacementCm3Rev: input.displacementCm3Rev,
-    rpm: input.rpm,
-    refEvapC: input.refEvapC,
-    refCondC: input.refCondC,
-    refSuperheatK: input.refSuperheatK,
-    refSubcoolK: input.refSubcoolK,
+    ratedCapacityW: roundTo(input.ratedCapacityW, 0),
+    displacementCm3Rev: roundTo(input.displacementCm3Rev, 1),
+    rpm: roundTo(rpmFromFrequency(input.frequencyHz), 0),
+    refEvapC: roundTo(input.refEvapC, 1),
+    refCondC: roundTo(input.refCondC, 1),
+    refSuperheatK: roundTo(input.refSuperheatK, 1),
+    refSubcoolK: roundTo(input.refSubcoolK, 1),
   })
   const digest = await window.crypto.subtle.digest(
     'SHA-256',
@@ -93,9 +97,10 @@ export const saveCalculation = async (
     const compressor = {
       owner_id: ownerId,
       fingerprint_hash: fingerprintHash,
+      modelo: input.compressorLabel,
       refrigerante: input.refrigerantId,
       vd_cm3: input.displacementCm3Rev,
-      rpm: input.rpm,
+      rpm: rpmFromFrequency(input.frequencyHz),
       q_ref_btu: input.ratedCapacityW * WATTS_TO_BTU_PER_HOUR,
       t_evap_ref_c: input.refEvapC,
       t_cond_ref_c: input.refCondC,

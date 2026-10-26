@@ -6,6 +6,15 @@ describe('validación del formulario', () => {
   it('acepta la entrada por defecto', () => {
     const result = calculationInputSchema.safeParse(defaultInput())
     expect(result.success).toBe(true)
+    expect(defaultInput().frequencyHz).toBe(60)
+  })
+
+  it('migrates RPM from previously saved cases to a supported frequency', () => {
+    const legacyInput: Record<string, unknown> = { ...defaultInput(), rpm: 2900 }
+    delete legacyInput.frequencyHz
+    const result = calculationInputSchema.safeParse(legacyInput)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.frequencyHz).toBe(50)
   })
 
   it('rechaza un salto térmico insuficiente', () => {

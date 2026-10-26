@@ -16,7 +16,12 @@ describe('CapilarPro', () => {
       screen.getByRole('heading', { name: /Del dato de placa al capilar/i }),
     ).toBeInTheDocument()
     expect(await screen.findByText('Recomendación primaria')).toBeInTheDocument()
-    expect(screen.getByText(/Datos reales de la placa/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Datos del compresor y placa/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Frecuencia de red' })).toHaveValue(
+      '60',
+    )
     expect(screen.getAllByText(/R134a/i).length).toBeGreaterThan(0)
   })
 

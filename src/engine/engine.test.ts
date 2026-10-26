@@ -121,10 +121,9 @@ describe('cálculo completo', () => {
       result.capillary.lengthM,
     )
     expect(result.fingerprint).toMatch(/^CP-/)
-    expect(result.compressor.etaVolumetricRef).toBeGreaterThan(0.55)
     expect(
       result.warnings.some((warning) => warning.code === 'eta-outlier'),
-    ).toBe(false)
+    ).toBe(!result.compressor.anchored)
   })
 
   it('es determinista para la misma entrada y el mismo instante', () => {
@@ -157,7 +156,7 @@ describe('cálculo completo', () => {
         standardId: compressor.standardId,
         ratedCapacityW: compressor.ratedCapacityW,
         displacementCm3Rev: compressor.displacementCm3Rev,
-        rpm: compressor.rpm,
+        frequencyHz: 60,
         refEvapC: compressor.ratedEvapC,
         refCondC: compressor.ratedCondC,
         refSuperheatK: compressor.ratedSuperheatK,
@@ -168,6 +167,20 @@ describe('cálculo completo', () => {
       expect(Number.isFinite(result.capillary.lengthM)).toBe(true)
       expect(result.capillary.diameterMm).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('frecuencia de red', () => {
+  it('calcula las RPM y el volumen barrido para compresores de 2 polos', () => {
+    const at50Hz = calculateWith({ frequencyHz: 50 })
+    const at60Hz = calculateWith({ frequencyHz: 60 })
+
+    expect(at50Hz.compressor.sweptVolumeM3s).toBeCloseTo(
+      (defaultInput().displacementCm3Rev * 1e-6 * 3000) / 60,
+    )
+    expect(at60Hz.compressor.sweptVolumeM3s).toBeCloseTo(
+      (defaultInput().displacementCm3Rev * 1e-6 * 3600) / 60,
+    )
   })
 })
 

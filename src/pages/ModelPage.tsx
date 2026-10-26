@@ -110,7 +110,7 @@ export const ModelPage = () => {
           number="01"
           icon={FileCheck2}
           title="Ancla en la placa"
-          text="Capacidad, desplazamiento, RPM y punto de referencia se usan para despejar la ηv real del equipo."
+          text="Capacidad, desplazamiento, frecuencia de red y punto de referencia se usan para despejar la ηv real del equipo."
         />
         <Step
           number="02"
@@ -142,7 +142,7 @@ export const ModelPage = () => {
           </p>
           <div className="mt-4 space-y-2.5">
             <Formula>
-              V̄ = desplazamiento [m³/rev] × RPM / 60
+              V̄ = desplazamiento [m³/rev] × (frecuencia [Hz] × 60) / 60
               <br />
               ηv,ref = Q<sub>placa</sub> / (V̄ · ρ<sub>asp,ref</sub> · Δh<sub>ref</sub>)
             </Formula>

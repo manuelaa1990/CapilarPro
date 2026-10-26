@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { CalculationResult } from '../types'
 import { Modal } from './Modal'
 import { fmt, fmtKpa, fmtKW } from '../lib/format'
+import { rpmFromFrequency } from '../engine/frequency'
 import { Badge } from './ui'
 
 const FlowStep = ({
@@ -105,12 +106,13 @@ export const BreakdownModal = ({
         <FlowStep index="01" title="Lectura de la placa del compresor">
           <p>
             La capacidad declarada se ancla al punto real de la etiqueta, no a
-            una condición genérica. Volumen barrido = desplazamiento × RPM.
+            una condición genérica. Para un compresor de 2 polos, RPM = Hz × 60.
           </p>
           <div className="mt-2 grid gap-2 font-mono text-[10px] text-ink-700 sm:grid-cols-2">
             <div className="rounded-lg bg-white p-2.5">
               V̄ = {fmt(result.input.displacementCm3Rev, 2)} cm³/rev ×{' '}
-              {fmt(result.input.rpm, 0)} rpm ={' '}
+              {fmt(result.input.frequencyHz, 0)} Hz × 60 ={' '}
+              {fmt(rpmFromFrequency(result.input.frequencyHz), 0)} rpm ={' '}
               {fmt(comp.sweptVolumeM3s * 60_000, 3)} L/min
             </div>
             <div className="rounded-lg bg-white p-2.5">

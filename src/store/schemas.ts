@@ -18,7 +18,7 @@ const nullablePositive = (min: number, max: number) =>
     .max(max)
     .nullable()
 
-export const calculationInputSchema = z
+const calculationInputObjectSchema = z
   .object({
     refrigerantId: refrigerantEnum,
     compressorId: z.string().min(1),
@@ -29,7 +29,7 @@ export const calculationInputSchema = z
       .number()
       .min(0.2, 'Desplazamiento demasiado bajo')
       .max(3000),
-    rpm: z.number().min(300).max(9000),
+    frequencyHz: z.union([z.literal(50), z.literal(60)]),
     refEvapC: z.number().min(-65).max(30),
     refCondC: z.number().min(20).max(67),
     refSuperheatK: z.number().min(0).max(50),
@@ -42,6 +42,20 @@ export const calculationInputSchema = z
     installedLengthM: nullablePositive(0.1, 10),
     notes: z.string().max(1200),
   })
+
+export const calculationInputSchema = z
+  .preprocess((value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+    const input = value as Record<string, unknown>
+    if (input.frequencyHz !== undefined || typeof input.rpm !== 'number') {
+      return value
+    }
+    const { rpm, ...legacyInput } = input
+    return {
+      ...legacyInput,
+      frequencyHz: rpm <= 3300 ? 50 : 60,
+    }
+  }, calculationInputObjectSchema)
   .superRefine((value, context) => {
     if (value.targetCondC - value.targetEvapC < 8) {
       context.addIssue({
@@ -176,7 +190,7 @@ export const defaultInput = (): CalculationInput => {
     standardId: seed.standardId as StandardId,
     ratedCapacityW: seed.ratedCapacityW,
     displacementCm3Rev: seed.displacementCm3Rev,
-    rpm: seed.rpm,
+    frequencyHz: 60,
     refEvapC: seed.refEvapC,
     refCondC: seed.refCondC,
     refSuperheatK: seed.refSuperheatK,
