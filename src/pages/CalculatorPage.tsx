@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
@@ -36,7 +36,7 @@ import {
   convertDisplacement,
 } from '../engine/units'
 import { useApp } from '../store/useApp'
-import { Badge, Card, InfoTip, NumberField, SectionHeading, SelectField } from '../components/ui'
+import { Badge, Card, NumberField, SectionHeading, SelectField } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { ResultCard } from '../components/ResultCard'
 import { LearningCard } from '../components/LearningCard'
@@ -44,12 +44,6 @@ import { BreakdownModal } from '../components/BreakdownModal'
 import { CompressorSearch } from '../components/CompressorSearch'
 import { saveCalculation } from '../lib/saveCalculation'
 import { deriveReferenceSuperheatAndSubcooling } from '../engine/standards'
-
-const presets = [
-  { label: 'Conservación', evap: -5, cond: 45, hint: 'Media temperatura' },
-  { label: 'Congelación', evap: -25, cond: 45, hint: 'Baja temperatura' },
-  { label: 'Alta temperatura', evap: 5, cond: 50, hint: 'Exhibición / clima' },
-]
 
 const pressureAt = (
   refrigerantId: RefrigerantId,
@@ -61,165 +55,6 @@ const pressureAt = (
   } catch {
     return 0
   }
-}
-
-const TemperatureControl = ({
-  label,
-  value,
-  onChange,
-  min,
-  max,
-  refrigerantId,
-  phase,
-}: {
-  label: string
-  value: number
-  onChange: (value: number) => void
-  min: number
-  max: number
-  refrigerantId: RefrigerantId
-  phase: 'bubble' | 'dew'
-}) => {
-  const percent = ((value - min) / (max - min)) * 100
-  const pressure = pressureAt(refrigerantId, value, phase)
-  const [text, setText] = useState(String(value))
-  useEffect(() => {
-    if (Number.parseFloat(text) !== value) setText(String(value))
-    // Sync exact text only when the external temperature changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-  return (
-    <div className="rounded-2xl border border-ink-900/[0.07] bg-frost-50/80 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="field-label">
-            {label}
-            <InfoTip label={`Información sobre ${label.toLowerCase()}`}>
-              Temperatura de saturación del refrigerante en el punto de diseño.
-              Ajusta el deslizador o el valor exacto.
-            </InfoTip>
-          </div>
-          <div className="input-shell mt-1 max-w-32">
-            <input
-              type="number"
-              aria-label={`${label} exact value`}
-              value={text}
-              min={min}
-              max={max}
-              step={0.1}
-              onChange={(event) => {
-                const nextText = event.target.value
-                setText(nextText)
-                const next = Number.parseFloat(nextText)
-                if (Number.isFinite(next)) {
-                  onChange(Math.min(max, Math.max(min, next)))
-                }
-              }}
-              onBlur={() => {
-                if (!Number.isFinite(Number.parseFloat(text))) setText(String(value))
-              }}
-              className="input-base py-1.5 text-[17px]"
-            />
-            <span className="shrink-0 border-l border-ink-900/10 px-2.5 text-[11px] font-bold text-ink-600">
-              °C
-            </span>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
-            P sat
-          </div>
-          <div className="mt-1 font-mono text-[12px] font-semibold text-ink-800">
-            {pressure > 0 ? fmtKpa(pressure) : '—'}
-          </div>
-        </div>
-      </div>
-      <input
-        className="range-input mt-4"
-        style={{ '--fill': `${percent}%` } as CSSProperties}
-        type="range"
-        min={min}
-        max={max}
-        step={0.5}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        aria-label={label}
-      />
-      <div className="mt-1.5 flex justify-between font-mono text-[8px] text-ink-600">
-        <span>{fmt(min, 0)} °C</span>
-        <span>{fmt(max, 0)} °C</span>
-      </div>
-    </div>
-  )
-}
-
-const AuxiliaryTemperatureControl = ({
-  label,
-  value,
-  onChange,
-  min,
-  max,
-}: {
-  label: string
-  value: number
-  onChange: (value: number) => void
-  min: number
-  max: number
-}) => {
-  const percent = ((value - min) / (max - min)) * 100
-  const [text, setText] = useState(String(value))
-  useEffect(() => {
-    if (Number.parseFloat(text) !== value) setText(String(value))
-    // Sync exact text only when the external temperature changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-  return (
-    <div className="rounded-2xl border border-ink-900/[0.07] bg-frost-50/80 p-4">
-      <label className="field-label" htmlFor={`${label}-number`}>
-        {label}
-      </label>
-      <div className="input-shell mt-1 max-w-36">
-        <input
-          id={`${label}-number`}
-          type="number"
-          value={text}
-          min={min}
-          max={max}
-          step={0.1}
-          onChange={(event) => {
-            const nextText = event.target.value
-            setText(nextText)
-            const next = Number.parseFloat(nextText)
-            if (Number.isFinite(next)) {
-              onChange(Math.min(max, Math.max(min, next)))
-            }
-          }}
-          onBlur={() => {
-            if (!Number.isFinite(Number.parseFloat(text))) setText(String(value))
-          }}
-          className="input-base py-1.5 text-[16px]"
-        />
-        <span className="shrink-0 border-l border-ink-900/10 px-2.5 text-[11px] font-bold text-ink-600">
-          °C
-        </span>
-      </div>
-      <input
-        className="range-input mt-4"
-        style={{ '--fill': `${percent}%` } as CSSProperties}
-        type="range"
-        min={min}
-        max={max}
-        step={0.5}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        aria-label={label}
-      />
-      <div className="mt-1.5 flex justify-between font-mono text-[8px] text-ink-600">
-        <span>{fmt(min, 0)} °C</span>
-        <span>{fmt(max, 0)} °C</span>
-      </div>
-    </div>
-  )
 }
 
 const WarningList = ({ warnings }: { warnings: CalculationWarning[] }) => {
@@ -807,135 +642,88 @@ export const CalculatorPage = () => {
                 }
               />
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <TemperatureControl
+              <div className="mt-5 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                <NumberField
                   label="Evaporación objetivo"
                   value={input.targetEvapC}
-                  onChange={(value) =>
+                  onChange={(targetEvapC) =>
                     updateInput({
-                      targetEvapC: value,
+                      targetEvapC,
                       targetReturnGasTempC:
-                        input.targetReturnGasTempC +
-                        (value - input.targetEvapC),
+                        targetEvapC + input.targetSuperheatK,
                     })
                   }
+                  unit="°C"
                   min={Math.max(-40, refrigerantLimits.minDesignEvapC)}
                   max={Math.min(15, refrigerantLimits.maxC)}
-                  refrigerantId={input.refrigerantId}
-                  phase="dew"
+                  step={0.1}
                 />
-                <TemperatureControl
+                <NumberField
                   label="Condensación objetivo"
                   value={input.targetCondC}
-                  onChange={(value) => updateInput({ targetCondC: value })}
+                  onChange={(targetCondC) => updateInput({ targetCondC })}
+                  unit="°C"
                   min={25}
                   max={Math.min(65, refrigerantLimits.maxDesignCondC)}
-                  refrigerantId={input.refrigerantId}
-                  phase="bubble"
+                  step={0.1}
                 />
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="mr-1 text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
-                  Atajos
-                </span>
-                {presets.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() =>
-                      updateInput({
-                        targetEvapC: preset.evap,
-                        targetCondC: preset.cond,
-                        targetReturnGasTempC:
-                          input.targetReturnGasTempC +
-                          (preset.evap - input.targetEvapC),
-                      })
-                    }
-                    className={clsx(
-                      'rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition-all',
-                      input.targetEvapC === preset.evap &&
-                        input.targetCondC === preset.cond
-                        ? 'border-mint-500/30 bg-mint-500/10 text-mint-700'
-                        : 'border-ink-900/10 bg-white text-ink-600 hover:border-ink-900/20',
-                    )}
-                  >
-                    {preset.label}
-                    <span className="ml-1.5 font-mono text-[9px]">
-                      {preset.evap}/{preset.cond}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <AuxiliaryTemperatureControl
+                <NumberField
                   label="Temperatura de Retorno de gas"
                   value={input.targetReturnGasTempC}
                   onChange={(targetReturnGasTempC) =>
-                    updateInput({ targetReturnGasTempC })
+                    updateInput({
+                      targetReturnGasTempC,
+                      targetSuperheatK:
+                        targetReturnGasTempC - input.targetEvapC,
+                    })
                   }
+                  unit="°C"
                   min={Math.max(-55, input.targetEvapC)}
                   max={100}
+                  step={0.1}
                 />
-                <AuxiliaryTemperatureControl
+                <NumberField
                   label="Temperatura Ambiente"
                   value={input.targetAmbientTempC}
                   onChange={(targetAmbientTempC) =>
                     updateInput({ targetAmbientTempC })
                   }
+                  unit="°C"
                   min={-20}
                   max={60}
+                  step={0.1}
+                />
+                <NumberField
+                  label="Recalentamiento (SH)"
+                  value={input.targetSuperheatK}
+                  onChange={(targetSuperheatK) =>
+                    updateInput({
+                      targetSuperheatK,
+                      targetReturnGasTempC:
+                        input.targetEvapC + targetSuperheatK,
+                    })
+                  }
+                  unit="K"
+                  min={0}
+                  max={200}
+                  step={0.1}
+                />
+                <NumberField
+                  label="Subenfriamiento (SC)"
+                  value={input.targetSubcoolK}
+                  onChange={(targetSubcoolK) => updateInput({ targetSubcoolK })}
+                  unit="K"
+                  min={0}
+                  max={100}
+                  step={0.1}
                 />
               </div>
-              <div
-                className={clsx(
-                  'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-[11px]',
-                  input.targetReturnGasTempC < input.targetEvapC
-                    ? 'bg-red-50 text-red-700'
-                    : 'bg-mint-50 text-mint-800',
-                )}
-                role="status"
-              >
-                <span>
-                  SH calculado:{' '}
-                  {fmt(
-                    input.targetReturnGasTempC - input.targetEvapC,
-                    1,
-                  )}{' '}
-                  K
-                </span>
-                <span>
-                  Salto condensador:{' '}
-                  {fmt(
-                    input.targetCondC - input.targetAmbientTempC,
-                    1,
-                  )}{' '}
-                  K
-                </span>
-              </div>
-              {input.targetReturnGasTempC < input.targetEvapC && (
-                <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">
-                  La temperatura de retorno debe ser igual o superior a la
-                  evaporación para calcular el sobrecalentamiento.
-                </p>
-              )}
               {input.targetCondC - input.targetAmbientTempC < 5 && (
                 <p role="alert" className="mt-2 text-[11px] font-medium text-amber-700">
                   Salto térmico bajo entre ambiente y condensación. Verifica la
                   ventilación y el punto de condensación.
                 </p>
               )}
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <NumberField
-                  label="Subenfriamiento de líquido"
-                  value={input.targetSubcoolK}
-                  onChange={(value) => updateInput({ targetSubcoolK: value })}
-                  unit="K"
-                  hint="Enfriamiento del líquido antes del capilar. Más subenfriamiento = más caudal."
-                />
-              </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-ink-900/[0.06] bg-ink-950 px-3.5 py-2.5 text-[10px] text-white/60">
                 <span className="flex items-center gap-1.5 font-semibold text-white/75">

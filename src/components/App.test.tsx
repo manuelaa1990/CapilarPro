@@ -282,18 +282,28 @@ describe('CapilarPro', () => {
     expect(screen.getAllByText('Validados').length).toBeGreaterThan(0)
   })
 
-  it('calcula SH de operación desde retorno y muestra alerta de bajo salto del condensador', async () => {
+  it('permite editar SH y muestra alerta de bajo salto del condensador', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    expect(screen.getByText('SH calculado: 10,0 K')).toBeInTheDocument()
+    const superheat = screen.getByRole('spinbutton', {
+      name: 'Recalentamiento (SH)',
+    })
+    expect(superheat).toHaveValue(10)
 
     const returnGas = screen.getByRole('spinbutton', {
       name: 'Temperatura de Retorno de gas',
     })
     await user.clear(returnGas)
     await user.type(returnGas, '12')
-    expect(screen.getByText('SH calculado: 17,0 K')).toBeInTheDocument()
+    expect(superheat).toHaveValue(17)
+
+    await user.clear(superheat)
+    await user.type(superheat, '15')
+    expect(returnGas).toHaveValue(10)
+
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+    expect(screen.queryByText('P sat')).not.toBeInTheDocument()
 
     const ambient = screen.getByRole('spinbutton', {
       name: 'Temperatura Ambiente',
