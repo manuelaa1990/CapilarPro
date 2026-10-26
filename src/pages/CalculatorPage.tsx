@@ -377,7 +377,7 @@ export const CalculatorPage = () => {
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <SelectField
-                  label="Norma del dato de placa"
+                  label="Estándar de ensayo"
                   value={input.standardId}
                   onChange={(value) => chooseStandard(value as StandardId)}
                   hint={standard.shortName === 'Personalizada' ? 'Define el punto exacto abajo.' : standard.reference}

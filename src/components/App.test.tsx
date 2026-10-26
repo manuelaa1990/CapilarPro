@@ -177,7 +177,7 @@ describe('CapilarPro', () => {
     render(<App />)
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Norma del dato de placa' }),
+      screen.getByRole('combobox', { name: 'Estándar de ensayo' }),
       'en12900',
     )
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(5)
@@ -193,7 +193,7 @@ describe('CapilarPro', () => {
     expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(0)
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Norma del dato de placa' }),
+      screen.getByRole('combobox', { name: 'Estándar de ensayo' }),
       'custom',
     )
     await user.selectOptions(
