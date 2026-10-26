@@ -1,4 +1,5 @@
 import type { CalculationInput, CalculationResult } from '../types'
+import { compressorById } from '../data/catalog'
 import { rpmFromFrequency } from '../engine/frequency'
 import {
   capacityToWatts,
@@ -103,7 +104,9 @@ export const saveCalculation = async (
   try {
     const { input } = result
     const ownerId = getOrCreateOwnerId()
-    const fingerprintHash = await compressorFingerprint(input)
+    const selectedCompressor = compressorById(input.compressorId)
+    const fingerprintHash =
+      selectedCompressor?.fingerprintHash ?? (await compressorFingerprint(input))
     const compressor = {
       owner_id: ownerId,
       fingerprint_hash: fingerprintHash,

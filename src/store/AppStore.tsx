@@ -58,6 +58,8 @@ const applicationForEvap = (
   temperatureC: number,
 ): CalculationInput['application'] =>
   temperatureC <= -20 ? 'LBP' : temperatureC <= 0 ? 'MBP' : 'HBP'
+const frequencyForRpm = (rpm: number) =>
+  Math.abs(rpm - 3000) <= Math.abs(rpm - 3600) ? 50 : 60
 
 const referenceConditionsFor = (
   standardId: StandardId,
@@ -206,6 +208,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       refrigerantId,
       standardId: compressor.standardId,
       application: applicationForEvap(compressor.ratedEvapC),
+      frequencyHz: frequencyForRpm(compressor.rpm),
       ratedCapacity: wattsToCapacity(
         compressor.ratedCapacityW,
         current.capacityUnit,
@@ -260,6 +263,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       compressorLabel: `${replacement.brand} ${replacement.model}`,
       standardId: replacement.standardId,
       application: applicationForEvap(replacement.ratedEvapC),
+      frequencyHz: frequencyForRpm(replacement.rpm),
       ratedCapacity: wattsToCapacity(
         replacement.ratedCapacityW,
         current.capacityUnit,

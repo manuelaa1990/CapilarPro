@@ -32,13 +32,63 @@ describe('CapilarPro', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const compressorLabel = screen.getByRole('textbox', {
+    const compressorLabel = screen.getByRole('combobox', {
       name: /Código o modelo del compresor/i,
     })
     await user.clear(compressorLabel)
     await user.type(compressorLabel, 'QD110H')
 
     expect(compressorLabel).toHaveValue('QD110H')
+  })
+
+  it('permite elegir un compresor del catálogo con el teclado y rellena la placa', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const compressorSearch = screen.getByRole('combobox', {
+      name: /Código o modelo del compresor/i,
+    })
+    await user.clear(compressorSearch)
+    await user.type(compressorSearch, 'secop sc15g')
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(compressorSearch).toHaveValue('Secop SC15G')
+    expect(
+      screen.getByRole('combobox', { name: 'Frecuencia de red' }),
+    ).toHaveValue('50')
+    const [capacity, displacement] = screen.getAllByRole('spinbutton')
+    expect(capacity).toHaveValue(1300)
+    expect(displacement).toHaveValue(15.3)
+  })
+
+  it('guarda los nombres personalizados recientes sin autocompletar la placa', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const capacity = screen.getAllByRole('spinbutton')[0]
+    await user.clear(capacity)
+    await user.type(capacity, '1377')
+    const compressorSearch = screen.getByRole('combobox', {
+      name: /Código o modelo del compresor/i,
+    })
+    await user.clear(compressorSearch)
+    await user.type(compressorSearch, 'Compresor de Juan')
+    await user.keyboard('{Enter}')
+
+    expect(compressorSearch).toHaveValue('Compresor de Juan')
+    expect(
+      screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
+    ).toHaveValue('custom')
+    expect(capacity).toHaveValue(1377)
+    expect(window.localStorage.getItem('capilarpro:recent_compressors')).toContain(
+      'Compresor de Juan',
+    )
+
+    await user.clear(compressorSearch)
+    await user.type(compressorSearch, 'juan')
+    expect(
+      screen.getByRole('option', { name: /Compresor de Juan/ }),
+    ).toBeInTheDocument()
   })
 
   it('conserva los datos de placa del compresor personalizado al cambiar de refrigerante', async () => {

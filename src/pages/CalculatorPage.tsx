@@ -41,6 +41,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ResultCard } from '../components/ResultCard'
 import { LearningCard } from '../components/LearningCard'
 import { BreakdownModal } from '../components/BreakdownModal'
+import { CompressorSearch } from '../components/CompressorSearch'
 import { saveCalculation } from '../lib/saveCalculation'
 
 const presets = [
@@ -440,21 +441,14 @@ export const CalculatorPage = () => {
               )}
 
               <div className="mt-4">
-                <label className="field-label" htmlFor="compressor-label">
-                  Código o modelo del compresor
-                </label>
-                <div className="input-shell">
-                  <input
-                    id="compressor-label"
-                    type="text"
-                    value={input.compressorLabel}
-                    onChange={(event) =>
-                      updateInput({ compressorLabel: event.target.value })
-                    }
-                    placeholder="Ej. QD110H"
-                    className="input-base"
-                  />
-                </div>
+                <CompressorSearch
+                  compressors={compressors}
+                  value={input.compressorLabel}
+                  onValueChange={(compressorLabel) =>
+                    updateInput({ compressorId: 'custom', compressorLabel })
+                  }
+                  onSelectCompressor={chooseCompressor}
+                />
               </div>
 
               <div className="mt-5">

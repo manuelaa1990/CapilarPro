@@ -67,6 +67,7 @@ export interface Compressor {
   standardId: StandardId
   application: string
   source: string
+  fingerprintHash?: string
   isCustom?: boolean
 }
 
