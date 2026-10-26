@@ -10,6 +10,7 @@ import { calculate } from '../engine/calculate'
 import { predictLengthForDiameter } from '../engine/capillary'
 import { saturationAtTemperature } from '../engine/properties'
 import {
+  deriveReferenceSuperheatAndSubcooling,
   getStandard,
   getStandardConditions,
   standardNameForId,
@@ -64,17 +65,35 @@ const frequencyForRpm = (rpm: number) =>
 const referenceConditionsFor = (
   standardId: StandardId,
   application: CalculationInput['application'],
+  current: Pick<
+    CalculationInput,
+    'refEvapC' | 'refCondC' | 'ambientTempC' | 'returnGasTempC'
+  >,
 ) => {
   const conditions = getStandardConditions(
     application,
     standardNameForId(standardId),
   )
-  if (!conditions) return {}
+  const refEvapC = conditions?.tEvapRef ?? current.refEvapC
+  const refCondC = conditions?.tCondRef ?? current.refCondC
+  const ambientTempC = conditions?.ambientTempC ?? current.ambientTempC
+  const returnGasTempC = conditions?.returnGasTempC ?? current.returnGasTempC
+  const derived = deriveReferenceSuperheatAndSubcooling({
+    refEvapC,
+    refCondC,
+    ambientTempC,
+    returnGasTempC,
+  })
   return {
-    refEvapC: conditions.tEvapRef,
-    refCondC: conditions.tCondRef,
-    refSuperheatK: conditions.shRef,
-    refSubcoolK: conditions.scRef,
+    ...(conditions
+      ? {
+          refEvapC,
+          refCondC,
+          ambientTempC,
+          returnGasTempC,
+        }
+      : {}),
+    ...derived,
   }
 }
 
@@ -291,7 +310,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setInput((current) => ({
       ...current,
       standardId: id,
-      ...referenceConditionsFor(id, current.application),
+      ...referenceConditionsFor(id, current.application, current),
     }))
   }, [])
 
@@ -300,7 +319,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setInput((current) => ({
         ...current,
         application,
-        ...referenceConditionsFor(current.standardId, application),
+        ...referenceConditionsFor(current.standardId, application, current),
       }))
     },
     [],

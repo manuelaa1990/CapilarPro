@@ -19,7 +19,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 ## Funciones principales
 
 - **Anclaje a placa**: capacidad en W o BTU/h, desplazamiento en cm³/rev o in³/rev, frecuencia de red (50/60 Hz) y condiciones de referencia editables. El motor normaliza las unidades antes del cálculo.
-- **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap., cond., recalentamiento y subenfriamiento según ASHRAE, EN 12900 o GB/T; la condición personalizada conserva los valores manuales.
+- **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap. y cond. según ASHRAE, EN 12900 o GB/T. El recalentamiento se deriva de temperatura de retorno menos evaporación, y el subenfriamiento de condensación menos ambiente; ambos valores quedan editables.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
 - **Incertidumbre honesta**: propagación RSS de modelo, capacidad, tolerancia dimensional, evidencia y propiedades.

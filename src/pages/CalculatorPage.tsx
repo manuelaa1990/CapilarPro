@@ -43,6 +43,7 @@ import { LearningCard } from '../components/LearningCard'
 import { BreakdownModal } from '../components/BreakdownModal'
 import { CompressorSearch } from '../components/CompressorSearch'
 import { saveCalculation } from '../lib/saveCalculation'
+import { deriveReferenceSuperheatAndSubcooling } from '../engine/standards'
 
 const presets = [
   { label: 'Conservación', evap: -5, cond: 45, hint: 'Media temperatura' },
@@ -551,11 +552,20 @@ export const CalculatorPage = () => {
                     {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                   <NumberField
                     label="Evap. referencia"
                     value={input.refEvapC}
-                    onChange={(value) => updateInput({ refEvapC: value, standardId: 'custom' })}
+                    onChange={(value) =>
+                      updateInput({
+                        refEvapC: value,
+                        ...deriveReferenceSuperheatAndSubcooling({
+                          ...input,
+                          refEvapC: value,
+                        }),
+                        standardId: 'custom',
+                      })
+                    }
                     unit="°C"
                     min={Math.max(-65, refrigerantLimits.minC)}
                     max={30}
@@ -565,10 +575,57 @@ export const CalculatorPage = () => {
                   <NumberField
                     label="Cond. referencia"
                     value={input.refCondC}
-                    onChange={(value) => updateInput({ refCondC: value, standardId: 'custom' })}
+                    onChange={(value) =>
+                      updateInput({
+                        refCondC: value,
+                        ...deriveReferenceSuperheatAndSubcooling({
+                          ...input,
+                          refCondC: value,
+                        }),
+                        standardId: 'custom',
+                      })
+                    }
                     unit="°C"
                     min={20}
                     max={Math.min(67, refrigerantLimits.maxC)}
+                    step={0.1}
+                    inputClassName="py-2 text-[13px]"
+                  />
+                  <NumberField
+                    label="Temp. Ambiente"
+                    value={input.ambientTempC}
+                    onChange={(value) => {
+                      updateInput({
+                        ambientTempC: value,
+                        ...deriveReferenceSuperheatAndSubcooling({
+                          ...input,
+                          ambientTempC: value,
+                        }),
+                        standardId: 'custom',
+                      })
+                    }}
+                    unit="°C"
+                    min={-65}
+                    max={67}
+                    step={0.1}
+                    inputClassName="py-2 text-[13px]"
+                  />
+                  <NumberField
+                    label="Temp. Retorno"
+                    value={input.returnGasTempC}
+                    onChange={(value) => {
+                      updateInput({
+                        returnGasTempC: value,
+                        ...deriveReferenceSuperheatAndSubcooling({
+                          ...input,
+                          returnGasTempC: value,
+                        }),
+                        standardId: 'custom',
+                      })
+                    }}
+                    unit="°C"
+                    min={-65}
+                    max={100}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
                   />
@@ -578,7 +635,7 @@ export const CalculatorPage = () => {
                     onChange={(value) => updateInput({ refSuperheatK: value, standardId: 'custom' })}
                     unit="K"
                     min={0}
-                    max={50}
+                    max={200}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
                   />
@@ -588,7 +645,7 @@ export const CalculatorPage = () => {
                     onChange={(value) => updateInput({ refSubcoolK: value, standardId: 'custom' })}
                     unit="K"
                     min={0}
-                    max={30}
+                    max={100}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
                   />

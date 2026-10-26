@@ -25,6 +25,14 @@ describe('CapilarPro', () => {
     expect(
       screen.queryByRole('combobox', { name: 'Compresor de la biblioteca' }),
     ).not.toBeInTheDocument()
+    const compressorSearch = screen.getByRole('combobox', {
+      name: /Código o modelo del compresor/i,
+    })
+    expect(compressorSearch).toHaveValue('')
+    expect(compressorSearch).toHaveAttribute(
+      'placeholder',
+      'Ingresa nombre o código del compresor',
+    )
     expect(screen.getByRole('combobox', { name: 'Refrigerante' })).toHaveValue(
       'R134a',
     )
@@ -39,6 +47,11 @@ describe('CapilarPro', () => {
       name: /Código o modelo del compresor/i,
     })
     await user.clear(compressorLabel)
+    expect(compressorLabel).toHaveValue('')
+    expect(compressorLabel).toHaveAttribute(
+      'placeholder',
+      'Ingresa nombre o código del compresor',
+    )
     await user.type(compressorLabel, 'QD110H')
 
     expect(compressorLabel).toHaveValue('QD110H')
@@ -189,8 +202,26 @@ describe('CapilarPro', () => {
     )
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-35)
     expect(screen.getByLabelText('Cond. referencia')).toHaveValue(40)
-    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(20)
-    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(0)
+    expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(32.2)
+    expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(32.2)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(67.2)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(7.8)
+
+    await user.clear(screen.getByLabelText('Temp. Retorno'))
+    await user.type(screen.getByLabelText('Temp. Retorno'), '31')
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(66)
+
+    await user.clear(screen.getByLabelText('Temp. Ambiente'))
+    await user.type(screen.getByLabelText('Temp. Ambiente'), '30')
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(10)
+
+    await user.clear(screen.getByLabelText('Evap. referencia'))
+    await user.type(screen.getByLabelText('Evap. referencia'), '-30')
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(61)
+
+    await user.clear(screen.getByLabelText('Cond. referencia'))
+    await user.type(screen.getByLabelText('Cond. referencia'), '45')
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(15)
 
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Estándar de ensayo' }),
@@ -200,7 +231,9 @@ describe('CapilarPro', () => {
       screen.getByRole('combobox', { name: 'Aplicación' }),
       'HBP',
     )
-    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-35)
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-30)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(61)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(15)
   })
 
   it('navega al historial y carga los casos de demostración', async () => {

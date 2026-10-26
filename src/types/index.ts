@@ -84,6 +84,8 @@ export interface CalculationInput {
   frequencyHz: number
   refEvapC: number
   refCondC: number
+  ambientTempC: number
+  returnGasTempC: number
   refSuperheatK: number
   refSubcoolK: number
   targetEvapC: number

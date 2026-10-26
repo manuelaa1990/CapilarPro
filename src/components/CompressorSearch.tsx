@@ -194,7 +194,7 @@ export const CompressorSearch = ({
             blurTimeout.current = window.setTimeout(commitCustomLabel, 120)
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Ej. QD110H o buscar marca/modelo"
+          placeholder="Ingresa nombre o código del compresor"
           className="input-base"
           role="combobox"
           aria-autocomplete="list"

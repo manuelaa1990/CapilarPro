@@ -13,28 +13,50 @@ export const standardsList = (): StandardCondition[] => standards
 export interface StandardConditions {
   tEvapRef: number
   tCondRef: number
+  ambientTempC: number
+  returnGasTempC: number
   shRef: number
   scRef: number
 }
 
+interface StandardTemperatureConditions {
+  tEvapRef: number
+  tCondRef: number
+  ambientTempC: number
+  returnGasTempC: number
+}
+
+export const deriveReferenceSuperheatAndSubcooling = ({
+  refEvapC,
+  refCondC,
+  ambientTempC,
+  returnGasTempC,
+}: Pick<
+  CalculationInput,
+  'refEvapC' | 'refCondC' | 'ambientTempC' | 'returnGasTempC'
+>) => ({
+  refSuperheatK: Number(Math.max(0, returnGasTempC - refEvapC).toFixed(1)),
+  refSubcoolK: Number(Math.max(0, refCondC - ambientTempC).toFixed(1)),
+})
+
 const applicationConditions: Record<
   'ASHRAE' | 'EN 12900' | 'GB/T',
-  Record<CompressorApplication, StandardConditions>
+  Record<CompressorApplication, StandardTemperatureConditions>
 > = {
   ASHRAE: {
-    LBP: { tEvapRef: -23.3, tCondRef: 54.4, shRef: 55.5, scRef: 0 },
-    MBP: { tEvapRef: -6.7, tCondRef: 54.4, shRef: 38.9, scRef: 0 },
-    HBP: { tEvapRef: 7.2, tCondRef: 54.4, shRef: 25, scRef: 0 },
+    LBP: { tEvapRef: -23.3, tCondRef: 54.4, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    MBP: { tEvapRef: -6.7, tCondRef: 54.4, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    HBP: { tEvapRef: 7.2, tCondRef: 54.4, ambientTempC: 32.2, returnGasTempC: 32.2 },
   },
   'EN 12900': {
-    LBP: { tEvapRef: -35, tCondRef: 40, shRef: 20, scRef: 0 },
-    MBP: { tEvapRef: -10, tCondRef: 40, shRef: 20, scRef: 0 },
-    HBP: { tEvapRef: 5, tCondRef: 50, shRef: 10, scRef: 0 },
+    LBP: { tEvapRef: -35, tCondRef: 40, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    MBP: { tEvapRef: -10, tCondRef: 40, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    HBP: { tEvapRef: 5, tCondRef: 50, ambientTempC: 32.2, returnGasTempC: 32.2 },
   },
   'GB/T': {
-    LBP: { tEvapRef: -25, tCondRef: 55, shRef: 20, scRef: 0 },
-    MBP: { tEvapRef: -7, tCondRef: 55, shRef: 20, scRef: 0 },
-    HBP: { tEvapRef: 7, tCondRef: 55, shRef: 20, scRef: 0 },
+    LBP: { tEvapRef: -25, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    MBP: { tEvapRef: -7, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    HBP: { tEvapRef: 7, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
   },
 }
 
@@ -48,7 +70,18 @@ export const getStandardConditions = (
   ) {
     return null
   }
-  return applicationConditions[norma][app]
+  const temperatures = applicationConditions[norma][app]
+  const derived = deriveReferenceSuperheatAndSubcooling({
+    refEvapC: temperatures.tEvapRef,
+    refCondC: temperatures.tCondRef,
+    ambientTempC: temperatures.ambientTempC,
+    returnGasTempC: temperatures.returnGasTempC,
+  })
+  return {
+    ...temperatures,
+    shRef: derived.refSuperheatK,
+    scRef: derived.refSubcoolK,
+  }
 }
 
 export const standardNameForId = (id: StandardId): string => {

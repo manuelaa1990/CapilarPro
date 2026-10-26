@@ -6,7 +6,7 @@ import type {
   SavedCase,
   StandardId,
 } from '../types'
-import { compressorById, defaults } from '../data/catalog'
+import { defaults } from '../data/catalog'
 import {
   capacityToWatts,
   displacementToCubicCentimeters,
@@ -44,7 +44,7 @@ const calculationInputObjectSchema = z
   .object({
     refrigerantId: refrigerantEnum,
     compressorId: z.string().min(1),
-    compressorLabel: z.string().min(1).max(160),
+    compressorLabel: z.string().max(160),
     standardId: standardEnum,
     application: applicationEnum,
     ratedCapacity: z.number().positive(),
@@ -54,8 +54,10 @@ const calculationInputObjectSchema = z
     frequencyHz: z.union([z.literal(50), z.literal(60)]),
     refEvapC: z.number().min(-65).max(30),
     refCondC: z.number().min(20).max(67),
-    refSuperheatK: z.number().min(0).max(50),
-    refSubcoolK: z.number().min(0).max(30),
+    ambientTempC: z.number().min(-65).max(67),
+    returnGasTempC: z.number().min(-65).max(100),
+    refSuperheatK: z.number().min(0).max(200),
+    refSubcoolK: z.number().min(0).max(100),
     targetEvapC: z.number().min(-55).max(20),
     targetCondC: z.number().min(20).max(67),
     targetSuperheatK: z.number().min(0).max(50),
@@ -102,6 +104,8 @@ export const calculationInputSchema = z
       ...migrated,
       capacityUnit: migrated.capacityUnit ?? 'W',
       displacementUnit: migrated.displacementUnit ?? 'cm³/rev',
+      ambientTempC: migrated.ambientTempC ?? 32.2,
+      returnGasTempC: migrated.returnGasTempC ?? 32.2,
     }
     return migrated
   }, calculationInputObjectSchema)
@@ -251,13 +255,10 @@ export const defaultSettings = (): AppSettings => ({
 
 export const defaultInput = (): CalculationInput => {
   const seed = defaults.defaults
-  const compressor = compressorById(seed.compressorId)
   return {
     refrigerantId: seed.refrigerantId as RefrigerantId,
-    compressorId: seed.compressorId,
-    compressorLabel: compressor
-      ? `${compressor.brand} ${compressor.model}`
-      : 'Compresor personalizado',
+    compressorId: 'custom',
+    compressorLabel: '',
     standardId: seed.standardId as StandardId,
     application:
       seed.refEvapC <= -20 ? 'LBP' : seed.refEvapC <= 0 ? 'MBP' : 'HBP',
@@ -268,8 +269,10 @@ export const defaultInput = (): CalculationInput => {
     frequencyHz: 60,
     refEvapC: seed.refEvapC,
     refCondC: seed.refCondC,
-    refSuperheatK: seed.refSuperheatK,
-    refSubcoolK: seed.refSubcoolK,
+    ambientTempC: 32.2,
+    returnGasTempC: 32.2,
+    refSuperheatK: 32.2 - seed.refEvapC,
+    refSubcoolK: seed.refCondC - 32.2,
     targetEvapC: seed.targetEvapC,
     targetCondC: seed.targetCondC,
     targetSuperheatK: seed.targetSuperheatK,

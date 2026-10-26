@@ -7,6 +7,23 @@ describe('validación del formulario', () => {
     const result = calculationInputSchema.safeParse(defaultInput())
     expect(result.success).toBe(true)
     expect(defaultInput().frequencyHz).toBe(60)
+    expect(defaultInput().compressorLabel).toBe('')
+    expect(defaultInput().compressorId).toBe('custom')
+    expect(defaultInput().ambientTempC).toBe(32.2)
+    expect(defaultInput().returnGasTempC).toBe(32.2)
+  })
+
+  it('migrates saved test temperatures to the standard defaults', () => {
+    const legacyInput: Record<string, unknown> = { ...defaultInput() }
+    delete legacyInput.ambientTempC
+    delete legacyInput.returnGasTempC
+
+    const result = calculationInputSchema.safeParse(legacyInput)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.ambientTempC).toBe(32.2)
+      expect(result.data.returnGasTempC).toBe(32.2)
+    }
   })
 
   it('migrates RPM from previously saved cases to a supported frequency', () => {
