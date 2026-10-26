@@ -20,6 +20,10 @@ import {
   pressureRatio,
 } from './volumetricEfficiency'
 import { rpmFromFrequency } from './frequency'
+import {
+  capacityToWatts,
+  displacementToCubicCentimeters,
+} from './units'
 
 interface CalculateOptions {
   calibration?: CalibrationSummary | null
@@ -37,6 +41,8 @@ const asSaturationPoint = (
   liquidEnthalpyKJkg: saturation.liquidEnthalpyKJkg,
   vaporEnthalpyKJkg: saturation.vaporEnthalpyKJkg,
   glideK: saturation.glideK,
+  bubblePressureKPa: saturation.bubblePressureKPa,
+  dewPressureKPa: saturation.dewPressureKPa,
 })
 
 const warningsFor = (
@@ -105,7 +111,7 @@ const warningsFor = (
       code: 'blend-glide',
       severity: 'info',
       title: 'Refrigerante zeotrópico',
-      message: `Glide aproximada ${result.refrigerant.glideK.toFixed(2)} K. El modelo promedia la curva de saturación; en campo verifica la temperatura de burbuja y rocío.`,
+      message: `Glide aproximada ${result.refrigerant.glideK.toFixed(2)} K. Ps usa el punto de rocío y Pd el de burbuja; verifica ambas temperaturas en campo.`,
     })
   }
 
@@ -143,18 +149,22 @@ export const calculate = (
   const referenceSaturation = saturationAtTemperature(
     input.refrigerantId,
     input.refEvapC,
+    'dew',
   )
   const targetSaturation = saturationAtTemperature(
     input.refrigerantId,
     input.targetEvapC,
+    'dew',
   )
   const referenceCondSaturation = saturationAtTemperature(
     input.refrigerantId,
     input.refCondC,
+    'bubble',
   )
   const targetCondSaturation = saturationAtTemperature(
     input.refrigerantId,
     input.targetCondC,
+    'bubble',
   )
 
   if (input.targetCondC <= input.targetEvapC + 8) {
@@ -193,7 +203,13 @@ export const calculate = (
 
   const rpm = rpmFromFrequency(input.frequencyHz)
   const sweptVolumeM3s =
-    (input.displacementCm3Rev * 1e-6 * rpm) / 60
+    (displacementToCubicCentimeters(
+      input.displacement,
+      input.displacementUnit,
+    ) *
+      1e-6 *
+      rpm) /
+    60
   if (sweptVolumeM3s <= 0) {
     throw new Error('El desplazamiento y la frecuencia deben ser positivos')
   }
@@ -208,7 +224,7 @@ export const calculate = (
   )
 
   const rawEtaVolumetricRef =
-    input.ratedCapacityW /
+    capacityToWatts(input.ratedCapacity, input.capacityUnit) /
     (sweptVolumeM3s *
       referenceSuction.densityKgM3 *
       referenceEnthalpyDifference *

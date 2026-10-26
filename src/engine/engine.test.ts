@@ -8,7 +8,11 @@ import {
   simulateCapillaryLength,
 } from './capillary'
 import { fingerprintOf } from './fingerprint'
-import { saturationAtPressure, saturationAtTemperature } from './properties'
+import {
+  fluidLimits,
+  saturationAtPressure,
+  saturationAtTemperature,
+} from './properties'
 import { applyStandard, getStandardConditions } from './standards'
 import { estimateUncertainty } from './uncertainty'
 import { anchorVolumetricEfficiency } from './volumetricEfficiency'
@@ -154,8 +158,10 @@ describe('cálculo completo', () => {
         compressorLabel: `${compressor.brand} ${compressor.model}`,
         refrigerantId: compressor.refrigerants[0],
         standardId: compressor.standardId,
-        ratedCapacityW: compressor.ratedCapacityW,
-        displacementCm3Rev: compressor.displacementCm3Rev,
+        ratedCapacity: compressor.ratedCapacityW,
+        capacityUnit: 'W',
+        displacement: compressor.displacementCm3Rev,
+        displacementUnit: 'cm³/rev',
         frequencyHz: 60,
         refEvapC: compressor.ratedEvapC,
         refCondC: compressor.ratedCondC,
@@ -176,11 +182,73 @@ describe('frecuencia de red', () => {
     const at60Hz = calculateWith({ frequencyHz: 60 })
 
     expect(at50Hz.compressor.sweptVolumeM3s).toBeCloseTo(
-      (defaultInput().displacementCm3Rev * 1e-6 * 3000) / 60,
+      (defaultInput().displacement * 1e-6 * 3000) / 60,
     )
     expect(at60Hz.compressor.sweptVolumeM3s).toBeCloseTo(
-      (defaultInput().displacementCm3Rev * 1e-6 * 3600) / 60,
+      (defaultInput().displacement * 1e-6 * 3600) / 60,
     )
+  })
+})
+
+describe('conversiones de unidades', () => {
+  it('produce el mismo cálculo desde W/cm³ y BTU/h/in³', () => {
+    const metricInput = {
+      ...defaultInput(),
+      ratedCapacity: 1300,
+      capacityUnit: 'W' as const,
+      displacement: 15.3,
+      displacementUnit: 'cm³/rev' as const,
+    }
+    const imperialInput = {
+      ...metricInput,
+      ratedCapacity: 1300 * 3.412,
+      capacityUnit: 'BTU/h' as const,
+      displacement: 15.3 / 16.387,
+      displacementUnit: 'in³/rev' as const,
+    }
+
+    const metric = calculate(metricInput)
+    const imperial = calculate(imperialInput)
+    expect(imperial.compressor.sweptVolumeM3s).toBeCloseTo(
+      metric.compressor.sweptVolumeM3s,
+      10,
+    )
+    expect(imperial.compressor.rawEtaVolumetricRef).toBeCloseTo(
+      metric.compressor.rawEtaVolumetricRef,
+      10,
+    )
+    expect(imperial.capillary.lengthM).toBeCloseTo(metric.capillary.lengthM, 8)
+  })
+})
+
+describe('refrigerantes zeotrópicos', () => {
+  it('separa presión de rocío y burbuja para los cuatro sustitutos incluidos', () => {
+    for (const refrigerantId of ['R407C', 'R417A', 'R422D', 'R427A'] as const) {
+      const bubble = saturationAtTemperature(refrigerantId, 25, 'bubble')
+      const dew = saturationAtTemperature(refrigerantId, 25, 'dew')
+      expect(bubble.pressureKPa).toBeGreaterThan(dew.pressureKPa)
+      expect(
+        saturationAtPressure(
+          refrigerantId,
+          bubble.pressureKPa,
+          'bubble',
+        ).temperatureC,
+      ).toBeCloseTo(25, 3)
+      expect(
+        saturationAtPressure(refrigerantId, dew.pressureKPa, 'dew')
+          .temperatureC,
+      ).toBeCloseTo(25, 3)
+    }
+  })
+
+  it('calcula el punto objetivo con cada mezcla zeotrópica incluida', () => {
+    for (const refrigerantId of ['R407C', 'R417A', 'R422D', 'R427A'] as const) {
+      const result = calculateWith({ refrigerantId })
+      expect(Number.isFinite(result.compressor.targetPressureRatio)).toBe(true)
+      expect(Number.isFinite(result.capillary.lengthM)).toBe(true)
+      expect(result.capillary.lengthM).toBeGreaterThan(0)
+    }
+    expect(fluidLimits('R427A').minDesignEvapC).toBeGreaterThan(-40)
   })
 })
 

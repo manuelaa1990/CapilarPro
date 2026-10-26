@@ -39,6 +39,10 @@ import {
 } from './userData'
 import { defaultInput, defaultSettings } from './schemas'
 import { fingerprintOf } from '../engine/fingerprint'
+import {
+  wattsToCapacity,
+  cubicCentimetersToDisplacement,
+} from '../engine/units'
 import { getOrCreateOwnerId } from '../lib/saveCalculation'
 
 const parseTab = (): TabId => {
@@ -76,9 +80,9 @@ const makeId = () =>
   `case-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 
 const pressuresFor = (input: CalculationInput) => ({
-  high: saturationAtTemperature(input.refrigerantId, input.targetCondC)
+  high: saturationAtTemperature(input.refrigerantId, input.targetCondC, 'bubble')
     .pressureKPa,
-  low: saturationAtTemperature(input.refrigerantId, input.targetEvapC)
+  low: saturationAtTemperature(input.refrigerantId, input.targetEvapC, 'dew')
     .pressureKPa,
 })
 
@@ -202,8 +206,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       refrigerantId,
       standardId: compressor.standardId,
       application: applicationForEvap(compressor.ratedEvapC),
-      ratedCapacityW: compressor.ratedCapacityW,
-      displacementCm3Rev: compressor.displacementCm3Rev,
+      ratedCapacity: wattsToCapacity(
+        compressor.ratedCapacityW,
+        current.capacityUnit,
+      ),
+      displacement: cubicCentimetersToDisplacement(
+        compressor.displacementCm3Rev,
+        current.displacementUnit,
+      ),
       refEvapC: compressor.ratedEvapC,
       refCondC: compressor.ratedCondC,
       refSuperheatK: compressor.ratedSuperheatK,
@@ -250,8 +260,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       compressorLabel: `${replacement.brand} ${replacement.model}`,
       standardId: replacement.standardId,
       application: applicationForEvap(replacement.ratedEvapC),
-      ratedCapacityW: replacement.ratedCapacityW,
-      displacementCm3Rev: replacement.displacementCm3Rev,
+      ratedCapacity: wattsToCapacity(
+        replacement.ratedCapacityW,
+        current.capacityUnit,
+      ),
+      displacement: cubicCentimetersToDisplacement(
+        replacement.displacementCm3Rev,
+        current.displacementUnit,
+      ),
       refEvapC: replacement.ratedEvapC,
       refCondC: replacement.ratedCondC,
       refSuperheatK: replacement.ratedSuperheatK,
@@ -380,8 +396,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         compressorLabel: `${compressor.brand} ${compressor.model}`,
         standardId: compressor.standardId,
         application: applicationForEvap(compressor.ratedEvapC),
-        ratedCapacityW: compressor.ratedCapacityW,
-        displacementCm3Rev: compressor.displacementCm3Rev,
+        ratedCapacity: compressor.ratedCapacityW,
+        capacityUnit: 'W',
+        displacement: compressor.displacementCm3Rev,
+        displacementUnit: 'cm³/rev',
         refEvapC: compressor.ratedEvapC,
         refCondC: compressor.ratedCondC,
         refSuperheatK: compressor.ratedSuperheatK,
@@ -399,10 +417,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const highPressure = saturationAtTemperature(
           demoInput.refrigerantId,
           demoInput.targetCondC,
+          'bubble',
         ).pressureKPa
         const lowPressure = saturationAtTemperature(
           demoInput.refrigerantId,
           demoInput.targetEvapC,
+          'dew',
         ).pressureKPa
         const modeled = predictLengthForDiameter(
           demoInput,

@@ -14,17 +14,19 @@ type FluidRow = [
   cpV_JkgK: number,
   muL_Pas: number,
   muV_Pas: number,
-  kL_WmK: number,
-  kV_WmK: number,
-  sigma_Nm: number,
+  kL_WmK: number | null,
+  kV_WmK: number | null,
+  sigma_Nm: number | null,
 ]
+
+export type SaturationPhase = 'bubble' | 'dew' | 'mean'
 
 interface FluidTable {
   minC: number
   maxC: number
   criticalC: number
   molarMass: number
-  tripleC: number
+  tripleC: number | null
   rows: FluidRow[]
 }
 
@@ -33,9 +35,9 @@ interface DetailedSaturation extends SaturationPoint {
   cpV: number
   muL: number
   muV: number
-  kL: number
-  kV: number
-  sigma: number
+  kL: number | null
+  kV: number | null
+  sigma: number | null
   molarMass: number
 }
 
@@ -73,10 +75,13 @@ const findBracket = (values: number[], target: number): [number, number, number]
 }
 
 const rowToSaturation = (row: FluidRow, molarMass: number): DetailedSaturation => {
-  const pressureKPa = (row[1] + row[2]) / 2
+  const bubblePressureKPa = row[1]
+  const dewPressureKPa = row[2]
   return {
     temperatureC: row[0],
-    pressureKPa,
+    pressureKPa: (bubblePressureKPa + dewPressureKPa) / 2,
+    bubblePressureKPa,
+    dewPressureKPa,
     liquidDensity: row[3],
     vaporDensity: row[4],
     liquidEnthalpyKJkg: row[5] / 1000,
@@ -103,6 +108,8 @@ const blendRows = (
   temperatureC:
     options?.temperatureOverrideC ?? lerp(a.temperatureC, b.temperatureC, t),
   pressureKPa: options?.pressureOverrideKPa ?? lerp(a.pressureKPa, b.pressureKPa, t),
+  bubblePressureKPa: lerp(a.bubblePressureKPa, b.bubblePressureKPa, t),
+  dewPressureKPa: lerp(a.dewPressureKPa, b.dewPressureKPa, t),
   liquidDensity: lerp(a.liquidDensity, b.liquidDensity, t),
   vaporDensity: lerp(a.vaporDensity, b.vaporDensity, t),
   liquidEnthalpyKJkg: lerp(a.liquidEnthalpyKJkg, b.liquidEnthalpyKJkg, t),
@@ -113,15 +120,21 @@ const blendRows = (
   cpV: lerp(a.cpV, b.cpV, t),
   muL: lerp(a.muL, b.muL, t),
   muV: lerp(a.muV, b.muV, t),
-  kL: lerp(a.kL, b.kL, t),
-  kV: lerp(a.kV, b.kV, t),
-  sigma: lerp(a.sigma, b.sigma, t),
+  kL:
+    a.kL === null || b.kL === null ? null : lerp(a.kL, b.kL, t),
+  kV:
+    a.kV === null || b.kV === null ? null : lerp(a.kV, b.kV, t),
+  sigma:
+    a.sigma === null || b.sigma === null
+      ? null
+      : lerp(a.sigma, b.sigma, t),
   molarMass: lerp(a.molarMass, b.molarMass, t),
 })
 
 export const saturationAtTemperature = (
   fluid: RefrigerantId,
   temperatureC: number,
+  phase: SaturationPhase = 'mean',
 ): DetailedSaturation => {
   const table = fluidTable(fluid)
   if (temperatureC < table.minC || temperatureC > table.maxC) {
@@ -135,6 +148,12 @@ export const saturationAtTemperature = (
   const a = rowToSaturation(table.rows[low], table.molarMass)
   const b = rowToSaturation(table.rows[high], table.molarMass)
   const saturation = t === 0 ? a : blendRows(a, b, t, { temperatureOverrideC: temperatureC })
+  saturation.pressureKPa =
+    phase === 'bubble'
+      ? saturation.bubblePressureKPa
+      : phase === 'dew'
+        ? saturation.dewPressureKPa
+        : (saturation.bubblePressureKPa + saturation.dewPressureKPa) / 2
   saturation.glideK = refrigerantById(fluid).glideK
   return saturation
 }
@@ -142,13 +161,59 @@ export const saturationAtTemperature = (
 export const saturationAtPressure = (
   fluid: RefrigerantId,
   pressureKPa: number,
+  phase: SaturationPhase = 'mean',
 ): DetailedSaturation => {
   const table = fluidTable(fluid)
   if (!Number.isFinite(pressureKPa) || pressureKPa <= 0) {
     throw new Error('La presión de saturación debe ser positiva')
   }
 
-  const pressureValues = table.rows.map((row) => (row[1] + row[2]) / 2)
+  const bubblePressures = table.rows.map((row) => row[1])
+  const dewPressures = table.rows.map((row) => row[2])
+  const blend = refrigerantById(fluid).glideK >= 0.25
+
+  if (phase === 'mean' && blend) {
+    const temperatureAtPressure = (pressures: number[]) => {
+      if (pressureKPa < pressures[0] || pressureKPa > pressures.at(-1)!) {
+        throw new Error(
+          `${fluid}: ${pressureKPa.toFixed(0)} kPa está fuera del rango de saturación disponible`,
+        )
+      }
+      const [low, high, t] = findBracket(pressures, pressureKPa)
+      return lerp(table.rows[low][0], table.rows[high][0], t)
+    }
+    const bubbleTemperature = temperatureAtPressure(bubblePressures)
+    const dewTemperature = temperatureAtPressure(dewPressures)
+    const bubble = saturationAtTemperature(fluid, bubbleTemperature, 'bubble')
+    const dew = saturationAtTemperature(fluid, dewTemperature, 'dew')
+    return {
+      ...bubble,
+      temperatureC: (bubbleTemperature + dewTemperature) / 2,
+      pressureKPa,
+      bubblePressureKPa: pressureKPa,
+      dewPressureKPa: pressureKPa,
+      liquidDensity: bubble.liquidDensity,
+      vaporDensity: dew.vaporDensity,
+      liquidEnthalpyKJkg: bubble.liquidEnthalpyKJkg,
+      vaporEnthalpyKJkg: dew.vaporEnthalpyKJkg,
+      latentHeatKJkg:
+        dew.vaporEnthalpyKJkg - bubble.liquidEnthalpyKJkg,
+      cpL: bubble.cpL,
+      cpV: dew.cpV,
+      muL: bubble.muL,
+      muV: dew.muV,
+      kL: bubble.kL,
+      kV: dew.kV,
+    }
+  }
+
+  const pressureValues = table.rows.map((row) =>
+    phase === 'bubble'
+      ? row[1]
+      : phase === 'dew'
+        ? row[2]
+        : (row[1] + row[2]) / 2,
+  )
   if (pressureKPa < pressureValues[0] || pressureKPa > pressureValues.at(-1)!) {
     throw new Error(
       `${fluid}: ${pressureKPa.toFixed(0)} kPa está fuera del rango de saturación disponible`,
@@ -157,11 +222,12 @@ export const saturationAtPressure = (
 
   const [low, high, t] = findBracket(pressureValues, pressureKPa)
   const temperature = lerp(table.rows[low][0], table.rows[high][0], t)
-  const base = saturationAtTemperature(fluid, temperature)
+  const base = saturationAtTemperature(fluid, temperature, phase)
   return {
     ...base,
     pressureKPa,
-    glideK: base.glideK,
+    bubblePressureKPa: base.bubblePressureKPa,
+    dewPressureKPa: base.dewPressureKPa,
   }
 }
 
@@ -181,7 +247,7 @@ export const superheatedVaporState = (
   pressureKPa: number,
   temperatureC: number,
 ): ThermoState => {
-  const saturation = saturationAtPressure(fluid, pressureKPa)
+  const saturation = saturationAtPressure(fluid, pressureKPa, 'dew')
   const superheat = temperatureC - saturation.temperatureC
   if (superheat < -0.25) {
     throw new Error(
@@ -209,7 +275,7 @@ export const subcooledLiquidState = (
   pressureKPa: number,
   temperatureC: number,
 ): ThermoState => {
-  const saturation = saturationAtPressure(fluid, pressureKPa)
+  const saturation = saturationAtPressure(fluid, pressureKPa, 'bubble')
   const subcooling = saturation.temperatureC - temperatureC
   if (subcooling < -0.25) {
     throw new Error(
@@ -257,9 +323,27 @@ export const capillarySaturationAtPressure = (
 
 export const fluidLimits = (fluid: RefrigerantId) => {
   const table = fluidTable(fluid)
+  const minimumSaturationPressure = Math.max(
+    table.rows[0][1],
+    table.rows[0][2],
+  )
+  const maximumSaturationPressure = Math.min(
+    table.rows.at(-1)![1],
+    table.rows.at(-1)![2],
+  )
+  const minDesignEvapC =
+    table.rows.find((row) => row[2] >= minimumSaturationPressure)?.[0] ??
+    table.minC
+  const maxDesignCondC =
+    [...table.rows]
+      .reverse()
+      .find((row) => row[1] <= maximumSaturationPressure)?.[0] ??
+    table.maxC
   return {
     minC: table.minC,
     maxC: table.maxC,
+    minDesignEvapC,
+    maxDesignCondC,
     criticalC: table.criticalC,
     tripleC: table.tripleC,
     molarMass: table.molarMass,

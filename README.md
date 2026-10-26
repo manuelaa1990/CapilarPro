@@ -18,7 +18,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 
 ## Funciones principales
 
-- **Anclaje a placa**: capacidad, desplazamiento, frecuencia de red (50/60 Hz) y condiciones de referencia editables.
+- **Anclaje a placa**: capacidad en W o BTU/h, desplazamiento en cm³/rev o in³/rev, frecuencia de red (50/60 Hz) y condiciones de referencia editables. El motor normaliza las unidades antes del cálculo.
 - **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap., cond., recalentamiento y subenfriamiento según ASHRAE, EN 12900 o GB/T; la condición personalizada conserva los valores manuales.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
@@ -33,9 +33,9 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 
 | Refrigerantes | Normas de referencia |
 | --- | --- |
-| R134a, R600a, R404A, R290, R22, R507A | AHRI 540, EN 12900, AHRI histórico / ARI y condición personalizada |
+| R134a, R600a, R404A, R290, R22, R507A, R407C, R417A, R422D, R427A | AHRI 540, EN 12900, AHRI histórico / ARI y condición personalizada |
 
-Las propiedades de saturación se generan desde **CoolProp 6.6.0 (HEOS)** y se versionan en `src/data/refrigerantTables.json` con paso de 1 K. El motor interpola esas tablas en el navegador; no carga WASM en tiempo de ejecución.
+Las propiedades de saturación se generan desde **CoolProp 6.6.0 (HEOS)** y se versionan en `src/data/refrigerantTables.json` con paso de 1 K. R407C usa su fluido HEOS; R417A, R422D y R427A usan sus composiciones másicas nominales como mezclas HEOS de componentes. La tabla de R427A comienza en −40 °C, límite de transporte disponible en esta versión. El motor usa la curva de rocío para la aspiración y la de burbuja para la condensación y el líquido subenfriado. El aviso de la interfaz recuerda cargar mezclas zeotrópicas en fase líquida. R438A no se ofrece todavía: HEOS 6.6 no tiene los parámetros de interacción necesarios para generar una tabla completa validada. El motor interpola las tablas en el navegador; no carga WASM en tiempo de ejecución.
 
 ## Cómo calcula
 

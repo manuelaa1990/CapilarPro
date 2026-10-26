@@ -87,7 +87,11 @@ export const simulateCapillaryLength = (
   if (area <= 0 || operating.massFlowKgS <= 0) return null
 
   const massFlux = operating.massFlowKgS / area
-  const inlet = saturationAtPressure(operating.fluid, operating.pressureInKPa)
+  const inlet = saturationAtPressure(
+    operating.fluid,
+    operating.pressureInKPa,
+    'bubble',
+  )
   if (operating.pressureInKPa <= operating.pressureOutKPa) return null
 
   const inletEnthalpy =

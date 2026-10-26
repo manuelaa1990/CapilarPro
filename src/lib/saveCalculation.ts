@@ -1,5 +1,9 @@
 import type { CalculationInput, CalculationResult } from '../types'
 import { rpmFromFrequency } from '../engine/frequency'
+import {
+  capacityToWatts,
+  displacementToCubicCentimeters,
+} from '../engine/units'
 import { neonClient } from './neonClient'
 
 const OWNER_ID_KEY = 'capilarpro:owner_id'
@@ -55,8 +59,14 @@ const compressorFingerprint = async (input: CalculationInput) => {
     compressorId: input.compressorId,
     compressorLabel: input.compressorLabel,
     refrigerantId: input.refrigerantId,
-    ratedCapacityW: roundTo(input.ratedCapacityW, 0),
-    displacementCm3Rev: roundTo(input.displacementCm3Rev, 1),
+    ratedCapacityW: roundTo(
+      capacityToWatts(input.ratedCapacity, input.capacityUnit),
+      0,
+    ),
+    displacementCm3Rev: roundTo(
+      displacementToCubicCentimeters(input.displacement, input.displacementUnit),
+      1,
+    ),
     rpm: roundTo(rpmFromFrequency(input.frequencyHz), 0),
     refEvapC: roundTo(input.refEvapC, 1),
     refCondC: roundTo(input.refCondC, 1),
@@ -99,9 +109,14 @@ export const saveCalculation = async (
       fingerprint_hash: fingerprintHash,
       modelo: input.compressorLabel,
       refrigerante: input.refrigerantId,
-      vd_cm3: input.displacementCm3Rev,
+      vd_cm3: displacementToCubicCentimeters(
+        input.displacement,
+        input.displacementUnit,
+      ),
       rpm: rpmFromFrequency(input.frequencyHz),
-      q_ref_btu: input.ratedCapacityW * WATTS_TO_BTU_PER_HOUR,
+      q_ref_btu:
+        capacityToWatts(input.ratedCapacity, input.capacityUnit) *
+        WATTS_TO_BTU_PER_HOUR,
       t_evap_ref_c: input.refEvapC,
       t_cond_ref_c: input.refCondC,
       sh_ref_k: input.refSuperheatK,

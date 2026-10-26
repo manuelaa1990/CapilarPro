@@ -17,6 +17,27 @@ describe('validación del formulario', () => {
     if (result.success) expect(result.data.frequencyHz).toBe(50)
   })
 
+  it('migrates saved plate fields and assigns default metric units', () => {
+    const legacyInput: Record<string, unknown> = {
+      ...defaultInput(),
+      ratedCapacityW: 1300,
+      displacementCm3Rev: 15.3,
+    }
+    delete legacyInput.ratedCapacity
+    delete legacyInput.capacityUnit
+    delete legacyInput.displacement
+    delete legacyInput.displacementUnit
+
+    const result = calculationInputSchema.safeParse(legacyInput)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.ratedCapacity).toBe(1300)
+      expect(result.data.capacityUnit).toBe('W')
+      expect(result.data.displacement).toBe(15.3)
+      expect(result.data.displacementUnit).toBe('cm³/rev')
+    }
+  })
+
   it('rechaza un salto térmico insuficiente', () => {
     const result = calculationInputSchema.safeParse({
       ...defaultInput(),

@@ -1,4 +1,17 @@
-export type RefrigerantId = 'R134a' | 'R600a' | 'R404A' | 'R290' | 'R22' | 'R507A'
+export type RefrigerantId =
+  | 'R134a'
+  | 'R600a'
+  | 'R404A'
+  | 'R290'
+  | 'R22'
+  | 'R507A'
+  | 'R407C'
+  | 'R417A'
+  | 'R422D'
+  | 'R427A'
+
+export type CapacityUnit = 'W' | 'BTU/h'
+export type DisplacementUnit = 'cm³/rev' | 'in³/rev'
 
 export type StandardId =
   | 'ahri540'
@@ -63,8 +76,10 @@ export interface CalculationInput {
   compressorLabel: string
   standardId: StandardId
   application: CompressorApplication
-  ratedCapacityW: number
-  displacementCm3Rev: number
+  ratedCapacity: number
+  capacityUnit: CapacityUnit
+  displacement: number
+  displacementUnit: DisplacementUnit
   frequencyHz: number
   refEvapC: number
   refCondC: number
@@ -83,6 +98,8 @@ export interface CalculationInput {
 export interface SaturationPoint {
   temperatureC: number
   pressureKPa: number
+  bubblePressureKPa: number
+  dewPressureKPa: number
   liquidDensity: number
   vaporDensity: number
   latentHeatKJkg: number

@@ -20,12 +20,21 @@ import clsx from 'clsx'
 import type {
   CalculationInput,
   CalculationWarning,
+  CapacityUnit,
+  DisplacementUnit,
   RefrigerantId,
   StandardId,
 } from '../types'
 import { compressors, refrigerantById, refrigerants, standards } from '../data/catalog'
-import { saturationAtTemperature } from '../engine/properties'
+import { fluidLimits, saturationAtTemperature } from '../engine/properties'
+import type { SaturationPhase } from '../engine/properties'
 import { fmt, fmtKpa, fmtKW } from '../lib/format'
+import {
+  BTU_PER_HOUR_PER_WATT,
+  CUBIC_CENTIMETERS_PER_CUBIC_INCH,
+  convertCapacity,
+  convertDisplacement,
+} from '../engine/units'
 import { useApp } from '../store/useApp'
 import { Badge, Card, InfoTip, NumberField, SectionHeading, SelectField } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
@@ -40,9 +49,13 @@ const presets = [
   { label: 'Alta temperatura', evap: 5, cond: 50, hint: 'Exhibición / clima' },
 ]
 
-const pressureAt = (refrigerantId: RefrigerantId, temperatureC: number) => {
+const pressureAt = (
+  refrigerantId: RefrigerantId,
+  temperatureC: number,
+  phase: SaturationPhase,
+) => {
   try {
-    return saturationAtTemperature(refrigerantId, temperatureC).pressureKPa
+    return saturationAtTemperature(refrigerantId, temperatureC, phase).pressureKPa
   } catch {
     return 0
   }
@@ -55,6 +68,7 @@ const TemperatureControl = ({
   min,
   max,
   refrigerantId,
+  phase,
   tone,
 }: {
   label: string
@@ -63,10 +77,11 @@ const TemperatureControl = ({
   min: number
   max: number
   refrigerantId: RefrigerantId
+  phase: 'bubble' | 'dew'
   tone: 'mint' | 'ember'
 }) => {
   const percent = ((value - min) / (max - min)) * 100
-  const pressure = pressureAt(refrigerantId, value)
+  const pressure = pressureAt(refrigerantId, value, phase)
   return (
     <div className="rounded-2xl border border-ink-900/[0.07] bg-frost-50/80 p-4">
       <div className="flex items-start justify-between gap-2">
@@ -201,12 +216,13 @@ export const CalculatorPage = () => {
   const compressor = compressors.find((item) => item.id === input.compressorId)
   const standard = standards.find((item) => item.id === input.standardId) ?? standards[0]
   const refrigerant = refrigerantById(input.refrigerantId)
+  const refrigerantLimits = fluidLimits(input.refrigerantId)
   const targetPressure = useMemo(
-    () => pressureAt(input.refrigerantId, input.targetEvapC),
+    () => pressureAt(input.refrigerantId, input.targetEvapC, 'dew'),
     [input.refrigerantId, input.targetEvapC],
   )
   const condPressure = useMemo(
-    () => pressureAt(input.refrigerantId, input.targetCondC),
+    () => pressureAt(input.refrigerantId, input.targetCondC, 'bubble'),
     [input.refrigerantId, input.targetCondC],
   )
   const ratio =
@@ -441,67 +457,117 @@ export const CalculatorPage = () => {
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {refrigerants.map((item) => {
-                  const active = item.id === input.refrigerantId
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => chooseRefrigerant(item.id)}
-                      className={clsx(
-                        'group relative overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all',
-                        active
-                          ? 'border-ink-950 bg-ink-950 text-white shadow-md'
-                          : 'border-ink-900/10 bg-white text-ink-950 hover:border-ink-900/25 hover:shadow-sm',
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="font-mono text-[13px] font-bold">
-                          {item.id}
-                        </span>
-                        {active && (
-                          <Check size={11} className="ml-auto text-mint-300" />
-                        )}
-                      </div>
-                      <div
-                        className={clsx(
-                          'mt-1 text-[9px]',
-                          active ? 'text-white/60' : 'text-ink-600',
-                        )}
-                      >
-                        {item.safety} · GWP {fmt(item.gwp, 0)}
-                      </div>
-                    </button>
-                  )
-                })}
+              <div className="mt-5">
+                <SelectField
+                  label="Refrigerante"
+                  value={input.refrigerantId}
+                  onChange={(value) => chooseRefrigerant(value as RefrigerantId)}
+                >
+                  {refrigerants.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.id}
+                    </option>
+                  ))}
+                </SelectField>
+                {refrigerant.glideK >= 0.25 && (
+                  <p
+                    role="status"
+                    className="mt-2 text-[11px] font-medium text-amber-700"
+                  >
+                    ⚠️ Mezcla zeotrópica. Cargar siempre en fase líquida.
+                  </p>
+                )}
+                {(input.targetEvapC < refrigerantLimits.minDesignEvapC ||
+                  input.targetCondC > refrigerantLimits.maxDesignCondC) && (
+                  <p
+                    role="alert"
+                    className="mt-2 text-[11px] font-medium text-red-700"
+                  >
+                    El punto de diseño está fuera del rango termofísico de{' '}
+                    {input.refrigerantId}. Ajusta la evaporación a ≥{' '}
+                    {fmt(refrigerantLimits.minDesignEvapC, 0)} °C y la
+                    condensación a ≤ {fmt(refrigerantLimits.maxDesignCondC, 0)} °C.
+                  </p>
+                )}
               </div>
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                <NumberField
-                  label="Capacidad declarada"
-                  value={input.ratedCapacityW}
-                  onChange={(value) => updateInput({ ratedCapacityW: value })}
-                  unit="W"
-                  min={20}
-                  max={250000}
-                  step={5}
-                  tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
-                />
-                <NumberField
-                  label="Desplazamiento"
-                  value={input.displacementCm3Rev}
-                  onChange={(value) => updateInput({ displacementCm3Rev: value })}
-                  unit="cm³/rev"
-                  min={0.2}
-                  max={3000}
-                  step={0.1}
-                  tip="Volumen geométrico barrido por revolución. Está en la placa o en el catálogo técnico."
-                />
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(96px,0.48fr)] items-end gap-2">
+                  <NumberField
+                    label="Capacidad declarada"
+                    value={input.ratedCapacity}
+                    onChange={(value) => updateInput({ ratedCapacity: value })}
+                    unit={input.capacityUnit}
+                    min={
+                      input.capacityUnit === 'W'
+                        ? 20
+                        : 20 * BTU_PER_HOUR_PER_WATT
+                    }
+                    max={
+                      input.capacityUnit === 'W'
+                        ? 250000
+                        : 250000 * BTU_PER_HOUR_PER_WATT
+                    }
+                    step={input.capacityUnit === 'W' ? 5 : 10}
+                    tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
+                  />
+                  <SelectField
+                    label="Unidad de capacidad"
+                    value={input.capacityUnit}
+                    onChange={(value) => {
+                      const capacityUnit = value as CapacityUnit
+                      updateInput({
+                        ratedCapacity: convertCapacity(
+                          input.ratedCapacity,
+                          input.capacityUnit,
+                          capacityUnit,
+                        ),
+                        capacityUnit,
+                      })
+                    }}
+                  >
+                    <option value="W">W</option>
+                    <option value="BTU/h">BTU/h</option>
+                  </SelectField>
+                </div>
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(96px,0.48fr)] items-end gap-2">
+                  <NumberField
+                    label="Desplazamiento"
+                    value={input.displacement}
+                    onChange={(value) => updateInput({ displacement: value })}
+                    unit={input.displacementUnit}
+                    min={
+                      input.displacementUnit === 'cm³/rev'
+                        ? 0.2
+                        : 0.2 / CUBIC_CENTIMETERS_PER_CUBIC_INCH
+                    }
+                    max={
+                      input.displacementUnit === 'cm³/rev'
+                        ? 3000
+                        : 3000 / CUBIC_CENTIMETERS_PER_CUBIC_INCH
+                    }
+                    step={input.displacementUnit === 'cm³/rev' ? 0.1 : 0.01}
+                    tip="Volumen geométrico barrido por revolución. Está en la placa o en el catálogo técnico."
+                  />
+                  <SelectField
+                    label="Unidad de desplazamiento"
+                    value={input.displacementUnit}
+                    onChange={(value) => {
+                      const displacementUnit = value as DisplacementUnit
+                      updateInput({
+                        displacement: convertDisplacement(
+                          input.displacement,
+                          input.displacementUnit,
+                          displacementUnit,
+                        ),
+                        displacementUnit,
+                      })
+                    }}
+                  >
+                    <option value="cm³/rev">cm³/rev</option>
+                    <option value="in³/rev">in³/rev</option>
+                  </SelectField>
+                </div>
                 <SelectField
                   label="Frecuencia de red"
                   value={String(input.frequencyHz)}
@@ -529,7 +595,7 @@ export const CalculatorPage = () => {
                     value={input.refEvapC}
                     onChange={(value) => updateInput({ refEvapC: value, standardId: 'custom' })}
                     unit="°C"
-                    min={-65}
+                    min={Math.max(-65, refrigerantLimits.minC)}
                     max={30}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
@@ -540,7 +606,7 @@ export const CalculatorPage = () => {
                     onChange={(value) => updateInput({ refCondC: value, standardId: 'custom' })}
                     unit="°C"
                     min={20}
-                    max={67}
+                    max={Math.min(67, refrigerantLimits.maxC)}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
                   />
@@ -598,9 +664,10 @@ export const CalculatorPage = () => {
                   label="Evaporación objetivo"
                   value={input.targetEvapC}
                   onChange={(value) => updateInput({ targetEvapC: value })}
-                  min={-45}
-                  max={15}
+                  min={Math.max(-45, refrigerantLimits.minDesignEvapC)}
+                  max={Math.min(15, refrigerantLimits.maxC)}
                   refrigerantId={input.refrigerantId}
+                  phase="dew"
                   tone="mint"
                 />
                 <TemperatureControl
@@ -608,8 +675,9 @@ export const CalculatorPage = () => {
                   value={input.targetCondC}
                   onChange={(value) => updateInput({ targetCondC: value })}
                   min={25}
-                  max={65}
+                  max={Math.min(65, refrigerantLimits.maxDesignCondC)}
                   refrigerantId={input.refrigerantId}
+                  phase="bubble"
                   tone="ember"
                 />
               </div>

@@ -7,8 +7,23 @@ import type {
   StandardId,
 } from '../types'
 import { compressorById, defaults } from '../data/catalog'
+import {
+  capacityToWatts,
+  displacementToCubicCentimeters,
+} from '../engine/units'
 
-const refrigerantEnum = z.enum(['R134a', 'R600a', 'R404A', 'R290', 'R22', 'R507A'])
+const refrigerantEnum = z.enum([
+  'R134a',
+  'R600a',
+  'R404A',
+  'R290',
+  'R22',
+  'R507A',
+  'R407C',
+  'R417A',
+  'R422D',
+  'R427A',
+])
 const standardEnum = z.enum([
   'ahri540',
   'en12900',
@@ -32,11 +47,10 @@ const calculationInputObjectSchema = z
     compressorLabel: z.string().min(1).max(160),
     standardId: standardEnum,
     application: applicationEnum,
-    ratedCapacityW: z.number().min(20, 'Capacidad demasiado baja').max(250000),
-    displacementCm3Rev: z
-      .number()
-      .min(0.2, 'Desplazamiento demasiado bajo')
-      .max(3000),
+    ratedCapacity: z.number().positive(),
+    capacityUnit: z.enum(['W', 'BTU/h']),
+    displacement: z.number().positive(),
+    displacementUnit: z.enum(['cm³/rev', 'in³/rev']),
     frequencyHz: z.union([z.literal(50), z.literal(60)]),
     refEvapC: z.number().min(-65).max(30),
     refCondC: z.number().min(20).max(67),
@@ -56,6 +70,17 @@ export const calculationInputSchema = z
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value
     const input = value as Record<string, unknown>
     let migrated: Record<string, unknown> = input
+    if (migrated.ratedCapacity === undefined && typeof input.ratedCapacityW === 'number') {
+      migrated = { ...migrated, ratedCapacity: input.ratedCapacityW }
+    }
+    if (migrated.displacement === undefined && typeof input.displacementCm3Rev === 'number') {
+      migrated = { ...migrated, displacement: input.displacementCm3Rev }
+    }
+    if (migrated.ratedCapacityW !== undefined || migrated.displacementCm3Rev !== undefined) {
+      migrated = { ...migrated }
+      delete migrated.ratedCapacityW
+      delete migrated.displacementCm3Rev
+    }
     const legacyRpm = input.rpm
     if (input.frequencyHz === undefined && typeof legacyRpm === 'number') {
       const legacyInput = { ...migrated }
@@ -73,9 +98,36 @@ export const calculationInputSchema = z
         application: refEvapC <= -20 ? 'LBP' : refEvapC <= 0 ? 'MBP' : 'HBP',
       }
     }
+    migrated = {
+      ...migrated,
+      capacityUnit: migrated.capacityUnit ?? 'W',
+      displacementUnit: migrated.displacementUnit ?? 'cm³/rev',
+    }
     return migrated
   }, calculationInputObjectSchema)
   .superRefine((value, context) => {
+    const ratedCapacityW = capacityToWatts(
+      value.ratedCapacity,
+      value.capacityUnit,
+    )
+    if (ratedCapacityW < 20 || ratedCapacityW > 250000) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ratedCapacity'],
+        message: 'La capacidad debe estar entre 20 y 250000 W equivalentes',
+      })
+    }
+    const displacementCm3Rev = displacementToCubicCentimeters(
+      value.displacement,
+      value.displacementUnit,
+    )
+    if (displacementCm3Rev < 0.2 || displacementCm3Rev > 3000) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['displacement'],
+        message: 'El desplazamiento debe estar entre 0.2 y 3000 cm³/rev equivalentes',
+      })
+    }
     if (value.targetCondC - value.targetEvapC < 8) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -209,8 +261,10 @@ export const defaultInput = (): CalculationInput => {
     standardId: seed.standardId as StandardId,
     application:
       seed.refEvapC <= -20 ? 'LBP' : seed.refEvapC <= 0 ? 'MBP' : 'HBP',
-    ratedCapacityW: seed.ratedCapacityW,
-    displacementCm3Rev: seed.displacementCm3Rev,
+    ratedCapacity: seed.ratedCapacityW,
+    capacityUnit: 'W',
+    displacement: seed.displacementCm3Rev,
+    displacementUnit: 'cm³/rev',
     frequencyHz: 60,
     refEvapC: seed.refEvapC,
     refCondC: seed.refCondC,

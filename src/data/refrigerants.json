@@ -80,6 +80,58 @@
       "color": "#e1779b",
       "applications": "Baja temperatura industrial y comercial.",
       "notes": "Mezcla casi azeotrópica. Sustituto histórico del R-502; GWP muy elevado."
+    },
+    {
+      "id": "R407C",
+      "name": "R407C",
+      "family": "HFC blend",
+      "safety": "A1",
+      "gwp": 1774,
+      "odp": 0,
+      "criticalTempC": 86.74,
+      "glideK": 4.9,
+      "color": "#3f8dd8",
+      "applications": "Sustituto de R22 en aire acondicionado y refrigeración.",
+      "notes": "Mezcla zeotrópica (R32/R125/R134a). Sustituto directo de R22; requiere aceite POE."
+    },
+    {
+      "id": "R417A",
+      "name": "R417A",
+      "family": "HFC/HC blend",
+      "safety": "A1",
+      "gwp": 2346,
+      "odp": 0,
+      "criticalTempC": 87.2,
+      "glideK": 4.6,
+      "color": "#6b91bd",
+      "applications": "Reemplazo de R22 en sistemas de expansión directa.",
+      "notes": "HEOS usa la composición másica nominal R125/R134a/R600 (46.6/50/3.4 %); confirmar compatibilidad de aceite del fabricante."
+    },
+    {
+      "id": "R422D",
+      "name": "R422D",
+      "family": "HFC/HC blend",
+      "safety": "A1",
+      "gwp": 2729,
+      "odp": 0,
+      "criticalTempC": 79.7,
+      "glideK": 5.5,
+      "color": "#6aa7ad",
+      "applications": "Reemplazo de R22 en refrigeración comercial.",
+      "notes": "HEOS usa la composición másica nominal R125/R134a/R600a (65.1/31.5/3.4 %); comprobar aceite y compatibilidad del sistema."
+    },
+    {
+      "id": "R427A",
+      "name": "R427A",
+      "family": "HFC blend",
+      "safety": "A1",
+      "gwp": 2138,
+      "odp": 0,
+      "criticalTempC": 86.5,
+      "glideK": 5.6,
+      "color": "#a178c4",
+      "applications": "Sustituto de R22 en sistemas existentes.",
+      "notes": "HEOS usa la composición másica nominal R32/R125/R143a/R134a (15/25/10/50 %); validar aceite y condiciones de operación."
     }
   ]
 }

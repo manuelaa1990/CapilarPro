@@ -4,6 +4,7 @@ import type { CalculationResult } from '../types'
 import { Modal } from './Modal'
 import { fmt, fmtKpa, fmtKW } from '../lib/format'
 import { rpmFromFrequency } from '../engine/frequency'
+import { displacementToCubicCentimeters } from '../engine/units'
 import { Badge } from './ui'
 
 const FlowStep = ({
@@ -110,7 +111,16 @@ export const BreakdownModal = ({
           </p>
           <div className="mt-2 grid gap-2 font-mono text-[10px] text-ink-700 sm:grid-cols-2">
             <div className="rounded-lg bg-white p-2.5">
-              V̄ = {fmt(result.input.displacementCm3Rev, 2)} cm³/rev ×{' '}
+              V̄ = {fmt(result.input.displacement, 2)}{' '}
+              {result.input.displacementUnit} →{' '}
+              {fmt(
+                displacementToCubicCentimeters(
+                  result.input.displacement,
+                  result.input.displacementUnit,
+                ),
+                2,
+              )}{' '}
+              cm³/rev ×{' '}
               {fmt(result.input.frequencyHz, 0)} Hz × 60 ={' '}
               {fmt(rpmFromFrequency(result.input.frequencyHz), 0)} rpm ={' '}
               {fmt(comp.sweptVolumeM3s * 60_000, 3)} L/min

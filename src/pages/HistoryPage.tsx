@@ -168,10 +168,12 @@ const ActualModal = ({
       const high = saturationAtTemperature(
         input.refrigerantId,
         input.targetCondC,
+        'bubble',
       ).pressureKPa
       const low = saturationAtTemperature(
         input.refrigerantId,
         input.targetEvapC,
+        'dew',
       ).pressureKPa
       return predictLengthForDiameter(
         input,

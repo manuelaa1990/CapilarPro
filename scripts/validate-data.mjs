@@ -25,7 +25,18 @@ const defaults = await readJson('defaults.json')
 const correlations = await readJson('correlations.json')
 const tables = (await readJson('refrigerantTables.json')).fluids
 
-const supported = ['R134a', 'R600a', 'R404A', 'R290', 'R22', 'R507A']
+const supported = [
+  'R134a',
+  'R600a',
+  'R404A',
+  'R290',
+  'R22',
+  'R507A',
+  'R407C',
+  'R417A',
+  'R422D',
+  'R427A',
+]
 
 check(
   standards.length >= 4,
@@ -194,7 +205,9 @@ for (const fluid of supported) {
       `Presión no monotónica en ${fluid}[${index}]`,
     )
     check(
-      pBubble > 0 && pDew > 0 && Math.abs(pDew - pBubble) / pBubble < 0.08,
+      pBubble > 0 &&
+        pDew > 0 &&
+        Math.abs(pDew - pBubble) / Math.min(pBubble, pDew) < 0.7,
       `Glide de presión incoherente en ${fluid}[${index}]`,
     )
     check(

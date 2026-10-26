@@ -22,6 +22,9 @@ describe('CapilarPro', () => {
     expect(screen.getByRole('combobox', { name: 'Frecuencia de red' })).toHaveValue(
       '60',
     )
+    expect(screen.getByRole('combobox', { name: 'Refrigerante' })).toHaveValue(
+      'R134a',
+    )
     expect(screen.getAllByText(/R134a/i).length).toBeGreaterThan(0)
   })
 
@@ -55,7 +58,10 @@ describe('CapilarPro', () => {
     await user.clear(screen.getByLabelText('Evap. referencia'))
     await user.type(screen.getByLabelText('Evap. referencia'), '-18')
 
-    await user.click(screen.getByRole('button', { name: /R600a/i }))
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Refrigerante' }),
+      'R600a',
+    )
 
     expect(
       screen.getByRole('combobox', { name: 'Compresor de la biblioteca' }),
@@ -63,6 +69,57 @@ describe('CapilarPro', () => {
     expect(capacity).toHaveValue(987)
     expect(displacement).toHaveValue(12.4)
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-18)
+  })
+
+  it('muestra solo los nombres de refrigerantes y advierte para mezclas zeotrópicas', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const refrigerant = screen.getByRole('combobox', { name: 'Refrigerante' })
+    expect(
+      screen.getByRole('option', { name: 'R407C' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'R417A' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'R422D' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'R427A' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: /R438A/i }),
+    ).not.toBeInTheDocument()
+
+    await user.selectOptions(refrigerant, 'R407C')
+    expect(
+      screen.getByText(
+        '⚠️ Mezcla zeotrópica. Cargar siempre en fase líquida.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('conserva el valor físico al cambiar unidades de capacidad y desplazamiento', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Unidad de capacidad' }),
+      'BTU/h',
+    )
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Unidad de desplazamiento' }),
+      'in³/rev',
+    )
+
+    expect(screen.getByRole('spinbutton', { name: /Capacidad declarada/ })).toHaveValue(
+      1300 * 3.412,
+    )
+    const displacementInput = screen.getByRole('spinbutton', {
+      name: /Desplazamiento/,
+    }) as HTMLInputElement
+    expect(Number(displacementInput.value)).toBeCloseTo(15.3 / 16.387, 8)
   })
 
   it('actualiza las condiciones de referencia por norma y aplicación', async () => {
