@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   ArrowUpRight,
   BookmarkCheck,
@@ -18,7 +19,34 @@ import type {
   MemorySuggestion,
 } from '../types'
 import { Badge } from './ui'
+import { UnitToggle } from './UnitToggle'
 import { fmt, fmtKW } from '../lib/format'
+import {
+  diameterDigits,
+  diameterFromMm,
+  fmtFixed,
+  lengthDigits,
+  lengthFromM,
+  type DiameterDisplayUnit,
+  type LengthDisplayUnit,
+} from '../lib/displayUnits'
+
+const DIAMETER_UNITS: ReadonlyArray<{
+  value: DiameterDisplayUnit
+  label: string
+}> = [
+  { value: 'mm', label: 'mm' },
+  { value: 'in', label: 'in' },
+]
+
+const LENGTH_UNITS: ReadonlyArray<{
+  value: LengthDisplayUnit
+  label: string
+}> = [
+  { value: 'm', label: 'm' },
+  { value: 'cm', label: 'cm' },
+  { value: 'in', label: 'in' },
+]
 
 const ConfidencePill = ({
   result,
@@ -90,8 +118,15 @@ const Coil = ({ diameterMm }: { diameterMm: number }) => {
   )
 }
 
-const PrecisionBar = ({ result }: { result: CalculationResult }) => {
+const PrecisionBar = ({
+  result,
+  lengthUnit,
+}: {
+  result: CalculationResult
+  lengthUnit: LengthDisplayUnit
+}) => {
   const uncertainty = result.uncertainty
+  const digits = lengthDigits(lengthUnit)
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.045] p-3.5">
       <div className="flex items-center justify-between gap-2">
@@ -109,8 +144,9 @@ const PrecisionBar = ({ result }: { result: CalculationResult }) => {
           Longitud
           <br />
           <span className="font-mono text-white/65">
-            {fmt(uncertainty.interval.lengthM[0], 2)}–
-            {fmt(uncertainty.interval.lengthM[1], 2)} m
+            {fmtFixed(lengthFromM(uncertainty.interval.lengthM[0], lengthUnit), digits)}–
+            {fmtFixed(lengthFromM(uncertainty.interval.lengthM[1], lengthUnit), digits)}{' '}
+            {lengthUnit}
           </span>
         </div>
       </div>
@@ -161,9 +197,13 @@ const Metric = ({
 const AlternativeRow = ({
   candidate,
   recommended,
+  diameterUnit,
+  lengthUnit,
 }: {
   candidate: CalculationResult['capillary']['alternatives'][number]
   recommended: boolean
+  diameterUnit: DiameterDisplayUnit
+  lengthUnit: LengthDisplayUnit
 }) => (
   <div
     className={clsx(
@@ -180,9 +220,14 @@ const AlternativeRow = ({
       )}
     />
     <span className="font-mono text-[11px] text-white/70">
-      {fmt(candidate.diameterMm, 2)} mm
+      {fmtFixed(
+        diameterFromMm(candidate.diameterMm, diameterUnit),
+        diameterDigits(diameterUnit),
+      )}{' '}
+      {diameterUnit}
       <span className="text-white/60"> × </span>
-      {fmt(candidate.lengthM, 2)} m
+      {fmtFixed(lengthFromM(candidate.lengthM, lengthUnit), lengthDigits(lengthUnit))}{' '}
+      {lengthUnit}
     </span>
     <span
       className={clsx(
@@ -218,6 +263,8 @@ export const ResultCard = ({
   suggestion: MemorySuggestion | null
   calibration: CalibrationSummary
 }) => {
+  const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
+  const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
   const capillary = result.capillary
   const primary = {
     ...capillary,
@@ -248,20 +295,38 @@ export const ResultCard = ({
 
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
-              <div className="flex items-baseline gap-1.5">
+              <div className="flex items-baseline gap-2">
                 <span className="font-display text-[46px] font-semibold leading-none tracking-[-0.06em] text-white">
-                  {fmt(capillary.diameterMm, 2)}
+                  {fmtFixed(
+                    diameterFromMm(capillary.diameterMm, diameterUnit),
+                    diameterDigits(diameterUnit),
+                  )}
                 </span>
-                <span className="font-mono text-[13px] font-medium text-white/60">
-                  mm ID
+                <UnitToggle
+                  label="Unidad del diámetro"
+                  options={DIAMETER_UNITS}
+                  value={diameterUnit}
+                  onChange={setDiameterUnit}
+                  className="self-center"
+                />
+                <span className="font-mono text-[11px] font-medium text-white/60">
+                  ID
                 </span>
               </div>
-              <div className="mt-2 flex items-baseline gap-1.5">
+              <div className="mt-2 flex items-center gap-2">
                 <span className="font-display text-[29px] font-semibold leading-none tracking-[-0.04em] text-mint-300">
-                  {fmt(capillary.lengthM, 2)}
+                  {fmtFixed(
+                    lengthFromM(capillary.lengthM, lengthUnit),
+                    lengthDigits(lengthUnit),
+                  )}
                 </span>
-                <span className="font-mono text-[12px] text-white/60">m</span>
-                <span className="ml-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/60">
+                <UnitToggle
+                  label="Unidad de la longitud"
+                  options={LENGTH_UNITS}
+                  value={lengthUnit}
+                  onChange={setLengthUnit}
+                />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/60">
                   longitud
                 </span>
               </div>
@@ -290,7 +355,7 @@ export const ResultCard = ({
       </div>
 
       <div className="space-y-3 px-5 pb-5 pt-4">
-        <PrecisionBar result={result} />
+        <PrecisionBar result={result} lengthUnit={lengthUnit} />
 
         <div className="grid grid-cols-2 gap-2">
           <Metric
@@ -325,7 +390,9 @@ export const ResultCard = ({
               Otras combinaciones
             </span>
             <span className="font-mono text-[8px] text-white/60">
-              ventana 0,35–4,5 m
+              ventana {fmtFixed(lengthFromM(0.35, lengthUnit), lengthDigits(lengthUnit))}
+              –{fmtFixed(lengthFromM(4.5, lengthUnit), lengthDigits(lengthUnit))}{' '}
+              {lengthUnit}
             </span>
           </div>
           <div className="space-y-0.5">
@@ -334,6 +401,8 @@ export const ResultCard = ({
                 key={`${candidate.diameterMm}-${index}`}
                 candidate={candidate}
                 recommended={candidate.status === 'recommended'}
+                diameterUnit={diameterUnit}
+                lengthUnit={lengthUnit}
               />
             ))}
           </div>
@@ -381,8 +450,17 @@ export const ResultCard = ({
           <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3 text-[10px] text-white/60">
             <Info size={12} className="shrink-0" />
             <span>
-              Memoria local sugiere {fmt(suggestion.diameterMm, 2)} mm ×{' '}
-              {fmt(suggestion.lengthM, 2)} m
+              Memoria local sugiere{' '}
+              {fmtFixed(
+                diameterFromMm(suggestion.diameterMm, diameterUnit),
+                diameterDigits(diameterUnit),
+              )}{' '}
+              {diameterUnit} ×{' '}
+              {fmtFixed(
+                lengthFromM(suggestion.lengthM, lengthUnit),
+                lengthDigits(lengthUnit),
+              )}{' '}
+              {lengthUnit}
             </span>
             <button
               type="button"
