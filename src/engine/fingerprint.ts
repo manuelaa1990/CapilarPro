@@ -54,7 +54,8 @@ export const fingerprintOf = (input: CalculationInput): string => {
     ...(input.slhxActivo
       ? {
           slhxActivo: 'true',
-          slhxEfectividad: normalizeNumber(input.slhxEfectividad, 3),
+          slhxPorcentaje: normalizeNumber(input.slhxPorcentaje, 0),
+          slhxDiametroSuccion: input.slhxDiametroSuccion,
         }
       : {}),
   }

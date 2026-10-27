@@ -61,15 +61,16 @@ Así la extrapolación conserva la eficiencia real del compresor en la placa y s
 
 ### 2. Intercambiador succión-líquido (SLHX)
 
-Al activar el SLHX, el motor usa la efectividad ε configurada (por defecto 0,7) y las capacidades caloríficas de ambas corrientes:
+Al activar el SLHX, el usuario selecciona la fracción del capilar que se enrolla sobre la línea de succión (30–70 %) y el diámetro comercial de esa línea. La tabla editable de coeficientes U por diámetro está en `src/data/slhx.json`. El motor estima la longitud requerida para una efectividad de diseño de 0,7 y la limita a la fracción disponible del capilar:
 
 ```text
-Ccap = ṁ · cp,líquido
-Csuc = ṁ · cp,vapor
-Q    = ε · min(Ccap, Csuc) · max(Tcap,in − Tsuc,in, 0)
+Cmin = ṁ · cp,vapor
+Lreq = −ln(1 − 0,7) · Cmin / (U · π · Dsuc)
+Lenrollar = min(Lreq, Lcapilar · porcentaje / 100)
+εreal = 1 − exp(−U · π · Dsuc · Lenrollar / Cmin)
 ```
 
-El calor transferido reduce la entalpía del líquido que entra al capilar y aumenta la entalpía del gas de succión. El motor actualiza la densidad de succión, el caudal y la longitud calculada hasta converger, con un máximo de 20 iteraciones. La efectividad representa el desempeño del intercambiador; no se infiere de una geometría o un valor UA.
+La efectividad real limita el calor transferido entre las corrientes; el motor ajusta las entalpías de succión y de entrada al capilar e itera el caudal y la longitud hasta converger, con un máximo de 20 iteraciones. Los coeficientes U son valores aproximados de configuración y no sustituyen datos de ensayo del intercambiador instalado.
 
 ### 3. Capilar 1D adiabático
 

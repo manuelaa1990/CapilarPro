@@ -146,7 +146,7 @@ export const saveCalculation = async (
       t_ambient_c: input.targetAmbientTempC,
       sh_k: result.input.targetSuperheatK,
       sc_k: input.targetSubcoolK,
-      l_hx_m: input.lHxM ?? 0,
+      l_hx_m: result.slhx?.lengthWoundM ?? input.lHxM ?? 0,
       d_cap_mm: result.capillary.diameterMm,
       l_cap_m: result.capillary.lengthM,
       eta_v: result.compressor.etaVolumetricTarget,

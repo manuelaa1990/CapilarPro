@@ -84,7 +84,14 @@ describe('CapilarPro', () => {
     await user.click(slhxButton)
 
     expect(slhxButton).toHaveAttribute('aria-pressed', 'true')
-    expect(await screen.findByLabelText('Efectividad (0-1)')).toHaveValue(0.7)
+    const windingSlider = await screen.findByRole('slider', {
+      name: 'Porcentaje de capilar enrollado',
+    })
+    expect(windingSlider).toHaveValue('50')
+    const suctionDiameter = screen.getByRole('combobox', {
+      name: 'Diámetro del tubo de succión',
+    })
+    expect(suctionDiameter).toHaveValue('5/16')
     await waitFor(() => {
       expect(screen.getByText(/^CP-[A-F0-9]{8}$/).textContent).not.toBe(
         fingerprint,
@@ -93,6 +100,15 @@ describe('CapilarPro', () => {
         screen.getByLabelText('Longitud seleccionada').textContent,
       ).not.toBe(selectedLength)
     })
+    expect(
+      await screen.findByText(/Enrollar .* m \(Efectividad real: .*\)/),
+    ).toBeInTheDocument()
+
+    await user.selectOptions(suctionDiameter, '1/2')
+    expect(suctionDiameter).toHaveValue('1/2')
+    windingSlider.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(windingSlider).toHaveValue('55')
   })
 
   it('permite editar el código o modelo del compresor', async () => {

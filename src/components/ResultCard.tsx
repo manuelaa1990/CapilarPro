@@ -269,9 +269,7 @@ export const ResultCard = ({
   diameterUnit,
   lengthUnit,
   slhxActivo,
-  slhxEfectividad,
   onSlhxToggle,
-  onSlhxEfectividadChange,
   onDiameterUnitChange,
   onLengthUnitChange,
 }: {
@@ -283,9 +281,7 @@ export const ResultCard = ({
   diameterUnit: DiameterDisplayUnit
   lengthUnit: LengthDisplayUnit
   slhxActivo: boolean
-  slhxEfectividad: number
   onSlhxToggle: () => void
-  onSlhxEfectividadChange: (value: number) => void
   onDiameterUnitChange: (unit: DiameterDisplayUnit) => void
   onLengthUnitChange: (unit: LengthDisplayUnit) => void
 }) => {
@@ -377,18 +373,11 @@ export const ResultCard = ({
                   slhxActivo={slhxActivo}
                 />
               </button>
-              {slhxActivo && (
-                <NumberField
-                  label="Efectividad (0-1)"
-                  value={slhxEfectividad}
-                  onChange={onSlhxEfectividadChange}
-                  unit="ε"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  className="mt-1"
-                  inputClassName="py-1 text-[11px]"
-                />
+              {slhxActivo && result.slhx && (
+                <p className="mt-1 text-center text-[9px] leading-relaxed text-white/70">
+                  Enrollar {fmtFixed(result.slhx.lengthWoundM, 2)} m
+                  {' '}(Efectividad real: {fmtFixed(result.slhx.epsilonReal, 2)})
+                </p>
               )}
             </div>
           </div>

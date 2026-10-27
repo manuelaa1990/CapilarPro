@@ -11,6 +11,7 @@ import {
   capacityToWatts,
   displacementToCubicCentimeters,
 } from '../engine/units'
+import { slhxSuctionTubeDiameters } from '../engine/slhx'
 
 const refrigerantEnum = z.enum([
   'R134a',
@@ -65,7 +66,8 @@ const calculationInputObjectSchema = z
     targetSuperheatK: z.number().min(0).max(200),
     targetSubcoolK: z.number().min(0).max(30),
     slhxActivo: z.boolean(),
-    slhxEfectividad: z.number().min(0).max(1),
+    slhxPorcentaje: z.number().min(30).max(70),
+    slhxDiametroSuccion: z.enum(slhxSuctionTubeDiameters),
     installedDiameterMm: nullablePositive(0.3, 3.5),
     installedLengthM: nullablePositive(0.1, 10),
     notes: z.string().max(1200),
@@ -109,7 +111,8 @@ export const calculationInputSchema = z
       capacityUnit: migrated.capacityUnit ?? 'W',
       displacementUnit: migrated.displacementUnit ?? 'cm³/rev',
       slhxActivo: migrated.slhxActivo ?? false,
-      slhxEfectividad: migrated.slhxEfectividad ?? 0.7,
+      slhxPorcentaje: migrated.slhxPorcentaje ?? 50,
+      slhxDiametroSuccion: migrated.slhxDiametroSuccion ?? '5/16',
       ambientTempC: migrated.ambientTempC ?? 32.2,
       returnGasTempC: migrated.returnGasTempC ?? 32.2,
     }
@@ -305,7 +308,8 @@ export const defaultInput = (): CalculationInput => {
     targetSuperheatK: seed.targetSuperheatK,
     targetSubcoolK: seed.targetSubcoolK,
     slhxActivo: false,
-    slhxEfectividad: 0.7,
+    slhxPorcentaje: 50,
+    slhxDiametroSuccion: '5/16',
     installedDiameterMm: null,
     installedLengthM: null,
     notes: '',

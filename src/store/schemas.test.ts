@@ -12,26 +12,29 @@ describe('validación del formulario', () => {
     expect(defaultInput().ambientTempC).toBe(32.2)
     expect(defaultInput().returnGasTempC).toBe(32.2)
     expect(defaultInput().slhxActivo).toBe(false)
-    expect(defaultInput().slhxEfectividad).toBe(0.7)
+    expect(defaultInput().slhxPorcentaje).toBe(50)
+    expect(defaultInput().slhxDiametroSuccion).toBe('5/16')
   })
 
   it('migrates saved inputs without SLHX settings to the defaults', () => {
     const legacyInput: Record<string, unknown> = { ...defaultInput() }
     delete legacyInput.slhxActivo
-    delete legacyInput.slhxEfectividad
+    delete legacyInput.slhxPorcentaje
+    delete legacyInput.slhxDiametroSuccion
 
     const result = calculationInputSchema.safeParse(legacyInput)
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.slhxActivo).toBe(false)
-      expect(result.data.slhxEfectividad).toBe(0.7)
+      expect(result.data.slhxPorcentaje).toBe(50)
+      expect(result.data.slhxDiametroSuccion).toBe('5/16')
     }
   })
 
-  it('rechaza una efectividad SLHX fuera de 0-1', () => {
+  it('rechaza porcentajes SLHX fuera de 30-70', () => {
     const result = calculationInputSchema.safeParse({
       ...defaultInput(),
-      slhxEfectividad: 1.1,
+      slhxPorcentaje: 75,
     })
     expect(result.success).toBe(false)
   })

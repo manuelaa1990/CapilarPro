@@ -48,6 +48,10 @@ import { BreakdownModal } from '../components/BreakdownModal'
 import { CompressorSearch } from '../components/CompressorSearch'
 import { saveCalculation } from '../lib/saveCalculation'
 import { deriveReferenceSuperheatAndSubcooling } from '../engine/standards'
+import {
+  isSlhxSuctionTubeDiameter,
+  slhxSuctionTubeOptions,
+} from '../engine/slhx'
 import { useNeonStatus } from '../store/neonStatusContext'
 
 const pressureAt = (
@@ -709,6 +713,64 @@ export const CalculatorPage = () => {
                   step={0.1}
                 />
               </div>
+              {input.slhxActivo && (
+                <div className="mt-4 grid grid-cols-1 gap-4 rounded-xl border border-ink-900/[0.06] bg-frost-50/70 px-3.5 py-3 sm:grid-cols-2">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label
+                        htmlFor="slhx-winding-percentage"
+                        className="field-label mb-0"
+                      >
+                        Porcentaje enrollado
+                      </label>
+                      <output
+                        htmlFor="slhx-winding-percentage"
+                        className="font-mono text-[12px] font-semibold text-ink-900"
+                      >
+                        {input.slhxPorcentaje}%
+                      </output>
+                    </div>
+                    <input
+                      id="slhx-winding-percentage"
+                      type="range"
+                      aria-label="Porcentaje de capilar enrollado"
+                      min={30}
+                      max={70}
+                      step={5}
+                      value={input.slhxPorcentaje}
+                      onChange={(event) =>
+                        updateInput({
+                          slhxPorcentaje: Number(event.target.value),
+                        })
+                      }
+                      className="range-input w-full"
+                    />
+                    <p className="mt-1 text-[10px] text-ink-600">
+                      Limita la longitud del capilar enrollada en la succión.
+                    </p>
+                  </div>
+                  <SelectField
+                    label="Diámetro del tubo de succión"
+                    value={input.slhxDiametroSuccion}
+                    onChange={(value) => {
+                      if (!isSlhxSuctionTubeDiameter(value)) {
+                        throw new Error(
+                          `Diámetro de succión SLHX no reconocido: ${value}`,
+                        )
+                      }
+                      updateInput({
+                        slhxDiametroSuccion: value,
+                      })
+                    }}
+                  >
+                    {slhxSuctionTubeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SelectField>
+                </div>
+              )}
               {input.targetCondC - input.targetAmbientTempC < 5 && (
                 <p role="alert" className="mt-2 text-[11px] font-medium text-amber-700">
                   Salto térmico bajo entre ambiente y condensación. Verifica la
@@ -839,14 +901,8 @@ export const CalculatorPage = () => {
                 diameterUnit={diameterUnit}
                 lengthUnit={lengthUnit}
                 slhxActivo={input.slhxActivo}
-                slhxEfectividad={input.slhxEfectividad}
                 onSlhxToggle={() =>
                   updateInput({ slhxActivo: !input.slhxActivo })
-                }
-                onSlhxEfectividadChange={(slhxEfectividad) =>
-                  updateInput({
-                    slhxEfectividad: Math.min(1, Math.max(0, slhxEfectividad)),
-                  })
                 }
                 onDiameterUnitChange={setDiameterUnit}
                 onLengthUnitChange={setLengthUnit}

@@ -53,7 +53,14 @@ describe('fingerprint', () => {
       fingerprintOf({
         ...base,
         slhxActivo: true,
-        slhxEfectividad: 0.8,
+        slhxPorcentaje: 60,
+      }),
+    ).not.toBe(fingerprintOf({ ...base, slhxActivo: true }))
+    expect(
+      fingerprintOf({
+        ...base,
+        slhxActivo: true,
+        slhxDiametroSuccion: '1/4',
       }),
     ).not.toBe(fingerprintOf({ ...base, slhxActivo: true }))
   })
@@ -165,6 +172,10 @@ describe('cálculo completo', () => {
     const withSlhx = calculateWith({ slhxActivo: true })
 
     expect(withSlhx.input.slhxActivo).toBe(true)
+    expect(withSlhx.slhx?.epsilonReal).toBeGreaterThan(0)
+    expect(withSlhx.slhx?.lengthWoundM).toBeLessThanOrEqual(
+      withSlhx.capillary.lengthM * 0.5,
+    )
     expect(withSlhx.compressor.suctionEnthalpy).toBeGreaterThan(
       withoutSlhx.compressor.suctionEnthalpy,
     )

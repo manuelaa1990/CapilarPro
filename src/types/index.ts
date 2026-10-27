@@ -95,7 +95,15 @@ export interface CalculationInput {
   targetSuperheatK: number
   targetSubcoolK: number
   slhxActivo: boolean
-  slhxEfectividad: number
+  slhxPorcentaje: number
+  slhxDiametroSuccion:
+    | '1/4'
+    | '5/16'
+    | '3/8'
+    | '1/2'
+    | '5/8'
+    | '3/4'
+    | '7/8'
   lHxM?: number
   installedDiameterMm: number | null
   installedLengthM: number | null
@@ -214,6 +222,12 @@ export interface CalculationResult {
   targetSaturation: SaturationPoint
   compressor: CompressorResult
   capillary: CapillaryResult
+  slhx?: {
+    lengthWoundM: number
+    epsilonReal: number
+    uWm2K: number
+    suctionDiameterM: number
+  } | null
   uncertainty: UncertaintyResult
   warnings: CalculationWarning[]
   references: {
