@@ -81,13 +81,21 @@ describe('CapilarPro', () => {
     const fingerprint = screen.getByText(/^CP-[A-F0-9]{8}$/).textContent
     const selectedLength = screen.getByLabelText('Longitud seleccionada')
       .textContent
+    const slhxSwitch = screen.getByRole('switch', {
+      name: 'Intercambiador Capilar/Succión (SLHX)',
+    })
     const slhxButton = screen.getByRole('button', {
       name: 'Intercambiador Capilar/Succión (SLHX)',
     })
 
+    expect(slhxSwitch).toHaveAttribute('aria-checked', 'false')
+    expect(
+      screen.queryByRole('slider', { name: 'Porcentaje de capilar enrollado' }),
+    ).not.toBeInTheDocument()
     await user.click(slhxButton)
 
     expect(slhxButton).toHaveAttribute('aria-pressed', 'true')
+    expect(slhxSwitch).toHaveAttribute('aria-checked', 'true')
     const windingSlider = await screen.findByRole('slider', {
       name: 'Porcentaje de capilar enrollado',
     })
@@ -104,14 +112,40 @@ describe('CapilarPro', () => {
         screen.getByLabelText('Longitud seleccionada').textContent,
       ).not.toBe(selectedLength)
     })
-    expect(
-      await screen.findByText(/Enrollar .* m \(Efectividad real: .*\)/),
-    ).toBeInTheDocument()
+    const slhxResults = screen.getByRole('group', { name: 'Resultados del SLHX' })
+    expect(slhxResults).toHaveTextContent('Longitud enrollada')
+    expect(slhxResults).toHaveTextContent('Efectividad real')
+    expect(screen.queryByText(/Enrollar .*Efectividad real/)).not.toBeInTheDocument()
 
+    const lengthBeforeDiameterChange = screen.getByLabelText(
+      'Longitud seleccionada',
+    ).textContent
     await user.selectOptions(suctionDiameter, '1/2')
     expect(suctionDiameter).toHaveValue('1/2')
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Longitud seleccionada').textContent,
+      ).not.toBe(lengthBeforeDiameterChange)
+    })
+
+    const lengthBeforePercentageChange = screen.getByLabelText(
+      'Longitud seleccionada',
+    ).textContent
     fireEvent.change(windingSlider, { target: { value: '55' } })
     expect(windingSlider).toHaveValue('55')
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Longitud seleccionada').textContent,
+      ).not.toBe(lengthBeforePercentageChange)
+    })
+
+    await user.click(slhxSwitch)
+    expect(slhxButton).toHaveAttribute('aria-pressed', 'false')
+    expect(slhxSwitch).toHaveAttribute('aria-checked', 'false')
+    expect(
+      screen.queryByRole('slider', { name: 'Porcentaje de capilar enrollado' }),
+    ).not.toBeInTheDocument()
   })
 
   it('permite editar el código o modelo del compresor', async () => {

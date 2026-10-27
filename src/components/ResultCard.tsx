@@ -373,12 +373,6 @@ export const ResultCard = ({
                   slhxActivo={slhxActivo}
                 />
               </button>
-              {slhxActivo && result.slhx && (
-                <p className="mt-1 text-center text-[9px] leading-relaxed text-white/70">
-                  Enrollar {fmtFixed(result.slhx.lengthWoundM, 2)} m
-                  {' '}(Efectividad real: {fmtFixed(result.slhx.epsilonReal, 2)})
-                </p>
-              )}
             </div>
           </div>
 
