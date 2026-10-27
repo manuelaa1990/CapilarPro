@@ -23,7 +23,8 @@ export interface SlhxTransferResult {
   epsilonReal: number
   uWm2K: number
   suctionDiameterM: number
-  heatTransferPerMassKJkg: number
+  /** Calor transferido por unidad de masa, en J/kg. */
+  heatTransferPerMassJKg: number
 }
 
 export const calculateSlhxTransfer = ({
@@ -35,6 +36,7 @@ export const calculateSlhxTransfer = ({
   suctionTubeDiameter,
 }: {
   massFlowKgS: number
+  /** Calor específico del vapor en J/(kg·K). */
   gasSpecificHeatJKgK: number
   inletTemperatureDifferenceK: number
   totalCapillaryLengthM: number
@@ -83,18 +85,19 @@ export const calculateSlhxTransfer = ({
       (-tube.uWm2K * Math.PI * tube.diameterM * lengthWoundM) /
         minimumHeatCapacityRate,
     )
-  const heatTransferPerMassKJkg =
+  // Cmin = ṁ·cp queda en W/K porque cp entra en J/(kg·K); el cociente
+  // devuelve J/kg sin conversiones adicionales.
+  const heatTransferPerMassJKg =
     (epsilonReal *
       minimumHeatCapacityRate *
       Math.max(0, inletTemperatureDifferenceK)) /
-    massFlowKgS /
-    1000
+    massFlowKgS
 
   return {
     lengthWoundM,
     epsilonReal,
     uWm2K: tube.uWm2K,
     suctionDiameterM: tube.diameterM,
-    heatTransferPerMassKJkg,
+    heatTransferPerMassJKg,
   }
 }

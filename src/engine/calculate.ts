@@ -1,12 +1,29 @@
-import { appMeta, refrigerantById, standardById } from '../data/catalog'
+import {
+  appMeta,
+  correlations,
+  refrigerantById,
+  solutions,
+  standardById,
+} from '../data/catalog'
 import type {
   CalculationInput,
   CalculationResult,
   CalculationWarning,
   CalibrationSummary,
+  CapillaryCandidate,
+  CapillaryResult,
 } from '../types'
-import { computeCapillary } from './capillary'
+import {
+  assembleCapillaryResult,
+  asCandidate,
+  clampCorrectionFactor,
+  computeCapillary,
+  simulateCapillaryLength,
+  type OperatingPoint,
+  type Simulation,
+} from './capillary'
 import { fingerprintOf } from './fingerprint'
+import { rankCandidates } from './grid'
 import { calculateSlhxTransfer } from './slhx'
 import {
   saturationAtPressure,
@@ -29,6 +46,15 @@ import {
 interface CalculateOptions {
   calibration?: CalibrationSummary | null
   now?: Date
+}
+
+interface SlhxOperatingState {
+  massFlowKgS: number
+  simulation: Simulation
+  suction: ReturnType<typeof superheatedVaporState> & { enthalpyKJkg: number }
+  liquidEnthalpyKJkg: number
+  slhx: ReturnType<typeof calculateSlhxTransfer>
+  operating: OperatingPoint
 }
 
 const asSaturationPoint = (
@@ -266,8 +292,9 @@ export const calculate = (
     options.calibration && options.calibration.adjusted
       ? options.calibration
       : null
-  const cpLiquid = targetCondSaturation.cpL
-  const cpSuction = targetSaturation.cpV
+  // El motor trabaja en J/(kg·K); las tablas guardan kJ/(kg·K).
+  const cpLiquid = targetCondSaturation.cpL * 1000
+  const cpSuction = targetSaturation.cpV * 1000
   const inletTemperatureDifference = Math.max(
     0,
     targetLiquidIn.temperatureC - input.targetReturnGasTempC,
@@ -281,86 +308,150 @@ export const calculate = (
   ) {
     throw new Error('No hay capacidades caloríficas válidas para calcular el SLHX')
   }
-  let massFlowGuess =
+  const correctionFactor = calibration?.factor ?? 1
+  const massFlowGuess =
     sweptVolumeM3s * targetSuctionIn.densityKgM3 * efficiency.etaTarget
-  let capillary = computeCapillary(
-    input,
-    massFlowGuess,
-    targetCondSaturation.pressureKPa,
-    targetSaturation.pressureKPa,
-    calibration?.factor ?? 1,
-  )
+  let capillary: CapillaryResult
   let targetSuction = targetSuctionIn
   let targetLiquidEnthalpyKJkg = targetLiquidIn.enthalpyKJkg
   let massFlow = massFlowGuess
   let slhxResult: ReturnType<typeof calculateSlhxTransfer> | null = null
 
   if (input.slhxActivo) {
-    let converged = false
-    for (let iteration = 0; iteration < 20; iteration += 1) {
-      const currentSlhx = calculateSlhxTransfer({
-        massFlowKgS: massFlowGuess,
-        gasSpecificHeatJKgK: cpSuction,
-        inletTemperatureDifferenceK: inletTemperatureDifference,
-        totalCapillaryLengthM: capillary.lengthM,
-        windingPercentage: input.slhxPorcentaje,
-        suctionTubeDiameter: input.slhxDiametroSuccion,
+    // Cada diámetro comercial se resuelve por separado hasta que caudal,
+    // calor transferido y longitud son consistentes. Después se comparan los
+    // estados ya convergidos: así el ranking no puede alternar entre dos
+    // medidas casi empatadas y realimentar el bucle.
+    const config = correlations.capillary
+    const clampedFactor = clampCorrectionFactor(correctionFactor)
+    const converged = new Map<number, SlhxOperatingState>()
+
+    for (const diameterMm of solutions.capillaryIdsMm) {
+      const operatingBase = {
+        fluid: input.refrigerantId,
+        pressureInKPa: targetCondSaturation.pressureKPa,
+        pressureOutKPa: targetSaturation.pressureKPa,
+        subcoolK: input.targetSubcoolK,
+      }
+      let currentMassFlow = massFlowGuess
+      let currentSimulation = simulateCapillaryLength(diameterMm, {
+        ...operatingBase,
+        massFlowKgS: currentMassFlow,
       })
-      const heatTransferPerMass = currentSlhx.heatTransferPerMassKJkg
-      const adjustedSuctionTemperature =
-        input.targetReturnGasTempC + (heatTransferPerMass * 1000) / cpSuction
-      const suctionForIteration = {
-        ...superheatedVaporState(
-          input.refrigerantId,
-          targetSaturation.pressureKPa,
-          adjustedSuctionTemperature,
-        ),
-        enthalpyKJkg:
-          targetSuctionIn.enthalpyKJkg + heatTransferPerMass,
+      if (
+        !currentSimulation ||
+        currentSimulation.lengthM * clampedFactor > config.maxLengthM * 2.2
+      ) {
+        continue
       }
-      const adjustedLiquidEnthalpy =
-        targetLiquidIn.enthalpyKJkg - heatTransferPerMass
-      const adjustedSubcooling =
-        input.targetSubcoolK + (heatTransferPerMass * 1000) / cpLiquid
-      const nextMassFlow =
-        sweptVolumeM3s *
-        suctionForIteration.densityKgM3 *
-        efficiency.etaTarget
-      const nextCapillary = computeCapillary(
-        input,
-        nextMassFlow,
-        targetCondSaturation.pressureKPa,
-        targetSaturation.pressureKPa,
-        calibration?.factor ?? 1,
-        {
-          subcoolK: adjustedSubcooling,
-          enthalpyKJkg: adjustedLiquidEnthalpy,
-        },
+
+      for (let iteration = 0; iteration < 40; iteration += 1) {
+        const currentSlhx = calculateSlhxTransfer({
+          massFlowKgS: currentMassFlow,
+          gasSpecificHeatJKgK: cpSuction,
+          inletTemperatureDifferenceK: inletTemperatureDifference,
+          totalCapillaryLengthM: currentSimulation.lengthM * clampedFactor,
+          windingPercentage: input.slhxPorcentaje,
+          suctionTubeDiameter: input.slhxDiametroSuccion,
+        })
+        const heatTransferPerMass = currentSlhx.heatTransferPerMassJKg
+        const adjustedSuctionTemperature =
+          input.targetReturnGasTempC + heatTransferPerMass / cpSuction
+        const suctionForIteration = {
+          ...superheatedVaporState(
+            input.refrigerantId,
+            targetSaturation.pressureKPa,
+            adjustedSuctionTemperature,
+          ),
+          enthalpyKJkg:
+            targetSuctionIn.enthalpyKJkg + heatTransferPerMass / 1000,
+        }
+        const adjustedLiquidEnthalpy =
+          targetLiquidIn.enthalpyKJkg - heatTransferPerMass / 1000
+        const adjustedSubcooling =
+          input.targetSubcoolK + heatTransferPerMass / cpLiquid
+        const nextMassFlow =
+          sweptVolumeM3s *
+          suctionForIteration.densityKgM3 *
+          efficiency.etaTarget
+        const nextSimulation = simulateCapillaryLength(diameterMm, {
+          ...operatingBase,
+          massFlowKgS: nextMassFlow,
+          inletSubcoolK: adjustedSubcooling,
+          inletEnthalpyKJkg: adjustedLiquidEnthalpy,
+        })
+        if (!nextSimulation) break
+
+        const massFlowConverged =
+          Math.abs(nextMassFlow - currentMassFlow) <=
+          Math.max(nextMassFlow, 1e-12) * 1e-6
+        const lengthConverged =
+          Math.abs(nextSimulation.lengthM - currentSimulation.lengthM) <=
+          Math.max(nextSimulation.lengthM, 1e-12) * 1e-6
+
+        currentMassFlow = nextMassFlow
+        currentSimulation = nextSimulation
+
+        if (massFlowConverged && lengthConverged) {
+          converged.set(diameterMm, {
+            massFlowKgS: nextMassFlow,
+            simulation: nextSimulation,
+            suction: suctionForIteration,
+            liquidEnthalpyKJkg: adjustedLiquidEnthalpy,
+            slhx: currentSlhx,
+            operating: {
+              ...operatingBase,
+              massFlowKgS: nextMassFlow,
+              inletSubcoolK: adjustedSubcooling,
+              inletEnthalpyKJkg: adjustedLiquidEnthalpy,
+            },
+          })
+          break
+        }
+      }
+    }
+
+    const candidates: CapillaryCandidate[] = []
+    for (const state of converged.values()) {
+      const candidate = asCandidate(state.simulation, correctionFactor)
+      if (candidate.lengthM <= config.maxLengthM * 2.2) {
+        candidates.push(candidate)
+      }
+    }
+    const ranked = rankCandidates(candidates, {
+      designLengthM: config.designLengthM,
+      minViableLengthM: config.lengthRangeM[0],
+      maxViableLengthM: config.lengthRangeM[1],
+    })
+    const selectedCandidate = ranked[0]
+    const selectedState = selectedCandidate
+      ? converged.get(selectedCandidate.diameterMm)
+      : undefined
+    if (!selectedState) {
+      throw new Error(
+        'El cálculo iterativo del SLHX no convergió en ningún diámetro comercial',
       )
-      const massFlowConverged =
-        Math.abs(nextMassFlow - massFlowGuess) <=
-        Math.max(nextMassFlow, 1e-12) * 1e-6
-      const lengthConverged =
-        Math.abs(nextCapillary.lengthM - capillary.lengthM) <=
-        Math.max(nextCapillary.lengthM, 1e-12) * 1e-6
-
-      slhxResult = currentSlhx
-      targetSuction = suctionForIteration
-      targetLiquidEnthalpyKJkg = adjustedLiquidEnthalpy
-      massFlow = nextMassFlow
-      capillary = nextCapillary
-
-      if (massFlowConverged && lengthConverged) {
-        converged = true
-        break
-      }
-
-      massFlowGuess = nextMassFlow
     }
 
-    if (!converged || !slhxResult) {
-      throw new Error('El cálculo iterativo del SLHX no convergió en 20 iteraciones')
-    }
+    massFlow = selectedState.massFlowKgS
+    targetSuction = selectedState.suction
+    targetLiquidEnthalpyKJkg = selectedState.liquidEnthalpyKJkg
+    slhxResult = selectedState.slhx
+    capillary = assembleCapillaryResult(ranked, {
+      input,
+      operating: selectedState.operating,
+      pressureInKPa: targetCondSaturation.pressureKPa,
+      pressureOutKPa: targetSaturation.pressureKPa,
+      correctionFactor,
+    })
+  } else {
+    capillary = computeCapillary(
+      input,
+      massFlowGuess,
+      targetCondSaturation.pressureKPa,
+      targetSaturation.pressureKPa,
+      correctionFactor,
+    )
   }
 
   const targetEnthalpyDifference =

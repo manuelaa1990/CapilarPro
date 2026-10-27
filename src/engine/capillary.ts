@@ -3,7 +3,7 @@ import type { CalculationInput, CapillaryCandidate, CapillaryResult, Refrigerant
 import { rankCandidates } from './grid'
 import { saturationAtPressure } from './properties'
 
-interface OperatingPoint {
+export interface OperatingPoint {
   fluid: RefrigerantId
   pressureInKPa: number
   pressureOutKPa: number
@@ -13,12 +13,12 @@ interface OperatingPoint {
   inletEnthalpyKJkg?: number
 }
 
-interface InletConditionOverrides {
+export interface InletConditionOverrides {
   subcoolK: number
   enthalpyKJkg: number
 }
 
-interface Simulation {
+export interface Simulation {
   diameterMm: number
   lengthM: number
   massFluxKgM2s: number
@@ -30,6 +30,10 @@ interface Simulation {
 
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value))
+
+/** Rango de corrección aprendida admitido por el motor. */
+export const clampCorrectionFactor = (factor: number) =>
+  clamp(factor, 0.7, 1.35)
 
 /**
  * Resuelve la calidad termodinámica local a partir del balance de energía
@@ -182,7 +186,9 @@ export const simulateCapillaryLength = (
 
     const deltaPressurePa = (p0 - p1) * 1000
     length += deltaPressurePa / pressureGradient
-    outletQuality = x0
+    // La salida del tubo es el estado a P_out, es decir x1 (no x0, que es
+    // el extremo de entrada del último tramo).
+    outletQuality = x1
     lastPressure = p1
   }
 
@@ -204,60 +210,55 @@ export const simulateCapillaryLength = (
   }
 }
 
-const asCandidate = (
+export const asCandidate = (
   simulation: Simulation,
-  factor: number,
-): CapillaryCandidate => ({
-  diameterMm: simulation.diameterMm,
-  lengthM: simulation.lengthM * factor,
-  rawLengthM: simulation.lengthM,
-  massFluxKgM2s: simulation.massFluxKgM2s,
-  inletVelocityMs: simulation.inletVelocityMs,
-  outletQuality: simulation.outletQuality,
-  outletPressureKPa: simulation.outletPressureKPa,
-  choked: simulation.choked,
-  status: 'alternative',
-  note: '',
-})
+  correctionFactor: number,
+): CapillaryCandidate => {
+  const factor = clampCorrectionFactor(correctionFactor)
+  return {
+    diameterMm: simulation.diameterMm,
+    lengthM: simulation.lengthM * factor,
+    rawLengthM: simulation.lengthM,
+    massFluxKgM2s: simulation.massFluxKgM2s,
+    inletVelocityMs: simulation.inletVelocityMs,
+    outletQuality: simulation.outletQuality,
+    outletPressureKPa: simulation.outletPressureKPa,
+    choked: simulation.choked,
+    status: 'alternative',
+    note: '',
+  }
+}
 
-export const computeCapillary = (
-  input: CalculationInput,
-  massFlowKgS: number,
-  pressureInKPa: number,
-  pressureOutKPa: number,
-  correctionFactor = 1,
-  inletOverrides?: InletConditionOverrides,
-): CapillaryResult => {
-  const config = correlations.capillary
-  const operating: OperatingPoint = {
-    fluid: input.refrigerantId,
+interface AssemblyContext {
+  input: CalculationInput
+  operating: OperatingPoint
+  pressureInKPa: number
+  pressureOutKPa: number
+  correctionFactor: number
+}
+
+/**
+ * Construye el resultado final a partir de candidatos ya evaluados en su
+ * punto de operación. Con SLHX cada diámetro se resuelve por separado, de modo
+ * que la lista puede contener estados con caudales ligeramente distintos.
+ */
+export const assembleCapillaryResult = (
+  ranked: CapillaryCandidate[],
+  {
+    input,
+    operating,
     pressureInKPa,
     pressureOutKPa,
-    subcoolK: input.targetSubcoolK,
-    massFlowKgS,
-    inletSubcoolK: inletOverrides?.subcoolK,
-    inletEnthalpyKJkg: inletOverrides?.enthalpyKJkg,
-  }
-  const factor = clamp(correctionFactor, 0.7, 1.35)
-  const candidates = solutions.capillaryIdsMm
-    .map((diameter) => simulateCapillaryLength(diameter, operating))
-    .filter((simulation): simulation is Simulation => simulation !== null)
-    .map((simulation) => asCandidate(simulation, factor))
-    .filter((candidate) => candidate.lengthM <= config.maxLengthM * 2.2)
-
-  if (candidates.length === 0) {
+    correctionFactor,
+  }: AssemblyContext,
+): CapillaryResult => {
+  if (ranked.length === 0) {
     throw new Error(
       'No se pudo resolver el capilar con las condiciones introducidas. Revisa presiones, subenfriamiento y caudal másico.',
     )
   }
-
-  const ranked = rankCandidates(candidates, {
-    designLengthM: config.designLengthM,
-    minViableLengthM: config.lengthRangeM[0],
-    maxViableLengthM: config.lengthRangeM[1],
-  })
   const selected = ranked[0]
-
+  const factor = clampCorrectionFactor(correctionFactor)
   const installed =
     input.installedDiameterMm && input.installedDiameterMm >= 0.3
       ? simulateCapillaryLength(input.installedDiameterMm, operating)
@@ -293,6 +294,45 @@ export const computeCapillary = (
       Math.abs((input.installedDiameterMm ?? 0) - selected.diameterMm) < 0.025,
     installedPrediction,
   }
+}
+
+export const computeCapillary = (
+  input: CalculationInput,
+  massFlowKgS: number,
+  pressureInKPa: number,
+  pressureOutKPa: number,
+  correctionFactor = 1,
+  inletOverrides?: InletConditionOverrides,
+): CapillaryResult => {
+  const config = correlations.capillary
+  const operating: OperatingPoint = {
+    fluid: input.refrigerantId,
+    pressureInKPa,
+    pressureOutKPa,
+    subcoolK: input.targetSubcoolK,
+    massFlowKgS,
+    inletSubcoolK: inletOverrides?.subcoolK,
+    inletEnthalpyKJkg: inletOverrides?.enthalpyKJkg,
+  }
+  const candidates = solutions.capillaryIdsMm
+    .map((diameter) => simulateCapillaryLength(diameter, operating))
+    .filter((simulation): simulation is Simulation => simulation !== null)
+    .map((simulation) => asCandidate(simulation, correctionFactor))
+    .filter((candidate) => candidate.lengthM <= config.maxLengthM * 2.2)
+
+  const ranked = rankCandidates(candidates, {
+    designLengthM: config.designLengthM,
+    minViableLengthM: config.lengthRangeM[0],
+    maxViableLengthM: config.lengthRangeM[1],
+  })
+
+  return assembleCapillaryResult(ranked, {
+    input,
+    operating,
+    pressureInKPa,
+    pressureOutKPa,
+    correctionFactor,
+  })
 }
 
 export const predictLengthForDiameter = (

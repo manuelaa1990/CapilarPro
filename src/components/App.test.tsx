@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../App'
 
@@ -106,8 +106,7 @@ describe('CapilarPro', () => {
 
     await user.selectOptions(suctionDiameter, '1/2')
     expect(suctionDiameter).toHaveValue('1/2')
-    windingSlider.focus()
-    await user.keyboard('{ArrowRight}')
+    fireEvent.change(windingSlider, { target: { value: '55' } })
     expect(windingSlider).toHaveValue('55')
   })
 

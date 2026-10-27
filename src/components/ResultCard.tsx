@@ -14,7 +14,7 @@ import type {
   CalculationResult,
   CalibrationSummary,
 } from '../types'
-import { Badge, NumberField } from './ui'
+import { Badge } from './ui'
 import { UnitToggle } from './UnitToggle'
 import { fmt, fmtKW } from '../lib/format'
 import {
