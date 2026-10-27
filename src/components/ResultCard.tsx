@@ -323,7 +323,7 @@ export const ResultCard = ({
 
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-center gap-2">
                 <span
                   aria-label="Diámetro seleccionado"
                   className="font-display text-[46px] font-semibold leading-none tracking-[-0.06em] text-white"
@@ -383,13 +383,6 @@ export const ResultCard = ({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <Badge tone="dark">
-              <Thermometer size={10} />
-              {fmt(result.input.targetEvapC, 1)} °C evaporación
-            </Badge>
-            <Badge tone="dark">
-              {fmt(result.input.targetCondC, 1)} °C condensación
-            </Badge>
             {capillary.selectedIsInstalled && (
               <Badge tone="mint" className="border-mint-400/20 bg-mint-400/10 text-mint-300">
                 <Check size={10} />

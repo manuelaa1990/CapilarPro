@@ -19,6 +19,10 @@ describe('CapilarPro', () => {
       screen.getByRole('heading', { name: /Del dato de placa al capilar/i }),
     ).toBeInTheDocument()
     expect(await screen.findByText('SELECCIÓN')).toBeInTheDocument()
+    expect(screen.queryByText(/°C evaporación/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/°C condensación/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Diámetro seleccionado')).toBeInTheDocument()
+    expect(screen.getByLabelText('Longitud seleccionada')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Datos del compresor y placa/i }),
     ).toBeInTheDocument()
