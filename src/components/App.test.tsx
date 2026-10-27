@@ -21,6 +21,11 @@ describe('CapilarPro', () => {
     expect(await screen.findByText('SELECCIÓN')).toBeInTheDocument()
     expect(screen.queryByText(/°C evaporación/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/°C condensación/i)).not.toBeInTheDocument()
+    const plateRatio = screen.getByText(/^placa /)
+    const pressureRatioMetric = plateRatio.parentElement
+    expect(pressureRatioMetric).toHaveTextContent('RC')
+    expect(pressureRatioMetric?.children[1]).toHaveTextContent(/^\d+,\d{2}$/)
+    expect(plateRatio).toHaveTextContent(/^placa \d+,\d{2}$/)
     expect(screen.getByLabelText('Diámetro seleccionado')).toBeInTheDocument()
     expect(screen.getByLabelText('Longitud seleccionada')).toBeInTheDocument()
     expect(

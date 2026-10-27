@@ -730,14 +730,14 @@ export const CalculatorPage = () => {
                     aria-label="Intercambiador Capilar/Succión (SLHX)"
                     onClick={() => updateInput({ slhxActivo: !input.slhxActivo })}
                     className={clsx(
-                      'relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 focus-visible:ring-offset-2',
+                      'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 focus-visible:ring-offset-2',
                       input.slhxActivo ? 'bg-mint-500' : 'bg-ink-900/15',
                     )}
                   >
                     <span
                       className={clsx(
-                        'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                        input.slhxActivo ? 'translate-x-[22px]' : 'translate-x-0.5',
+                        'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                        input.slhxActivo ? 'translate-x-5' : 'translate-x-0',
                       )}
                     />
                   </button>

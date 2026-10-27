@@ -405,7 +405,7 @@ export const ResultCard = ({
           />
           <Metric
             icon={CircleAlert}
-            label="Pd / Ps"
+            label="RC"
             value={fmt(result.compressor.targetPressureRatio, 2)}
             sub={`placa ${fmt(result.compressor.referencePressureRatio, 2)}`}
           />
