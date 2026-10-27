@@ -263,7 +263,6 @@ export interface MemorySuggestion {
   similarity: number
   label: string
   refrigerantId: RefrigerantId
-  compressorModel: string
   lastSeen: string
 }
 

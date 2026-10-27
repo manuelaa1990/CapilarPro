@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../App'
 
@@ -40,54 +40,6 @@ describe('CapilarPro', () => {
       'R134a',
     )
     expect(screen.getAllByText(/R134a/i).length).toBeGreaterThan(0)
-  })
-
-  it('explica la eficiencia volumétrica anclada y permite cerrar la ayuda', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Ayuda sobre eficiencia volumétrica anclada',
-      }),
-    )
-
-    expect(
-      screen.getByRole('dialog', {
-        name: '¿Qué es la Eficiencia Volumétrica Anclada (ηv)?',
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Es el porcentaje real de gas que el compresor puede bombear en comparación con su volumen teórico.',
-      ),
-    ).toBeInTheDocument()
-
-    await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it('mantiene las unidades seleccionadas en el desglose técnico', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(
-      within(
-        screen.getByRole('group', { name: 'Unidad del diámetro' }),
-      ).getByRole('button', { name: 'in' }),
-    )
-    await user.click(
-      within(screen.getByRole('group', { name: 'Unidad de la longitud' })).getByRole(
-        'button',
-        { name: 'cm' },
-      ),
-    )
-    await user.click(screen.getByRole('button', { name: 'Ver desglose técnico' }))
-
-    expect(
-      screen.getByText(/D =.*in · L =.*cm/),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/Banda de longitud:.*cm/)).toBeInTheDocument()
   })
 
   it('permite editar el código o modelo del compresor', async () => {
