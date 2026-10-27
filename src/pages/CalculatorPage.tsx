@@ -28,7 +28,11 @@ import type {
 import { compressors, refrigerantById, refrigerants, standards } from '../data/catalog'
 import { fluidLimits, saturationAtTemperature } from '../engine/properties'
 import type { SaturationPhase } from '../engine/properties'
-import { fmt, fmtKpa, fmtKW } from '../lib/format'
+import { fmt, fmtKW } from '../lib/format'
+import type {
+  DiameterDisplayUnit,
+  LengthDisplayUnit,
+} from '../lib/displayUnits'
 import {
   BTU_PER_HOUR_PER_WATT,
   CUBIC_CENTIMETERS_PER_CUBIC_INCH,
@@ -118,6 +122,8 @@ export const CalculatorPage = () => {
   const [showDetails, setShowDetails] = useState(false)
   const [advanced, setAdvanced] = useState(settings.showAdvanced)
   const [manualReferenceValues, setManualReferenceValues] = useState(false)
+  const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
+  const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
   const [toast, setToast] = useState<string | null>(null)
   const [toastIsError, setToastIsError] = useState(false)
   const autoSavedFingerprints = useRef(new Set<string>())
@@ -217,32 +223,6 @@ export const CalculatorPage = () => {
           {cases.length} cálculos en memoria
         </span>
       </div>
-
-      {learned.suggestion && (
-        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-mint-500/20 bg-mint-500/[0.065] px-4 py-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-mint-500/15 text-mint-700">
-            <Sparkles size={16} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold text-ink-900">
-              Tu taller ya conoce este tipo de equipo
-            </p>
-            <p className="mt-0.5 text-[10px] text-ink-600">
-              {learned.suggestion.label} · {learned.suggestion.sampleCount} caso(s)
-              comparables · similitud {fmt(learned.suggestion.similarity * 100, 0)} %
-            </p>
-          </div>
-          <div className="rounded-xl border border-mint-500/15 bg-white/70 px-3 py-1.5 text-right">
-            <div className="font-mono text-[15px] font-semibold text-ink-950">
-              {fmt(learned.suggestion.diameterMm, 2)} mm ×{' '}
-              {fmt(learned.suggestion.lengthM, 2)} m
-            </div>
-            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-mint-700">
-              referencia de memoria
-            </div>
-          </div>
-        </div>
-      )}
 
       {calculationError && (
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5">
@@ -638,11 +618,15 @@ export const CalculatorPage = () => {
                 title="Condiciones de operación"
                 description="El capilar se dimensiona para el caudal real que el compresor puede entregar en este punto, no para la capacidad de etiqueta."
                 right={
-                  <div className="flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white px-3 py-1.5">
-                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-ink-600">
-                      Pd/Ps
+                  <div
+                    className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-ink-900/10 bg-slate-100 px-2.5 py-1 text-[9px] leading-none text-ink-700 shadow-sm"
+                    title="Relación de Compresión: Presión de descarga / Presión de succión. Indica el esfuerzo del compresor."
+                    aria-label="Relación de Compresión: Presión de descarga / Presión de succión. Indica el esfuerzo del compresor."
+                  >
+                    <span className="font-bold uppercase tracking-[0.12em] text-ink-600">
+                      RC
                     </span>
-                    <span className="font-mono text-[15px] font-semibold text-ink-950">
+                    <span className="font-mono text-[12px] font-semibold text-ink-950">
                       {fmt(ratio, 2)}
                     </span>
                   </div>
@@ -731,20 +715,6 @@ export const CalculatorPage = () => {
                   ventilación y el punto de condensación.
                 </p>
               )}
-
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-ink-900/[0.06] bg-ink-950 px-3.5 py-2.5 text-[10px] text-white/60">
-                <span className="flex items-center gap-1.5 font-semibold text-white/75">
-                  <Thermometer size={12} className="text-mint-300" />
-                  {fmt(input.targetEvapC, 1)} °C → {fmt(input.targetCondC, 1)} °C
-                </span>
-                <span className="font-mono text-white/60">
-                  Ps {fmtKpa(targetPressure)} · Pd {fmtKpa(condPressure)}
-                </span>
-                <span className="ml-auto flex items-center gap-1.5 text-white/60">
-                  <Info size={10} />
-                  La incertidumbre se recalcula con cada cambio
-                </span>
-              </div>
             </div>
           </Card>
 
@@ -867,8 +837,17 @@ export const CalculatorPage = () => {
                 onShowDetails={() => setShowDetails(true)}
                 suggestion={learned.suggestion}
                 calibration={learned.calibration}
+                diameterUnit={diameterUnit}
+                lengthUnit={lengthUnit}
+                onDiameterUnitChange={setDiameterUnit}
+                onLengthUnitChange={setLengthUnit}
               />
-              <LearningCard learned={learned} calibration={learned.calibration} />
+              <LearningCard
+                learned={learned}
+                calibration={learned.calibration}
+                diameterUnit={diameterUnit}
+                lengthUnit={lengthUnit}
+              />
               <div className="mt-4">
                 <WarningList warnings={result.warnings} />
               </div>
@@ -897,6 +876,8 @@ export const CalculatorPage = () => {
           open={showDetails}
           onClose={() => setShowDetails(false)}
           result={result}
+          diameterUnit={diameterUnit}
+          lengthUnit={lengthUnit}
         />
       )}
 

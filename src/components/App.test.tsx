@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../App'
 
@@ -40,6 +40,34 @@ describe('CapilarPro', () => {
       'R134a',
     )
     expect(screen.getAllByText(/R134a/i).length).toBeGreaterThan(0)
+  })
+
+  it('aplica las unidades seleccionadas a todas las recomendaciones visibles', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(
+      within(screen.getByRole('group', { name: 'Unidad del diámetro' })).getByRole(
+        'button',
+        { name: 'in' },
+      ),
+    )
+    await user.click(
+      within(screen.getByRole('group', { name: 'Unidad de la longitud' })).getByRole(
+        'button',
+        { name: 'cm' },
+      ),
+    )
+
+    const alternatives = screen
+      .getByText('Otras combinaciones')
+      .parentElement?.parentElement
+    expect(alternatives).toHaveTextContent(/\bin\s*×.*cm/)
+
+    await user.click(screen.getByRole('button', { name: 'Ver desglose técnico' }))
+    const dialog = screen.getByRole('dialog', { name: 'Trazabilidad del cálculo' })
+    expect(within(dialog).getByText(/D =/)).toHaveTextContent(/in · L =.*cm/)
+    expect(within(dialog).getByText(/Banda de longitud:/)).toHaveTextContent(/cm/)
   })
 
   it('permite editar el código o modelo del compresor', async () => {

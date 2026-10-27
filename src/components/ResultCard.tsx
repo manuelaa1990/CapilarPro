@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   ArrowUpRight,
   BookmarkCheck,
@@ -255,6 +254,10 @@ export const ResultCard = ({
   onShowDetails,
   suggestion,
   calibration,
+  diameterUnit,
+  lengthUnit,
+  onDiameterUnitChange,
+  onLengthUnitChange,
 }: {
   result: CalculationResult
   currentSaved: boolean
@@ -262,9 +265,11 @@ export const ResultCard = ({
   onShowDetails: () => void
   suggestion: MemorySuggestion | null
   calibration: CalibrationSummary
+  diameterUnit: DiameterDisplayUnit
+  lengthUnit: LengthDisplayUnit
+  onDiameterUnitChange: (unit: DiameterDisplayUnit) => void
+  onLengthUnitChange: (unit: LengthDisplayUnit) => void
 }) => {
-  const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
-  const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
   const capillary = result.capillary
   const primary = {
     ...capillary,
@@ -306,7 +311,7 @@ export const ResultCard = ({
                   label="Unidad del diámetro"
                   options={DIAMETER_UNITS}
                   value={diameterUnit}
-                  onChange={setDiameterUnit}
+                  onChange={onDiameterUnitChange}
                   className="self-center"
                 />
                 <span className="font-mono text-[11px] font-medium text-white/60">
@@ -324,7 +329,7 @@ export const ResultCard = ({
                   label="Unidad de la longitud"
                   options={LENGTH_UNITS}
                   value={lengthUnit}
-                  onChange={setLengthUnit}
+                  onChange={onLengthUnitChange}
                 />
                 <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/60">
                   longitud
