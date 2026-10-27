@@ -709,56 +709,6 @@ export const CalculatorPage = () => {
                   step={0.1}
                 />
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-900/[0.06] bg-frost-50/70 px-3.5 py-3">
-                <div>
-                  <p className="text-[11px] font-semibold text-ink-900">
-                    Intercambiador succión-líquido (SLHX)
-                  </p>
-                  <p className="mt-0.5 text-[10px] leading-relaxed text-ink-600">
-                    Modela la transferencia de calor entre las líneas de líquido y succión.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-label="Intercambiador SLHX"
-                  aria-checked={input.slhxActivo}
-                  onClick={() =>
-                    updateInput({ slhxActivo: !input.slhxActivo })
-                  }
-                  className={clsx(
-                    'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 focus-visible:ring-offset-2',
-                    input.slhxActivo ? 'bg-mint-600' : 'bg-ink-300',
-                  )}
-                >
-                  <span
-                    className={clsx(
-                      'inline-block h-4 w-4 rounded-full bg-white shadow transition-transform',
-                      input.slhxActivo ? 'translate-x-6' : 'translate-x-1',
-                    )}
-                  />
-                </button>
-                {input.slhxActivo && (
-                  <NumberField
-                    label="Efectividad (0-1)"
-                    value={input.slhxEfectividad}
-                    onChange={(slhxEfectividad) =>
-                      updateInput({
-                        slhxEfectividad: Math.min(
-                          1,
-                          Math.max(0, slhxEfectividad),
-                        ),
-                      })
-                    }
-                    unit="ε"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    className="w-full sm:w-44"
-                    inputClassName="py-2 text-[13px]"
-                  />
-                )}
-              </div>
               {input.targetCondC - input.targetAmbientTempC < 5 && (
                 <p role="alert" className="mt-2 text-[11px] font-medium text-amber-700">
                   Salto térmico bajo entre ambiente y condensación. Verifica la
@@ -888,6 +838,16 @@ export const CalculatorPage = () => {
                 calibration={learned.calibration}
                 diameterUnit={diameterUnit}
                 lengthUnit={lengthUnit}
+                slhxActivo={input.slhxActivo}
+                slhxEfectividad={input.slhxEfectividad}
+                onSlhxToggle={() =>
+                  updateInput({ slhxActivo: !input.slhxActivo })
+                }
+                onSlhxEfectividadChange={(slhxEfectividad) =>
+                  updateInput({
+                    slhxEfectividad: Math.min(1, Math.max(0, slhxEfectividad)),
+                  })
+                }
                 onDiameterUnitChange={setDiameterUnit}
                 onLengthUnitChange={setLengthUnit}
               />

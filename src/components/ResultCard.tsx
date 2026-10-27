@@ -14,7 +14,7 @@ import type {
   CalculationResult,
   CalibrationSummary,
 } from '../types'
-import { Badge } from './ui'
+import { Badge, NumberField } from './ui'
 import { UnitToggle } from './UnitToggle'
 import { fmt, fmtKW } from '../lib/format'
 import {
@@ -70,7 +70,13 @@ const ConfidencePill = ({
   )
 }
 
-const Coil = ({ diameterMm }: { diameterMm: number }) => {
+const Coil = ({
+  diameterMm,
+  slhxActivo,
+}: {
+  diameterMm: number
+  slhxActivo: boolean
+}) => {
   const stroke = Math.max(2.2, Math.min(7.5, diameterMm * 2.8))
   return (
     <svg
@@ -80,9 +86,9 @@ const Coil = ({ diameterMm }: { diameterMm: number }) => {
     >
       <defs>
         <linearGradient id="coil-gradient" x1="0" x2="1">
-          <stop offset="0" stopColor="#ffb45c" />
-          <stop offset="0.3" stopColor="#7ee8d2" />
-          <stop offset="1" stopColor="#40d7bd" />
+          <stop offset="0" stopColor={slhxActivo ? '#6ee7b7' : '#ffb45c'} />
+          <stop offset="0.3" stopColor={slhxActivo ? '#34d399' : '#7ee8d2'} />
+          <stop offset="1" stopColor={slhxActivo ? '#38bdf8' : '#40d7bd'} />
         </linearGradient>
         <filter id="coil-glow" x="-40%" y="-80%" width="180%" height="260%">
           <feGaussianBlur stdDeviation="3.5" result="blur" />
@@ -92,6 +98,16 @@ const Coil = ({ diameterMm }: { diameterMm: number }) => {
           </feMerge>
         </filter>
       </defs>
+      {slhxActivo && (
+        <path
+          d="M12 43h196"
+          fill="none"
+          stroke="#38bdf8"
+          strokeWidth="10"
+          strokeLinecap="round"
+          opacity="0.72"
+        />
+      )}
       <path
         d="M8 24h92c17 0 17 22 0 22H45c-17 0-17 20 0 20h90c25 0 25-28 0-28h-32"
         fill="none"
@@ -100,7 +116,7 @@ const Coil = ({ diameterMm }: { diameterMm: number }) => {
         strokeLinecap="round"
       />
       <path
-        className="coil-path"
+        className={clsx(slhxActivo && 'drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]')}
         d="M8 24h92c17 0 17 22 0 22H45c-17 0-17 20 0 20h90c25 0 25-28 0-28h-32"
         fill="none"
         stroke="url(#coil-gradient)"
@@ -252,6 +268,10 @@ export const ResultCard = ({
   calibration,
   diameterUnit,
   lengthUnit,
+  slhxActivo,
+  slhxEfectividad,
+  onSlhxToggle,
+  onSlhxEfectividadChange,
   onDiameterUnitChange,
   onLengthUnitChange,
 }: {
@@ -262,6 +282,10 @@ export const ResultCard = ({
   calibration: CalibrationSummary
   diameterUnit: DiameterDisplayUnit
   lengthUnit: LengthDisplayUnit
+  slhxActivo: boolean
+  slhxEfectividad: number
+  onSlhxToggle: () => void
+  onSlhxEfectividadChange: (value: number) => void
   onDiameterUnitChange: (unit: DiameterDisplayUnit) => void
   onLengthUnitChange: (unit: LengthDisplayUnit) => void
 }) => {
@@ -340,7 +364,32 @@ export const ResultCard = ({
               </div>
             </div>
             <div className="w-[44%] max-w-[210px] self-end">
-              <Coil diameterMm={capillary.diameterMm} />
+              <button
+                type="button"
+                title="Activar Intercambiador Capilar/Succión (SLHX)"
+                aria-label="Intercambiador Capilar/Succión (SLHX)"
+                aria-pressed={slhxActivo}
+                onClick={onSlhxToggle}
+                className="block w-full cursor-pointer rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950"
+              >
+                <Coil
+                  diameterMm={capillary.diameterMm}
+                  slhxActivo={slhxActivo}
+                />
+              </button>
+              {slhxActivo && (
+                <NumberField
+                  label="Efectividad (0-1)"
+                  value={slhxEfectividad}
+                  onChange={onSlhxEfectividadChange}
+                  unit="ε"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  className="mt-1"
+                  inputClassName="py-1 text-[11px]"
+                />
+              )}
             </div>
           </div>
 

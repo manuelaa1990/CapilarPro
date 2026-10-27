@@ -77,13 +77,13 @@ describe('CapilarPro', () => {
     const fingerprint = screen.getByText(/^CP-[A-F0-9]{8}$/).textContent
     const selectedLength = screen.getByLabelText('Longitud seleccionada')
       .textContent
-    const slhxSwitch = screen.getByRole('switch', {
-      name: 'Intercambiador SLHX',
+    const slhxButton = screen.getByRole('button', {
+      name: 'Intercambiador Capilar/Succión (SLHX)',
     })
 
-    await user.click(slhxSwitch)
+    await user.click(slhxButton)
 
-    expect(slhxSwitch).toHaveAttribute('aria-checked', 'true')
+    expect(slhxButton).toHaveAttribute('aria-pressed', 'true')
     expect(await screen.findByLabelText('Efectividad (0-1)')).toHaveValue(0.7)
     await waitFor(() => {
       expect(screen.getByText(/^CP-[A-F0-9]{8}$/).textContent).not.toBe(
