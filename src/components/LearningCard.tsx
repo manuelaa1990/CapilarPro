@@ -1,14 +1,27 @@
 import { ArrowRight, BrainCircuit, Database, Sparkles } from 'lucide-react'
 import type { CalibrationSummary, LearnedModel } from '../types'
 import { fmt } from '../lib/format'
+import {
+  diameterDigits,
+  diameterFromMm,
+  fmtFixed,
+  lengthDigits,
+  lengthFromM,
+  type DiameterDisplayUnit,
+  type LengthDisplayUnit,
+} from '../lib/displayUnits'
 import { useApp } from '../store/useApp'
 
 export const LearningCard = ({
   learned,
   calibration,
+  diameterUnit,
+  lengthUnit,
 }: {
   learned: LearnedModel
   calibration: CalibrationSummary
+  diameterUnit: DiameterDisplayUnit
+  lengthUnit: LengthDisplayUnit
 }) => {
   const { navigate, settings } = useApp()
   const suggestion = learned.suggestion
@@ -50,9 +63,23 @@ export const LearningCard = ({
                   {suggestion.label}. Tu historial apunta a:
                 </p>
                 <p className="mt-1.5 font-mono text-[19px] font-semibold tracking-[-0.03em] text-ink-950">
-                  {fmt(suggestion.diameterMm, 2)} mm
+                  {fmtFixed(
+                    diameterFromMm(suggestion.diameterMm, diameterUnit),
+                    diameterDigits(diameterUnit),
+                  )}{' '}
+                  {diameterUnit}
                   <span className="mx-1 text-frost-300">×</span>
-                  {fmt(suggestion.lengthM, 2)} m
+                  {fmtFixed(
+                    lengthFromM(suggestion.lengthM, lengthUnit),
+                    lengthDigits(lengthUnit),
+                  )}{' '}
+                  {lengthUnit}
+                </p>
+                <p className="mt-1 text-[10px] leading-relaxed text-ink-600">
+                  Compresor:{' '}
+                  <span className="font-semibold text-ink-800">
+                    {suggestion.compressorModel || 'Personalizado'}
+                  </span>
                 </p>
                 <div className="mt-1 flex items-center gap-2 text-[9px] text-ink-600">
                   <span>{suggestion.sampleCount} caso(s)</span>

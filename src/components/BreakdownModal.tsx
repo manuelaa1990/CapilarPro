@@ -3,6 +3,15 @@ import type { ReactNode } from 'react'
 import type { CalculationResult } from '../types'
 import { Modal } from './Modal'
 import { fmt, fmtKpa, fmtKW } from '../lib/format'
+import {
+  diameterDigits,
+  diameterFromMm,
+  fmtFixed,
+  lengthDigits,
+  lengthFromM,
+  type DiameterDisplayUnit,
+  type LengthDisplayUnit,
+} from '../lib/displayUnits'
 import { rpmFromFrequency } from '../engine/frequency'
 import { displacementToCubicCentimeters } from '../engine/units'
 import { Badge } from './ui'
@@ -34,13 +43,21 @@ export const BreakdownModal = ({
   result,
   open,
   onClose,
+  diameterUnit,
+  lengthUnit,
 }: {
   result: CalculationResult
   open: boolean
   onClose: () => void
+  diameterUnit: DiameterDisplayUnit
+  lengthUnit: LengthDisplayUnit
 }) => {
   const comp = result.compressor
   const cap = result.capillary
+  const diameterDigitsShown = diameterDigits(diameterUnit)
+  const diameterUncertaintyDigits =
+    diameterDigitsShown + (diameterUnit === 'in' ? 1 : 0)
+  const lengthDigitsShown = lengthDigits(lengthUnit)
 
   return (
     <Modal
@@ -91,7 +108,10 @@ export const BreakdownModal = ({
             Capilar
           </div>
           <div className="mt-1 font-mono text-[16px] font-semibold text-mint-700">
-            {fmt(cap.diameterMm, 2)} × {fmt(cap.lengthM, 2)} m
+            {fmtFixed(diameterFromMm(cap.diameterMm, diameterUnit), diameterDigitsShown)}{' '}
+            {diameterUnit} ×{' '}
+            {fmtFixed(lengthFromM(cap.lengthM, lengthUnit), lengthDigitsShown)}{' '}
+            {lengthUnit}
           </div>
         </div>
       </div>
@@ -195,7 +215,14 @@ export const BreakdownModal = ({
               {fmtKpa(cap.pressureDropKPa)}
             </div>
             <div className="rounded-lg bg-white p-2.5">
-              D = {fmt(cap.diameterMm, 2)} mm · L = {fmt(cap.lengthM, 3)} m
+              D ={' '}
+              {fmtFixed(
+                diameterFromMm(cap.diameterMm, diameterUnit),
+                diameterDigitsShown,
+              )}{' '}
+              {diameterUnit} · L ={' '}
+              {fmtFixed(lengthFromM(cap.lengthM, lengthUnit), lengthDigitsShown)}{' '}
+              {lengthUnit}
             </div>
             <div className="rounded-lg bg-white p-2.5">
               Corrección empírica = ×{fmt(cap.correctionFactor, 3)} · n ={' '}
@@ -238,9 +265,27 @@ export const BreakdownModal = ({
         <div className="mt-3 flex items-start gap-1.5 border-t border-amber-900/10 pt-2.5 text-[10px] text-[#8a5b28]">
           <Info size={12} className="mt-0.5 shrink-0" />
           <span>
-            Banda de longitud: {fmt(result.uncertainty.interval.lengthM[0], 2)}–
-            {fmt(result.uncertainty.interval.lengthM[1], 2)} m. Diámetro nominal
-            ± {fmt((result.uncertainty.interval.diameterMm[1] - result.uncertainty.interval.diameterMm[0]) / 2, 3)} mm.
+            Banda de longitud:{' '}
+            {fmtFixed(
+              lengthFromM(result.uncertainty.interval.lengthM[0], lengthUnit),
+              lengthDigitsShown,
+            )}
+            –
+            {fmtFixed(
+              lengthFromM(result.uncertainty.interval.lengthM[1], lengthUnit),
+              lengthDigitsShown,
+            )}{' '}
+            {lengthUnit}. Diámetro nominal ±{' '}
+            {fmtFixed(
+              diameterFromMm(
+                (result.uncertainty.interval.diameterMm[1] -
+                  result.uncertainty.interval.diameterMm[0]) /
+                  2,
+                diameterUnit,
+              ),
+              diameterUncertaintyDigits,
+            )}{' '}
+            {diameterUnit}.
           </span>
         </div>
       </div>

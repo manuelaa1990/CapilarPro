@@ -137,4 +137,27 @@ describe('modelo aprendido', () => {
     )
     expect(suggestion).toBeNull()
   })
+
+  it('incluye el compresor del caso similar y cae a Personalizado sin nombre', () => {
+    const named = getMemorySuggestion(
+      [makeCase('named', { compressorLabel: 'QD110H' })],
+      defaultInput(),
+      true,
+    )
+    expect(named?.compressorModel).toBe('QD110H')
+
+    const catalog = getMemorySuggestion(
+      [makeCase('catalog', { compressorId: 'secop-sc15g', compressorLabel: '' })],
+      defaultInput(),
+      true,
+    )
+    expect(catalog?.compressorModel).toBe('SC15G')
+
+    const unnamed = getMemorySuggestion(
+      [makeCase('unnamed', { compressorLabel: '   ' })],
+      defaultInput(),
+      true,
+    )
+    expect(unnamed?.compressorModel).toBe('Personalizado')
+  })
 })

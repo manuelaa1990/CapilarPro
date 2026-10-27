@@ -1,4 +1,4 @@
-import { correlations } from '../data/catalog'
+import { compressorById, correlations } from '../data/catalog'
 import type {
   CalibrationSummary,
   CalculationInput,
@@ -153,6 +153,20 @@ const weightedGeometricMean = (values: Array<{ value: number; weight: number }>)
   )
 }
 
+const CUSTOM_COMPRESSOR_LABEL = /^compresor personalizado$/i
+
+/**
+ * Equivalente local del campo `modelo` de la tabla `compressors`:
+ * `compressorLabel` es lo que se persiste allí en `saveCalculation`.
+ * Si el usuario lo dejó en blanco, se usa el modelo del catálogo y, si
+ * tampoco existe, se declara como "Personalizado".
+ */
+const compressorModelOf = (input: CalculationInput): string => {
+  const label = input.compressorLabel.trim()
+  if (label && !CUSTOM_COMPRESSOR_LABEL.test(label)) return label
+  return compressorById(input.compressorId)?.model ?? 'Personalizado'
+}
+
 /**
  * Recomendación antes de completar el formulario: busca los casos más
  * parecidos por refrigerante, compresor y puntos de evaporación/condensación.
@@ -200,6 +214,7 @@ export const getMemorySuggestion = (
           ? 'Dos casos comparables'
           : 'Un caso similar',
     refrigerantId: input.refrigerantId,
+    compressorModel: compressorModelOf(ranked[0].item.result.input),
     lastSeen: ranked
       .map(({ item }) => item.updatedAt)
       .sort()

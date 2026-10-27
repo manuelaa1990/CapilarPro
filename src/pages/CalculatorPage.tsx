@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
@@ -30,6 +30,15 @@ import { fluidLimits, saturationAtTemperature } from '../engine/properties'
 import type { SaturationPhase } from '../engine/properties'
 import { fmt, fmtKpa, fmtKW } from '../lib/format'
 import {
+  diameterDigits,
+  diameterFromMm,
+  fmtFixed,
+  lengthDigits,
+  lengthFromM,
+  type DiameterDisplayUnit,
+  type LengthDisplayUnit,
+} from '../lib/displayUnits'
+import {
   BTU_PER_HOUR_PER_WATT,
   CUBIC_CENTIMETERS_PER_CUBIC_INCH,
   convertCapacity,
@@ -41,6 +50,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ResultCard } from '../components/ResultCard'
 import { LearningCard } from '../components/LearningCard'
 import { BreakdownModal } from '../components/BreakdownModal'
+import { Modal } from '../components/Modal'
 import { CompressorSearch } from '../components/CompressorSearch'
 import { saveCalculation } from '../lib/saveCalculation'
 import { deriveReferenceSuperheatAndSubcooling } from '../engine/standards'
@@ -116,12 +126,38 @@ export const CalculatorPage = () => {
     dismissError,
   } = useApp()
   const [showDetails, setShowDetails] = useState(false)
+  const [showVolumetricEfficiencyHelp, setShowVolumetricEfficiencyHelp] =
+    useState(false)
   const [advanced, setAdvanced] = useState(settings.showAdvanced)
   const [manualReferenceValues, setManualReferenceValues] = useState(false)
+  const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
+  const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
   const [toast, setToast] = useState<string | null>(null)
   const [toastIsError, setToastIsError] = useState(false)
+  const toastTimeout = useRef<number | null>(null)
   const autoSavedFingerprints = useRef(new Set<string>())
   const { setStatus: setNeonStatus } = useNeonStatus()
+
+  const showToast = useCallback((message: string) => {
+    if (toastTimeout.current !== null) {
+      window.clearTimeout(toastTimeout.current)
+    }
+    setToastIsError(true)
+    setToast(message)
+    toastTimeout.current = window.setTimeout(() => {
+      setToast(null)
+      toastTimeout.current = null
+    }, 4200)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (toastTimeout.current !== null) {
+        window.clearTimeout(toastTimeout.current)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!result || autoSavedFingerprints.current.has(result.fingerprint)) return
@@ -133,17 +169,13 @@ export const CalculatorPage = () => {
         return
       }
       setNeonStatus('local')
-      setToastIsError(true)
-      setToast('Guardado localmente. No se pudo sincronizar con Neon.')
-      window.setTimeout(() => setToast(null), 4200)
+      showToast('Guardado localmente. No se pudo sincronizar con Neon.')
     }).catch((error: unknown) => {
       setNeonStatus('local')
       console.error('No se pudo guardar el cálculo ni en Neon ni localmente.', error)
-      setToastIsError(true)
-      setToast('No se pudo guardar el cálculo localmente.')
-      window.setTimeout(() => setToast(null), 4200)
+      showToast('No se pudo guardar el cálculo localmente.')
     })
-  }, [result, setNeonStatus])
+  }, [result, setNeonStatus, showToast])
 
   const compressor = compressors.find((item) => item.id === input.compressorId)
   const standard = standards.find((item) => item.id === input.standardId) ?? standards[0]
@@ -234,8 +266,16 @@ export const CalculatorPage = () => {
           </div>
           <div className="rounded-xl border border-mint-500/15 bg-white/70 px-3 py-1.5 text-right">
             <div className="font-mono text-[15px] font-semibold text-ink-950">
-              {fmt(learned.suggestion.diameterMm, 2)} mm ×{' '}
-              {fmt(learned.suggestion.lengthM, 2)} m
+              {fmtFixed(
+                diameterFromMm(learned.suggestion.diameterMm, diameterUnit),
+                diameterDigits(diameterUnit),
+              )}{' '}
+              {diameterUnit} ×{' '}
+              {fmtFixed(
+                lengthFromM(learned.suggestion.lengthM, lengthUnit),
+                lengthDigits(lengthUnit),
+              )}{' '}
+              {lengthUnit}
             </div>
             <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-mint-700">
               referencia de memoria
@@ -281,9 +321,18 @@ export const CalculatorPage = () => {
                     ) : (
                       <Badge>Personalizado</Badge>
                     )}
-                    <div className="hidden text-right sm:block">
-                      <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
-                        ηv anclada
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-1 text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
+                        <span>ηv anclada</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowVolumetricEfficiencyHelp(true)}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sky-600 transition-colors hover:bg-sky-50 hover:text-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                          aria-label="Ayuda sobre eficiencia volumétrica anclada"
+                          aria-haspopup="dialog"
+                        >
+                          <Info size={13} aria-hidden="true" />
+                        </button>
                       </div>
                       <div className="mt-1 font-mono text-[18px] font-semibold text-mint-700">
                         {result
@@ -867,8 +916,17 @@ export const CalculatorPage = () => {
                 onShowDetails={() => setShowDetails(true)}
                 suggestion={learned.suggestion}
                 calibration={learned.calibration}
+                diameterUnit={diameterUnit}
+                lengthUnit={lengthUnit}
+                onDiameterUnitChange={setDiameterUnit}
+                onLengthUnitChange={setLengthUnit}
               />
-              <LearningCard learned={learned} calibration={learned.calibration} />
+              <LearningCard
+                learned={learned}
+                calibration={learned.calibration}
+                diameterUnit={diameterUnit}
+                lengthUnit={lengthUnit}
+              />
               <div className="mt-4">
                 <WarningList warnings={result.warnings} />
               </div>
@@ -897,8 +955,22 @@ export const CalculatorPage = () => {
           open={showDetails}
           onClose={() => setShowDetails(false)}
           result={result}
+          diameterUnit={diameterUnit}
+          lengthUnit={lengthUnit}
         />
       )}
+
+      <Modal
+        open={showVolumetricEfficiencyHelp}
+        onClose={() => setShowVolumetricEfficiencyHelp(false)}
+        title="¿Qué es la Eficiencia Volumétrica Anclada (ηv)?"
+        eyebrow="Ayuda técnica"
+      >
+        <p className="text-sm leading-relaxed text-ink-700">
+          Es el porcentaje real de gas que el compresor puede bombear en
+          comparación con su volumen teórico.
+        </p>
+      </Modal>
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink-950 px-4 py-2.5 text-[11px] font-semibold text-white shadow-float lg:bottom-8">
