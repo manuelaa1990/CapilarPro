@@ -1,11 +1,9 @@
 import {
-  ArrowUpRight,
   BookmarkCheck,
   Check,
   ChevronRight,
   CircleAlert,
   Gauge,
-  Info,
   ShieldCheck,
   Sparkles,
   Thermometer,
@@ -15,7 +13,6 @@ import clsx from 'clsx'
 import type {
   CalculationResult,
   CalibrationSummary,
-  MemorySuggestion,
 } from '../types'
 import { Badge } from './ui'
 import { UnitToggle } from './UnitToggle'
@@ -252,7 +249,6 @@ export const ResultCard = ({
   currentSaved,
   onSave,
   onShowDetails,
-  suggestion,
   calibration,
   diameterUnit,
   lengthUnit,
@@ -263,7 +259,6 @@ export const ResultCard = ({
   currentSaved: boolean
   onSave: () => void
   onShowDetails: () => void
-  suggestion: MemorySuggestion | null
   calibration: CalibrationSummary
   diameterUnit: DiameterDisplayUnit
   lengthUnit: LengthDisplayUnit
@@ -278,6 +273,14 @@ export const ResultCard = ({
     note: '',
   }
   const alternatives = [primary, ...capillary.alternatives].slice(0, 4)
+  const selectedDiameter = fmtFixed(
+    diameterFromMm(capillary.diameterMm, diameterUnit),
+    diameterDigits(diameterUnit),
+  )
+  const selectedLength = fmtFixed(
+    lengthFromM(capillary.lengthM, lengthUnit),
+    lengthDigits(lengthUnit),
+  )
 
   return (
     <div className="overflow-hidden rounded-[24px] bg-ink-950 text-white shadow-float">
@@ -291,7 +294,7 @@ export const ResultCard = ({
                 <span className="absolute inline-flex h-full w-full animate-pulse-soft rounded-full bg-mint-400" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint-300" />
               </span>
-              Recomendación primaria
+              SELECCIÓN
             </div>
             <span className="font-mono text-[9px] tracking-wider text-white/60">
               {result.fingerprint}
@@ -301,11 +304,11 @@ export const ResultCard = ({
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="font-display text-[46px] font-semibold leading-none tracking-[-0.06em] text-white">
-                  {fmtFixed(
-                    diameterFromMm(capillary.diameterMm, diameterUnit),
-                    diameterDigits(diameterUnit),
-                  )}
+                <span
+                  aria-label="Diámetro seleccionado"
+                  className="font-display text-[46px] font-semibold leading-none tracking-[-0.06em] text-white"
+                >
+                  {selectedDiameter}
                 </span>
                 <UnitToggle
                   label="Unidad del diámetro"
@@ -319,11 +322,11 @@ export const ResultCard = ({
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <span className="font-display text-[29px] font-semibold leading-none tracking-[-0.04em] text-mint-300">
-                  {fmtFixed(
-                    lengthFromM(capillary.lengthM, lengthUnit),
-                    lengthDigits(lengthUnit),
-                  )}
+                <span
+                  aria-label="Longitud seleccionada"
+                  className="font-display text-[29px] font-semibold leading-none tracking-[-0.04em] text-mint-300"
+                >
+                  {selectedLength}
                 </span>
                 <UnitToggle
                   label="Unidad de la longitud"
@@ -383,16 +386,15 @@ export const ResultCard = ({
           />
           <Metric
             icon={Thermometer}
-            label="Calidad salida"
-            value={fmt(capillary.outletQuality, 2)}
-            sub="0 = líquido · 1 = vapor"
+            label="SATURACIÓN"
+            value={`${fmt(capillary.outletQuality * 100, 0)}%`}
           />
         </div>
 
         <div className="rounded-2xl border border-white/[0.07] p-3">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/60">
-              Otras combinaciones
+              Alternativas de selección
             </span>
             <span className="font-mono text-[8px] text-white/60">
               ventana {fmtFixed(lengthFromM(0.35, lengthUnit), lengthDigits(lengthUnit))}
@@ -451,32 +453,6 @@ export const ResultCard = ({
           </button>
         </div>
 
-        {suggestion && (
-          <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3 text-[10px] text-white/60">
-            <Info size={12} className="shrink-0" />
-            <span>
-              Memoria local sugiere{' '}
-              {fmtFixed(
-                diameterFromMm(suggestion.diameterMm, diameterUnit),
-                diameterDigits(diameterUnit),
-              )}{' '}
-              {diameterUnit} ×{' '}
-              {fmtFixed(
-                lengthFromM(suggestion.lengthM, lengthUnit),
-                lengthDigits(lengthUnit),
-              )}{' '}
-              {lengthUnit}
-            </span>
-            <button
-              type="button"
-              onClick={onShowDetails}
-              className="ml-auto inline-flex items-center gap-1 text-mint-300/70 hover:text-mint-300"
-            >
-              ver
-              <ArrowUpRight size={10} />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

@@ -18,7 +18,7 @@ describe('CapilarPro', () => {
     expect(
       screen.getByRole('heading', { name: /Del dato de placa al capilar/i }),
     ).toBeInTheDocument()
-    expect(await screen.findByText('Recomendación primaria')).toBeInTheDocument()
+    expect(await screen.findByText('SELECCIÓN')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Datos del compresor y placa/i }),
     ).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('CapilarPro', () => {
     )
 
     const alternatives = screen
-      .getByText('Otras combinaciones')
+      .getByText('Alternativas de selección')
       .parentElement?.parentElement
     expect(alternatives).toHaveTextContent(/\bin\s*×.*cm/)
 
@@ -68,6 +68,31 @@ describe('CapilarPro', () => {
     const dialog = screen.getByRole('dialog', { name: 'Trazabilidad del cálculo' })
     expect(within(dialog).getByText(/D =/)).toHaveTextContent(/in · L =.*cm/)
     expect(within(dialog).getByText(/Banda de longitud:/)).toHaveTextContent(/cm/)
+  })
+
+  it('recalcula la selección al activar el SLHX', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const fingerprint = screen.getByText(/^CP-[A-F0-9]{8}$/).textContent
+    const selectedLength = screen.getByLabelText('Longitud seleccionada')
+      .textContent
+    const slhxSwitch = screen.getByRole('switch', {
+      name: 'Intercambiador SLHX',
+    })
+
+    await user.click(slhxSwitch)
+
+    expect(slhxSwitch).toHaveAttribute('aria-checked', 'true')
+    expect(await screen.findByLabelText('Efectividad (0-1)')).toHaveValue(0.7)
+    await waitFor(() => {
+      expect(screen.getByText(/^CP-[A-F0-9]{8}$/).textContent).not.toBe(
+        fingerprint,
+      )
+      expect(
+        screen.getByLabelText('Longitud seleccionada').textContent,
+      ).not.toBe(selectedLength)
+    })
   })
 
   it('permite editar el código o modelo del compresor', async () => {

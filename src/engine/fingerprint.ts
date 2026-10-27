@@ -51,6 +51,12 @@ export const fingerprintOf = (input: CalculationInput): string => {
     targetAmbientTempC: normalizeNumber(input.targetAmbientTempC, 2),
     targetSuperheatK: normalizeNumber(input.targetSuperheatK, 2),
     targetSubcoolK: normalizeNumber(input.targetSubcoolK, 2),
+    ...(input.slhxActivo
+      ? {
+          slhxActivo: 'true',
+          slhxEfectividad: normalizeNumber(input.slhxEfectividad, 3),
+        }
+      : {}),
   }
   const stable = Object.keys(payload)
     .sort()

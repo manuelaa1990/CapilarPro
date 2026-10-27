@@ -11,6 +11,29 @@ describe('validación del formulario', () => {
     expect(defaultInput().compressorId).toBe('custom')
     expect(defaultInput().ambientTempC).toBe(32.2)
     expect(defaultInput().returnGasTempC).toBe(32.2)
+    expect(defaultInput().slhxActivo).toBe(false)
+    expect(defaultInput().slhxEfectividad).toBe(0.7)
+  })
+
+  it('migrates saved inputs without SLHX settings to the defaults', () => {
+    const legacyInput: Record<string, unknown> = { ...defaultInput() }
+    delete legacyInput.slhxActivo
+    delete legacyInput.slhxEfectividad
+
+    const result = calculationInputSchema.safeParse(legacyInput)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.slhxActivo).toBe(false)
+      expect(result.data.slhxEfectividad).toBe(0.7)
+    }
+  })
+
+  it('rechaza una efectividad SLHX fuera de 0-1', () => {
+    const result = calculationInputSchema.safeParse({
+      ...defaultInput(),
+      slhxEfectividad: 1.1,
+    })
+    expect(result.success).toBe(false)
   })
 
   it('migrates saved test temperatures to the standard defaults', () => {

@@ -43,6 +43,20 @@ describe('fingerprint', () => {
       fingerprintOf(base),
     )
   })
+
+  it('cambia cuando cambia la configuración del SLHX', () => {
+    const base = defaultInput()
+    expect(fingerprintOf({ ...base, slhxActivo: true })).not.toBe(
+      fingerprintOf(base),
+    )
+    expect(
+      fingerprintOf({
+        ...base,
+        slhxActivo: true,
+        slhxEfectividad: 0.8,
+      }),
+    ).not.toBe(fingerprintOf({ ...base, slhxActivo: true }))
+  })
 })
 
 describe('eficiencia volumétrica anclada', () => {
@@ -144,6 +158,27 @@ describe('cálculo completo', () => {
       targetSuperheatK: 40,
     })
     expect(result.input.targetSuperheatK).toBe(12)
+  })
+
+  it('recalcula el caudal y el capilar con el intercambiador SLHX activo', () => {
+    const withoutSlhx = calculateWith()
+    const withSlhx = calculateWith({ slhxActivo: true })
+
+    expect(withSlhx.input.slhxActivo).toBe(true)
+    expect(withSlhx.compressor.suctionEnthalpy).toBeGreaterThan(
+      withoutSlhx.compressor.suctionEnthalpy,
+    )
+    expect(withSlhx.compressor.liquidEnthalpy).toBeLessThan(
+      withoutSlhx.compressor.liquidEnthalpy,
+    )
+    expect(withSlhx.compressor.massFlowKgS).not.toBeCloseTo(
+      withoutSlhx.compressor.massFlowKgS,
+      6,
+    )
+    expect(withSlhx.capillary.lengthM).not.toBeCloseTo(
+      withoutSlhx.capillary.lengthM,
+      6,
+    )
   })
 
   it('rechaza un salto térmico insuficiente', () => {

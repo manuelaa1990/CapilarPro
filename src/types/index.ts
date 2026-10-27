@@ -94,6 +94,8 @@ export interface CalculationInput {
   targetAmbientTempC: number
   targetSuperheatK: number
   targetSubcoolK: number
+  slhxActivo: boolean
+  slhxEfectividad: number
   lHxM?: number
   installedDiameterMm: number | null
   installedLengthM: number | null

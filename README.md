@@ -21,6 +21,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 - **Anclaje a placa**: capacidad en W o BTU/h, desplazamiento en cm³/rev o in³/rev, frecuencia de red (50/60 Hz) y condiciones de referencia editables. El motor normaliza las unidades antes del cálculo.
 - **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap. y cond. según ASHRAE, EN 12900 o GB/T. El recalentamiento de ensayo se deriva de temperatura de retorno menos evaporación y el subenfriamiento de condensación menos ambiente; ambos son de solo lectura salvo que el usuario habilite la edición manual.
 - **Punto de diseño**: evaporación y condensación objetivo con deslizadores e introducción exacta, temperatura de retorno y ambiente; el motor deriva el SH operativo y avisa si el salto térmico del condensador es bajo.
+- **Intercambiador SLHX opcional**: el modelo ε-NTU aplica una efectividad configurable y recalcula el estado de succión, el caudal y el capilar en vivo.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
 - **Incertidumbre honesta**: propagación RSS de modelo, capacidad, tolerancia dimensional, evidencia y propiedades.
@@ -58,7 +59,19 @@ Después se despeja el volumen nocivo efectivo `c` del modelo:
 
 Así la extrapolación conserva la eficiencia real del compresor en la placa y solo escala por relación de presiones. No se usa una tabla genérica de ηv. Si la capacidad de placa implica una eficiencia fuera del rango físico, la app la limita y **avisa** en lugar de ocultarlo.
 
-### 2. Capilar 1D adiabático
+### 2. Intercambiador succión-líquido (SLHX)
+
+Al activar el SLHX, el motor usa la efectividad ε configurada (por defecto 0,7) y las capacidades caloríficas de ambas corrientes:
+
+```text
+Ccap = ṁ · cp,líquido
+Csuc = ṁ · cp,vapor
+Q    = ε · min(Ccap, Csuc) · max(Tcap,in − Tsuc,in, 0)
+```
+
+El calor transferido reduce la entalpía del líquido que entra al capilar y aumenta la entalpía del gas de succión. El motor actualiza la densidad de succión, el caudal y la longitud calculada hasta converger, con un máximo de 20 iteraciones. La efectividad representa el desempeño del intercambiador; no se infiere de una geometría o un valor UA.
+
+### 3. Capilar 1D adiabático
 
 Para cada diámetro comercial se integra la caída de presión a lo largo del tubo:
 
@@ -70,7 +83,7 @@ Para cada diámetro comercial se integra la caída de presión a lo largo del tu
 
 La longitud que agota la presión objetivo es la predicción. El motor compara los diámetros comerciales, descarta longitudes fuera de la ventana práctica y ordena las alternativas.
 
-### 3. Incertidumbre
+### 4. Incertidumbre
 
 Las contribuciones se combinan en cuadratura (RSS):
 
@@ -80,7 +93,7 @@ Las contribuciones se combinan en cuadratura (RSS):
 
 La incertidumbre del modelo domina la estimación. La evidencia de campo solo reduce el término empírico; nunca convierte una predicción en una certeza.
 
-### 4. Aprendizaje local
+### 5. Aprendizaje local
 
 Solo los casos con longitud real y diámetro real entran en la calibración.
 
@@ -177,7 +190,7 @@ El `base: './'` de Vite permite servir la app desde la raíz o desde una subruta
 
 ## Límites de ingeniería
 
-CapilarPro es una **herramienta de estimación**. No es CFD, no modela metaestabilidad, aceite, curvas de retorno, fugas, intercambiadores ni la instalación completa. La longitud final debe verificarse en banco o campo antes de una producción en serie.
+CapilarPro es una **herramienta de estimación**. No es CFD, no modela metaestabilidad, aceite, curvas de retorno, fugas, geometría/UA del SLHX ni la instalación completa. El SLHX usa la efectividad ε indicada por el usuario. La longitud final debe verificarse en banco o campo antes de una producción en serie.
 
 La biblioteca de compresores incluida es ilustrativa y debe contrastarse siempre con la placa o el catálogo del fabricante. Las tablas de propiedades son una interpolación de CoolProp; para condiciones críticas o mezclas con glide pronunciado, verifica con la fuente original.
 

@@ -155,6 +155,14 @@ export const calculate = (
   input: CalculationInput,
   options: CalculateOptions = {},
 ): CalculationResult => {
+  if (
+    !Number.isFinite(input.slhxEfectividad) ||
+    input.slhxEfectividad < 0 ||
+    input.slhxEfectividad > 1
+  ) {
+    throw new Error('La efectividad del SLHX debe estar entre 0 y 1')
+  }
+
   const targetSuperheatK =
     input.targetReturnGasTempC - input.targetEvapC
   if (targetSuperheatK < 0) {
@@ -195,7 +203,7 @@ export const calculate = (
     referenceSaturation.pressureKPa,
     input.refEvapC + input.refSuperheatK,
   )
-  const targetSuction = superheatedVaporState(
+  const targetSuctionIn = superheatedVaporState(
     input.refrigerantId,
     targetSaturation.pressureKPa,
     input.targetReturnGasTempC,
@@ -205,7 +213,7 @@ export const calculate = (
     referenceCondSaturation.pressureKPa,
     input.refCondC - input.refSubcoolK,
   )
-  const targetLiquid = subcooledLiquidState(
+  const targetLiquidIn = subcooledLiquidState(
     input.refrigerantId,
     targetCondSaturation.pressureKPa,
     input.targetCondC - input.targetSubcoolK,
@@ -213,10 +221,8 @@ export const calculate = (
 
   const referenceEnthalpyDifference =
     referenceSuction.enthalpyKJkg - referenceLiquid.enthalpyKJkg
-  const targetEnthalpyDifference =
-    targetSuction.enthalpyKJkg - targetLiquid.enthalpyKJkg
 
-  if (referenceEnthalpyDifference <= 0 || targetEnthalpyDifference <= 0) {
+  if (referenceEnthalpyDifference <= 0) {
     throw new Error('El salto entálpico calculado no es válido')
   }
 
@@ -255,20 +261,127 @@ export const calculate = (
     targetPressureRatio,
   })
 
-  const massFlow = sweptVolumeM3s * targetSuction.densityKgM3 * efficiency.etaTarget
-  const capacityW = massFlow * targetEnthalpyDifference * 1000
-
   const calibration =
     options.calibration && options.calibration.adjusted
       ? options.calibration
       : null
-  const capillary = computeCapillary(
-    input,
-    massFlow,
-    targetCondSaturation.pressureKPa,
-    targetSaturation.pressureKPa,
-    calibration?.factor ?? 1,
+  const cpLiquid = targetCondSaturation.cpL
+  const cpSuction = targetSaturation.cpV
+  const inletTemperatureDifference = Math.max(
+    0,
+    targetLiquidIn.temperatureC - input.targetReturnGasTempC,
   )
+  if (
+    input.slhxActivo &&
+    inletTemperatureDifference > 0 &&
+    (!Number.isFinite(cpLiquid) ||
+      cpLiquid <= 0 ||
+      !Number.isFinite(cpSuction) ||
+      cpSuction <= 0)
+  ) {
+    throw new Error('No hay capacidades caloríficas válidas para calcular el SLHX')
+  }
+  const maxIterations = input.slhxActivo ? 20 : 1
+  let massFlowGuess =
+    sweptVolumeM3s * targetSuctionIn.densityKgM3 * efficiency.etaTarget
+  let previousLengthM: number | null = null
+  let targetSuction = targetSuctionIn
+  let targetLiquidEnthalpyKJkg = targetLiquidIn.enthalpyKJkg
+  let inletSubcoolK = input.targetSubcoolK
+  let massFlow = massFlowGuess
+  let capillary: ReturnType<typeof computeCapillary> | null = null
+  let converged = false
+
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    let inletOverrides:
+      | { subcoolK: number; enthalpyKJkg: number }
+      | undefined
+    let suctionForIteration = targetSuctionIn
+
+    if (input.slhxActivo && inletTemperatureDifference > 0) {
+      const heatCapacityRateLiquid = massFlowGuess * cpLiquid
+      const heatCapacityRateSuction = massFlowGuess * cpSuction
+      const minimumHeatCapacityRate = Math.min(
+        heatCapacityRateLiquid,
+        heatCapacityRateSuction,
+      )
+      const maximumHeatTransfer =
+        minimumHeatCapacityRate * inletTemperatureDifference
+      const actualHeatTransfer =
+        input.slhxEfectividad * maximumHeatTransfer
+      const heatTransferPerMass = actualHeatTransfer / massFlowGuess
+      const adjustedSuctionTemperature =
+        input.targetReturnGasTempC + heatTransferPerMass / cpSuction
+
+      suctionForIteration = {
+        ...superheatedVaporState(
+          input.refrigerantId,
+          targetSaturation.pressureKPa,
+          adjustedSuctionTemperature,
+        ),
+        enthalpyKJkg:
+          targetSuctionIn.enthalpyKJkg + heatTransferPerMass,
+      }
+      targetLiquidEnthalpyKJkg =
+        targetLiquidIn.enthalpyKJkg - heatTransferPerMass
+      inletSubcoolK =
+        input.targetSubcoolK + heatTransferPerMass / cpLiquid
+      inletOverrides = {
+        subcoolK: inletSubcoolK,
+        enthalpyKJkg: targetLiquidEnthalpyKJkg,
+      }
+    } else {
+      targetLiquidEnthalpyKJkg = targetLiquidIn.enthalpyKJkg
+      inletSubcoolK = input.targetSubcoolK
+    }
+
+    const nextMassFlow =
+      sweptVolumeM3s *
+      suctionForIteration.densityKgM3 *
+      efficiency.etaTarget
+    const nextCapillary = computeCapillary(
+      input,
+      nextMassFlow,
+      targetCondSaturation.pressureKPa,
+      targetSaturation.pressureKPa,
+      calibration?.factor ?? 1,
+      inletOverrides,
+    )
+    const massFlowConverged =
+      Math.abs(nextMassFlow - massFlowGuess) <=
+      Math.max(nextMassFlow, 1e-12) * 1e-7
+    const lengthConverged =
+      previousLengthM !== null &&
+      Math.abs(nextCapillary.lengthM - previousLengthM) <=
+        Math.max(nextCapillary.lengthM, 1e-12) * 1e-7
+
+    targetSuction = suctionForIteration
+    massFlow = nextMassFlow
+    capillary = nextCapillary
+
+    if (
+      !input.slhxActivo ||
+      (massFlowConverged && lengthConverged)
+    ) {
+      converged = true
+      break
+    }
+
+    previousLengthM = nextCapillary.lengthM
+    massFlowGuess = nextMassFlow
+  }
+
+  if (!converged || !capillary) {
+    throw new Error('El cálculo iterativo del SLHX no convergió en 20 iteraciones')
+  }
+
+  const targetEnthalpyDifference =
+    targetSuction.enthalpyKJkg - targetLiquidEnthalpyKJkg
+  if (targetEnthalpyDifference <= 0) {
+    throw new Error('El salto entálpico calculado no es válido')
+  }
+
+  const capacityW = massFlow * targetEnthalpyDifference * 1000
   const uncertainty = estimateUncertainty({
     lengthM: capillary.lengthM,
     diameterMm: capillary.diameterMm,
@@ -298,7 +411,7 @@ export const calculate = (
       targetPressureRatio,
       suctionDensity: targetSuction.densityKgM3,
       suctionEnthalpy: targetSuction.enthalpyKJkg,
-      liquidEnthalpy: targetLiquid.enthalpyKJkg,
+      liquidEnthalpy: targetLiquidEnthalpyKJkg,
       enthalpyDifference: targetEnthalpyDifference,
       anchored: efficiency.anchored,
       rawEtaVolumetricRef,

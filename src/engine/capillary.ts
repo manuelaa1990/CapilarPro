@@ -9,6 +9,13 @@ interface OperatingPoint {
   pressureOutKPa: number
   subcoolK: number
   massFlowKgS: number
+  inletSubcoolK?: number
+  inletEnthalpyKJkg?: number
+}
+
+interface InletConditionOverrides {
+  subcoolK: number
+  enthalpyKJkg: number
 }
 
 interface Simulation {
@@ -94,9 +101,13 @@ export const simulateCapillaryLength = (
   )
   if (operating.pressureInKPa <= operating.pressureOutKPa) return null
 
-  const inletEnthalpy =
-    (inlet.liquidEnthalpyKJkg - inlet.cpL * operating.subcoolK) * 1000
-  const inletDensity = inlet.liquidDensity * (1 + 0.0016 * operating.subcoolK)
+  const inletSubcoolK = operating.inletSubcoolK ?? operating.subcoolK
+  const inletEnthalpyKJkg =
+    operating.inletEnthalpyKJkg ??
+    inlet.liquidEnthalpyKJkg - inlet.cpL * inletSubcoolK
+  const inletEnthalpy = inletEnthalpyKJkg * 1000
+  const inletDensity =
+    inlet.liquidDensity * (1 + 0.0016 * inletSubcoolK)
   const inletSpecificVolume = 1 / inletDensity
   const massFluxSquared = massFlux * massFlux
   const stagnationEnthalpy =
@@ -215,6 +226,7 @@ export const computeCapillary = (
   pressureInKPa: number,
   pressureOutKPa: number,
   correctionFactor = 1,
+  inletOverrides?: InletConditionOverrides,
 ): CapillaryResult => {
   const config = correlations.capillary
   const operating: OperatingPoint = {
@@ -223,6 +235,8 @@ export const computeCapillary = (
     pressureOutKPa,
     subcoolK: input.targetSubcoolK,
     massFlowKgS,
+    inletSubcoolK: inletOverrides?.subcoolK,
+    inletEnthalpyKJkg: inletOverrides?.enthalpyKJkg,
   }
   const factor = clamp(correctionFactor, 0.7, 1.35)
   const candidates = solutions.capillaryIdsMm
