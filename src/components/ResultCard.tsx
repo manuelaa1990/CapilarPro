@@ -301,6 +301,12 @@ export const ResultCard = ({
     lengthFromM(capillary.lengthM, lengthUnit),
     lengthDigits(lengthUnit),
   )
+  const selectedWoundLength = result.slhx
+    ? fmtFixed(
+        lengthFromM(result.slhx.lengthWoundM, lengthUnit),
+        lengthDigits(lengthUnit),
+      )
+    : null
 
   return (
     <div className="overflow-hidden rounded-[24px] bg-ink-950 text-white shadow-float">
@@ -358,6 +364,12 @@ export const ResultCard = ({
                   longitud
                 </span>
               </div>
+              {slhxActivo && selectedWoundLength !== null && (
+                <p className="mt-1 text-[10px] text-white/65">
+                  Total: {selectedLength} {lengthUnit} | Enrollar:{' '}
+                  {selectedWoundLength} {lengthUnit}
+                </p>
+              )}
             </div>
             <div className="w-[44%] max-w-[210px] self-end">
               <button

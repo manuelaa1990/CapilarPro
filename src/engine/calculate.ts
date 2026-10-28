@@ -324,6 +324,13 @@ export const calculate = (
     // medidas casi empatadas y realimentar el bucle.
     const config = correlations.capillary
     const clampedFactor = clampCorrectionFactor(correctionFactor)
+    const baselineCapillary = computeCapillary(
+      input,
+      massFlowGuess,
+      targetCondSaturation.pressureKPa,
+      targetSaturation.pressureKPa,
+      correctionFactor,
+    )
     const converged = new Map<number, SlhxOperatingState>()
 
     for (const diameterMm of solutions.capillaryIdsMm) {
@@ -422,6 +429,7 @@ export const calculate = (
       designLengthM: config.designLengthM,
       minViableLengthM: config.lengthRangeM[0],
       maxViableLengthM: config.lengthRangeM[1],
+      preferredDiameterMm: baselineCapillary.diameterMm,
     })
     const selectedCandidate = ranked[0]
     const selectedState = selectedCandidate
@@ -455,7 +463,7 @@ export const calculate = (
   }
 
   const targetEnthalpyDifference =
-    targetSuctionIn.enthalpyKJkg - targetLiquidEnthalpyKJkg
+    targetSuction.enthalpyKJkg - targetLiquidEnthalpyKJkg
   if (targetEnthalpyDifference <= 0) {
     throw new Error('El salto entálpico calculado no es válido')
   }

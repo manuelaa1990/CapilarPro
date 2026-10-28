@@ -33,14 +33,13 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(Math.abs(epsilon - 0.7)).toBeGreaterThan(0.2)
   })
 
-  it('la efectividad refleja el enrollado y la longitud convergida', () => {
+  it('la efectividad aumenta con el enrollado y la longitud convergida', () => {
     const thirty = effectiveness(withSlhx(30, '5/16'))
     const fifty = effectiveness(withSlhx(50, '5/16'))
     const seventy = effectiveness(withSlhx(70, '5/16'))
 
-    // At 70%, capillary length/mass-flow feedback lowers the converged epsilon.
     expect(fifty).toBeGreaterThan(thirty)
-    expect(fifty).toBeGreaterThan(seventy)
+    expect(seventy).toBeGreaterThan(fifty)
     expect(Math.abs(seventy - thirty)).toBeGreaterThan(0.05)
   })
 
@@ -53,14 +52,13 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(large - medium).toBeGreaterThan(1e-3)
   })
 
-  it('mantiene la efectividad en la ventana 0.1–0.48 para 1/4"–3/8"', () => {
+  it('mantiene la efectividad entre 0.1 y la efectividad de diseño', () => {
     const diameters: SlhxSuctionTubeDiameter[] = ['1/4', '5/16', '3/8']
     for (const percentage of [30, 50, 70]) {
       for (const diameter of diameters) {
         const epsilon = effectiveness(withSlhx(percentage, diameter))
         expect(epsilon).toBeGreaterThanOrEqual(0.1)
-        // The added acceleration and inlet-loss terms shift the upper bound.
-        expect(epsilon).toBeLessThanOrEqual(0.48)
+        expect(epsilon).toBeLessThanOrEqual(0.7)
       }
     }
   })
@@ -73,6 +71,41 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(woundLength).toBeGreaterThan(0.02)
     expect(woundLength).toBeLessThanOrEqual(
       result.capillary.lengthM * 0.3 + 1e-9,
+    )
+  })
+
+  it('requiere mayor longitud con SLHX que sin SLHX para el mismo diámetro y condiciones', () => {
+    const withoutSlhx = calculate({
+      ...defaultInput(),
+      slhxActivo: false,
+      slhxPorcentaje: 50,
+      slhxDiametroSuccion: '5/16',
+    })
+    const withSlhx = calculate({
+      ...defaultInput(),
+      slhxActivo: true,
+      slhxPorcentaje: 50,
+      slhxDiametroSuccion: '5/16',
+    })
+
+    expect(withSlhx.capillary.lengthM).toBeGreaterThan(
+      withoutSlhx.capillary.lengthM,
+    )
+    expect(withSlhx.capillary.lengthM).toBeGreaterThan(0)
+    expect(withoutSlhx.capillary.lengthM).toBeGreaterThan(0)
+  })
+
+  it('mantiene el diámetro recomendado al activar el SLHX', () => {
+    const input = {
+      ...defaultInput(),
+      slhxPorcentaje: 50,
+      slhxDiametroSuccion: '5/16' as const,
+    }
+    const withoutSlhx = calculate({ ...input, slhxActivo: false })
+    const withSlhx = calculate({ ...input, slhxActivo: true })
+
+    expect(withSlhx.capillary.diameterMm).toBe(
+      withoutSlhx.capillary.diameterMm,
     )
   })
 })

@@ -107,6 +107,8 @@ describe('CapilarPro', () => {
     const fingerprint = screen.getByText(/^CP-[A-F0-9]{8}$/).textContent
     const selectedLength = screen.getByLabelText('Longitud seleccionada')
       .textContent
+    const selectedDiameter = screen.getByLabelText('Diámetro seleccionado')
+      .textContent
     const slhxSwitch = screen.getByRole('switch', {
       name: 'Intercambiador Capilar/Succión (SLHX)',
     })
@@ -137,7 +139,11 @@ describe('CapilarPro', () => {
       expect(
         screen.getByLabelText('Longitud seleccionada').textContent,
       ).not.toBe(selectedLength)
+      expect(
+        screen.getByLabelText('Diámetro seleccionado').textContent,
+      ).toBe(selectedDiameter)
     })
+    expect(screen.getByText(/Total: .* \| Enrollar:/)).toBeInTheDocument()
     const slhxResults = screen.getByRole('group', { name: 'Resultados del SLHX' })
     expect(slhxResults).toHaveTextContent('Longitud enrollada')
     expect(slhxResults).toHaveTextContent('Efectividad real')

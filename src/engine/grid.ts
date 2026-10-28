@@ -4,6 +4,7 @@ interface RankOptions {
   designLengthM: number
   minViableLengthM: number
   maxViableLengthM: number
+  preferredDiameterMm?: number
 }
 
 const clamp = (value: number, minimum: number, maximum: number) =>
@@ -52,7 +53,14 @@ export const rankCandidates = (
 ): CapillaryCandidate[] => {
   if (candidates.length === 0) return []
   const ranked = [...candidates].sort(
-    (a, b) => scoreCandidate(a, options) - scoreCandidate(b, options),
+    (a, b) => {
+      if (options.preferredDiameterMm !== undefined) {
+        const aPreferred = a.diameterMm === options.preferredDiameterMm
+        const bPreferred = b.diameterMm === options.preferredDiameterMm
+        if (aPreferred !== bPreferred) return aPreferred ? -1 : 1
+      }
+      return scoreCandidate(a, options) - scoreCandidate(b, options)
+    },
   )
   return ranked.map((candidate, index) => {
     const base = noteFor(candidate, options)
