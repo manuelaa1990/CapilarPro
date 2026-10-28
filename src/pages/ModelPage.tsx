@@ -369,8 +369,8 @@ export const ModelPage = () => {
           </div>
           <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-ink-600">
             <LockKeyhole size={11} className="mt-0.5 shrink-0" />
-            Todo el aprendizaje ocurre en localStorage. No hay cuentas, red ni
-            telemetría.
+            Todo el aprendizaje ocurre en localStorage. No hay cuentas ni
+            telemetría. Solo hay red si activas la sincronización anónima.
           </p>
         </ModelSection>
 

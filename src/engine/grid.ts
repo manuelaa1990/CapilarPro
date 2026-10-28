@@ -10,6 +10,10 @@ interface RankOptions {
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value))
 
+const isViable = (candidate: CapillaryCandidate, options: RankOptions) =>
+  candidate.lengthM >= options.minViableLengthM &&
+  candidate.lengthM <= options.maxViableLengthM
+
 const scoreCandidate = (candidate: CapillaryCandidate, options: RankOptions) => {
   const safeLength = Math.max(candidate.lengthM, 0.01)
   const lengthDistance = Math.abs(Math.log(safeLength / options.designLengthM))
@@ -55,8 +59,10 @@ export const rankCandidates = (
   const ranked = [...candidates].sort(
     (a, b) => {
       if (options.preferredDiameterMm !== undefined) {
-        const aPreferred = a.diameterMm === options.preferredDiameterMm
-        const bPreferred = b.diameterMm === options.preferredDiameterMm
+        const aPreferred =
+          a.diameterMm === options.preferredDiameterMm && isViable(a, options)
+        const bPreferred =
+          b.diameterMm === options.preferredDiameterMm && isViable(b, options)
         if (aPreferred !== bPreferred) return aPreferred ? -1 : 1
       }
       return scoreCandidate(a, options) - scoreCandidate(b, options)
@@ -65,14 +71,17 @@ export const rankCandidates = (
   return ranked.map((candidate, index) => {
     const base = noteFor(candidate, options)
     if (index === 0) {
+      if (base.status === 'alternative') {
+        return {
+          ...candidate,
+          status: 'recommended',
+          note: 'Mejor equilibrio entre longitud, diámetro y tolerancias.',
+        }
+      }
       return {
         ...candidate,
-        status: 'recommended',
-        note:
-          candidate.lengthM < options.minViableLengthM ||
-          candidate.lengthM > options.maxViableLengthM
-            ? `${base.note} Se elige por ser la opción menos desfavorable.`
-            : 'Mejor equilibrio entre longitud, diámetro y tolerancias.',
+        status: base.status,
+        note: `${base.note} Se elige por ser la opción menos desfavorable.`,
       }
     }
     return { ...candidate, ...base }

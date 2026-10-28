@@ -20,6 +20,7 @@ import clsx from 'clsx'
 import { appMeta, defaults } from '../data/catalog'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/useApp'
+import { isNeonConfigured } from '../lib/neonClient'
 import { Badge, Card, SectionHeading } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { Logo } from '../components/Logo'
@@ -77,6 +78,7 @@ export const SettingsPage = () => {
   const {
     settings,
     cases,
+    quarantinedCases,
     learned,
     updateSettings,
     exportAll,
@@ -135,7 +137,7 @@ export const SettingsPage = () => {
             <br className="hidden sm:block" /> tus datos, tus reglas.
           </>
         }
-        description="Ajusta la identidad de la app, el comportamiento del aprendizaje y la gestión de la memoria local. Nada sale de este navegador."
+        description="Ajusta la identidad de la app, el comportamiento del aprendizaje y la gestión de la memoria local. Por defecto, nada sale de este navegador."
         action={
           <Badge tone={storageMode === 'localStorage' ? 'mint' : 'amber'}>
             <HardDrive size={11} />
@@ -218,6 +220,32 @@ export const SettingsPage = () => {
                 description="Muestra por defecto el bloque de capilar instalado y notas del caso en la calculadora."
                 icon={Sparkles}
               />
+              {isNeonConfigured ? (
+                <Toggle
+                  checked={settings.neonSyncEnabled}
+                  onChange={(value) =>
+                    updateSettings({ neonSyncEnabled: value })
+                  }
+                  label="Sincronización anónima con Neon"
+                  description="Envía a Neon el compresor y el cálculo, sin datos personales. Desactivada por defecto; puedes apagarla cuando quieras."
+                  icon={Database}
+                />
+              ) : (
+                <div className="flex items-start gap-3 py-4">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-frost-100 text-ink-700">
+                    <Database size={15} />
+                  </span>
+                  <div>
+                    <p className="text-[12px] font-semibold text-ink-900">
+                      Sincronización con Neon no configurada
+                    </p>
+                    <p className="mt-0.5 max-w-md text-[10px] leading-relaxed text-ink-600">
+                      Este build no define VITE_NEON_DATA_API_URL ni
+                      VITE_NEON_AUTH_URL, así que todo se queda en el navegador.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="mt-4 flex items-start gap-2 rounded-xl border border-sky-200/60 bg-sky-50/60 px-3 py-2.5 text-[10px] leading-relaxed text-sky-800">
               <Info size={12} className="mt-0.5 shrink-0" />
@@ -310,6 +338,16 @@ export const SettingsPage = () => {
               descartan al superar el límite. La exportación no incluye las tablas
               termofísicas ni el código.
             </p>
+            {quarantinedCases > 0 && (
+              <p
+                role="status"
+                className="mt-3 flex items-start gap-1.5 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2.5 text-[10px] leading-relaxed text-amber-800"
+              >
+                <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+                {quarantinedCases} caso(s) del historial no cumplían el esquema
+                actual y se conservaron en cuarentena local. No se han borrado.
+              </p>
+            )}
           </Card>
 
           <div className="rounded-[22px] border border-red-200/80 bg-red-50/40 p-5 sm:p-6">
@@ -325,8 +363,9 @@ export const SettingsPage = () => {
                   Restablecer CapilarPro
                 </h2>
                 <p className="mt-1 text-[10px] leading-relaxed text-ink-600">
-                  Borra todos los casos, evidencias, ajustes y la memoria
-                  aprendida. No afecta a otros datos del navegador.
+                  Borra todos los casos, evidencias, ajustes, la memoria
+                  aprendida, la cola de sincronización y el identificador
+                  anónimo. No afecta a otros datos del navegador.
                 </p>
                 <button
                   type="button"
@@ -351,17 +390,18 @@ export const SettingsPage = () => {
                   Privacidad por diseño
                 </div>
                 <h2 className="mt-2 font-display text-[22px] font-semibold leading-tight tracking-[-0.03em]">
-                  Nada de lo que calculas sale del navegador.
+                  Por defecto, nada de lo que calculas sale del navegador.
                 </h2>
                 <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-                  Sin cuentas, sin backend, sin analítica. El historial se guarda
-                  en localStorage y el respaldo lo decides tú.
+                  Sin cuentas y sin analítica. El historial se guarda en
+                  localStorage. Solo si activas la sincronización anónima se
+                  envían cálculos a Neon.
                 </p>
               </div>
             </div>
             <div className="space-y-3 p-5">
               {[
-                [ShieldCheck, 'Cero llamadas de red', 'El motor y los datos están incluidos en el build.'],
+                [ShieldCheck, 'Sin red por defecto', 'El motor y los datos están incluidos en el build. Solo hay red si activas la sincronización anónima.'],
                 [HardDrive, 'Persistencia local', `Modo actual: ${storageMode}.`],
                 [Database, 'Datos versionados', `Tablas ${appMeta.propertySource}.`],
                 [FileUp, 'Portabilidad', 'Exporta e importa todo el conocimiento del taller.'],
@@ -470,7 +510,7 @@ export const SettingsPage = () => {
       >
         <p className="text-[12px] leading-relaxed text-ink-600">
           {confirm === 'reset'
-            ? 'Se borrarán todos los casos, evidencias, ajustes y la memoria aprendida de este navegador. Esta acción no se puede deshacer.'
+            ? 'Se borrarán todos los casos, evidencias, ajustes, la memoria aprendida, la cola de sincronización y el identificador anónimo de este navegador. Esta acción no se puede deshacer.'
             : 'Se borrarán todos los casos y evidencias. El modelo dejará de tener memoria y volverá a su incertidumbre base. La configuración se mantiene.'}
         </p>
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-[10px] leading-relaxed text-amber-800">

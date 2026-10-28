@@ -13,6 +13,7 @@ import type {
 export interface AppStore {
   settings: AppSettings
   cases: SavedCase[]
+  quarantinedCases: number
   input: CalculationInput
   result: CalculationResult | null
   calculationError: string | null

@@ -289,8 +289,8 @@ export const ResultCard = ({
   const primary = {
     ...capillary,
     rawLengthM: capillary.lengthM / Math.max(capillary.correctionFactor, 0.1),
-    status: 'recommended' as const,
-    note: '',
+    status: capillary.status ?? 'recommended',
+    note: capillary.note ?? '',
   }
   const alternatives = [primary, ...capillary.alternatives].slice(0, 4)
   const selectedDiameter = fmtFixed(
@@ -370,6 +370,15 @@ export const ResultCard = ({
                   {selectedWoundLength} {lengthUnit}
                 </p>
               )}
+              {(capillary.status === 'short' || capillary.status === 'long') &&
+                capillary.note && (
+                  <p
+                    role="status"
+                    className="mt-1 max-w-[280px] text-[10px] leading-snug text-ember-400"
+                  >
+                    {capillary.note}
+                  </p>
+                )}
             </div>
             <div className="w-[44%] max-w-[210px] self-end">
               <button

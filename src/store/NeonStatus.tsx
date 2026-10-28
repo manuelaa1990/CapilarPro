@@ -7,14 +7,20 @@ import {
 } from 'react'
 import { neonClient } from '../lib/neonClient'
 import { NeonStatusContext, type NeonStatus } from './neonStatusContext'
+import { useApp } from './useApp'
 
 export const NeonStatusProvider = ({ children }: { children: ReactNode }) => {
+  const { settings } = useApp()
   const [status, setStatusState] = useState<NeonStatus>('local')
   const setStatus = useCallback((nextStatus: NeonStatus) => {
     setStatusState(nextStatus)
   }, [])
 
   useEffect(() => {
+    if (!settings.neonSyncEnabled) {
+      setStatus('local')
+      return
+    }
     const client = neonClient
     if (!client || import.meta.env.MODE === 'test') {
       setStatus('local')
@@ -46,7 +52,7 @@ export const NeonStatusProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       active = false
     }
-  }, [setStatus])
+  }, [setStatus, settings.neonSyncEnabled])
 
   const value = useMemo(() => ({ status, setStatus }), [status, setStatus])
 

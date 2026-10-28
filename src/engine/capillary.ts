@@ -350,6 +350,8 @@ export const assembleCapillaryResult = (
     pressureDropKPa: pressureInKPa - pressureOutKPa,
     choked: selected.choked,
     correctionFactor: factor,
+    status: selected.status,
+    note: selected.note,
     alternatives: ranked.slice(1, 6),
     selectedIsInstalled:
       Boolean(input.installedDiameterMm) &&

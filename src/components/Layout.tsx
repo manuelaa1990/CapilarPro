@@ -30,6 +30,12 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const { tab, navigate, settings, cases, learned, storageMode } = useApp()
   const { status } = useNeonStatus()
   const neonConnected = status === 'connected'
+  const neonEnabled = settings.neonSyncEnabled
+  const statusLabel = neonConnected
+    ? '🟢 Neon Conectado'
+    : neonEnabled
+      ? '🟡 Neon pendiente'
+      : '🟡 Modo Local'
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
@@ -132,7 +138,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
               <span className="leading-tight">
                 Cálculo local · {storageMode}
                 <br />
-                Sincronización Neon opcional
+                Neon solo si lo activas
               </span>
             </div>
 
@@ -159,7 +165,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           <div className="flex items-center gap-2">
             <span
               role="status"
-              aria-label={neonConnected ? '🟢 Neon Conectado' : '🟡 Modo Local'}
+              aria-label={statusLabel}
               className={clsx(
                 'flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-[9px] font-bold tracking-wide sm:text-[10px]',
                 neonConnected
@@ -174,7 +180,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
                   neonConnected ? 'bg-mint-500' : 'bg-amber-500',
                 )}
               />
-              <span>{neonConnected ? 'Neon Conectado' : 'Modo Local'}</span>
+              <span>{neonConnected ? 'Neon Conectado' : neonEnabled ? 'Neon pendiente' : 'Modo Local'}</span>
             </span>
             <button
               type="button"

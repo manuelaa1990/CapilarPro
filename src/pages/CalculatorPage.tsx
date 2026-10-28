@@ -40,6 +40,7 @@ import {
   convertDisplacement,
 } from '../engine/units'
 import { useApp } from '../store/useApp'
+import { calculationInputSchema, inputLimits } from '../store/schemas'
 import { Badge, Card, NumberField, SectionHeading, SelectField } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { ResultCard } from '../components/ResultCard'
@@ -141,31 +142,38 @@ export const CalculatorPage = () => {
   }, [toast])
 
   useEffect(() => {
+    if (!settings.neonSyncEnabled) return
     if (!result || autoSavedFingerprints.current.has(result.fingerprint)) return
 
     let active = true
     autoSavedFingerprints.current.add(result.fingerprint)
-    void saveCalculation(result).then((savedRemotely) => {
-      if (!active) return
-      if (savedRemotely) {
-        setNeonStatus('connected')
-        return
-      }
-      setNeonStatus('local')
-      setToastIsError(true)
-      setToast('Guardado localmente. No se pudo sincronizar con Neon.')
-    }).catch((error: unknown) => {
-      if (!active) return
-      setNeonStatus('local')
-      console.error('No se pudo guardar el cálculo ni en Neon ni localmente.', error)
-      setToastIsError(true)
-      setToast('No se pudo guardar el cálculo localmente.')
-    })
+    void saveCalculation(result, true)
+      .then((status) => {
+        if (!active) return
+        if (status === 'synced') {
+          setNeonStatus('connected')
+          return
+        }
+        setNeonStatus('local')
+        if (status === 'queued') {
+          setToastIsError(false)
+          setToast(
+            'Guardado localmente. Se sincronizará cuando Neon esté disponible.',
+          )
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) return
+        setNeonStatus('local')
+        console.error('No se pudo guardar el cálculo ni en Neon ni localmente.', error)
+        setToastIsError(true)
+        setToast('No se pudo guardar el cálculo localmente.')
+      })
 
     return () => {
       active = false
     }
-  }, [result, setNeonStatus])
+  }, [result, setNeonStatus, settings.neonSyncEnabled])
 
   const compressor = compressors.find((item) => item.id === input.compressorId)
   const standard = standards.find((item) => item.id === input.standardId) ?? standards[0]
@@ -183,10 +191,33 @@ export const CalculatorPage = () => {
     targetPressure > 0 ? condPressure / targetPressure : result?.compressor.targetPressureRatio ?? 0
 
   const save = () => {
-    saveCurrentCase()
+    const validation = calculationInputSchema.safeParse(input)
+    if (!validation.success) {
+      setToastIsError(true)
+      setToast(
+        'No se puede guardar: revisa los límites y los campos obligatorios del caso.',
+      )
+      return
+    }
+    const saved = saveCurrentCase()
+    if (!saved) {
+      setToastIsError(true)
+      setToast('No se puede guardar: revisa los datos del caso.')
+      return
+    }
     setToastIsError(false)
     setToast('Caso guardado. La memoria local se actualizará si registras la longitud real.')
   }
+
+  const installedPairIncomplete =
+    (input.installedDiameterMm === null) !== (input.installedLengthM === null)
+  const installedValuesInvalid =
+    (input.installedDiameterMm !== null &&
+      (input.installedDiameterMm < inputLimits.installedDiameterMm.min ||
+        input.installedDiameterMm > inputLimits.installedDiameterMm.max)) ||
+    (input.installedLengthM !== null &&
+      (input.installedLengthM < inputLimits.installedLengthM.min ||
+        input.installedLengthM > inputLimits.installedLengthM.max))
 
   const resetPlate = () => {
     if (!compressor) return
@@ -717,11 +748,19 @@ export const CalculatorPage = () => {
                 <NumberField
                   label="Subenfriamiento (SC)"
                   value={input.targetSubcoolK}
-                  onChange={(targetSubcoolK) => updateInput({ targetSubcoolK })}
+                  onChange={(targetSubcoolK) =>
+                    updateInput({
+                      targetSubcoolK: Math.min(
+                        inputLimits.targetSubcoolK.max,
+                        Math.max(inputLimits.targetSubcoolK.min, targetSubcoolK),
+                      ),
+                    })
+                  }
                   unit="K"
-                  min={0}
-                  max={100}
+                  min={inputLimits.targetSubcoolK.min}
+                  max={inputLimits.targetSubcoolK.max}
                   step={0.1}
+                  hint={`Entre ${inputLimits.targetSubcoolK.min} y ${inputLimits.targetSubcoolK.max} K.`}
                 />
               </div>
               <div className="mt-4 rounded-xl border border-ink-900/[0.06] bg-frost-50/70 px-3.5 py-3">
@@ -862,9 +901,9 @@ export const CalculatorPage = () => {
                     }
                     unit="mm"
                     min={0}
-                    max={3.5}
+                    max={inputLimits.installedDiameterMm.max}
                     step={0.01}
-                    hint="Si ya montaste un capilar, indícalo para comparar."
+                    hint={`Entre ${inputLimits.installedDiameterMm.min} y ${inputLimits.installedDiameterMm.max} mm. Si ya montaste un capilar, indícalo para comparar.`}
                   />
                   <NumberField
                     label="Longitud instalada"
@@ -876,11 +915,32 @@ export const CalculatorPage = () => {
                     }
                     unit="m"
                     min={0}
-                    max={10}
+                    max={inputLimits.installedLengthM.max}
                     step={0.01}
-                    hint="La longitud real medida, no la que crees que tiene."
+                    hint={`Entre ${inputLimits.installedLengthM.min} y ${inputLimits.installedLengthM.max} m. La longitud real medida, no la que crees que tiene.`}
                   />
                 </div>
+                {installedPairIncomplete && (
+                  <p
+                    role="alert"
+                    className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-[10px] leading-relaxed text-amber-800"
+                  >
+                    Introduce diámetro y longitud del capilar instalado juntos, o
+                    deja ambos campos vacíos.
+                  </p>
+                )}
+                {installedValuesInvalid && (
+                  <p
+                    role="alert"
+                    className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-[10px] leading-relaxed text-amber-800"
+                  >
+                    Revisa el rango del capilar instalado: diámetro entre{' '}
+                    {inputLimits.installedDiameterMm.min} y{' '}
+                    {inputLimits.installedDiameterMm.max} mm; longitud entre{' '}
+                    {inputLimits.installedLengthM.min} y{' '}
+                    {inputLimits.installedLengthM.max} m.
+                  </p>
+                )}
                 <div className="mt-4">
                   <label className="field-label" htmlFor="notes">
                     Notas del caso
@@ -888,11 +948,15 @@ export const CalculatorPage = () => {
                   <textarea
                     id="notes"
                     value={input.notes}
+                    maxLength={inputLimits.notesMaxLength}
                     onChange={(event) => updateInput({ notes: event.target.value })}
                     rows={2}
                     placeholder="Equipo, aceite, diámetro de línea, observaciones de campo…"
                     className="w-full resize-none rounded-xl border border-ink-900/10 bg-white px-3.5 py-2.5 text-[13px] text-ink-950 outline-none transition-all placeholder:text-ink-600/40 focus:border-mint-500 focus:ring-4 focus:ring-mint-500/10"
                   />
+                  <p className="mt-1 text-right font-mono text-[9px] text-ink-600">
+                    {input.notes.length}/{inputLimits.notesMaxLength}
+                  </p>
                 </div>
                 <div className="mt-3 flex items-start gap-2 rounded-xl bg-ember-500/[0.07] px-3 py-2.5 text-[10px] leading-relaxed text-[#8a5a1f]">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0" />

@@ -500,4 +500,55 @@ describe('CapilarPro', () => {
       screen.getByText(/Salto térmico bajo entre ambiente y condensación/),
     ).toBeInTheDocument()
   })
+
+  it('no muestra un error de sincronización cuando el envío está desactivado', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const ambient = screen.getByRole('spinbutton', {
+      name: 'Temperatura Ambiente',
+    })
+    await user.clear(ambient)
+    await user.type(ambient, '42')
+
+    expect(
+      await screen.findByText(/Salto térmico bajo entre ambiente y condensación/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/No se pudo sincronizar con Neon/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/Se sincronizará cuando Neon esté disponible/),
+    ).not.toBeInTheDocument()
+    expect(
+      window.localStorage.getItem('capilarpro:v1:pending_solutions'),
+    ).toBeNull()
+  })
+
+  it('bloquea el guardado si el capilar instalado está incompleto', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(
+      screen.getByRole('button', { name: /Capilar instalado y notas/i }),
+    )
+    await user.type(screen.getByLabelText('Diámetro interior instalado'), '0.7')
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Guardar y aprender' })[0],
+    )
+
+    expect(
+      await screen.findByText(/No se puede guardar: revisa los límites/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/0 cálculos en memoria/)).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Longitud instalada'), '1.2')
+    await user.click(
+      screen.getAllByRole('button', { name: 'Guardar y aprender' })[0],
+    )
+
+    expect(await screen.findByText(/Caso guardado\./)).toBeInTheDocument()
+    expect(screen.getByText(/1 cálculos en memoria/)).toBeInTheDocument()
+  })
 })

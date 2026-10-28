@@ -11,6 +11,7 @@ const KEYS = {
   cases: 'capilarpro:v1:cases',
   settings: 'capilarpro:v1:settings',
   meta: 'capilarpro:v1:meta',
+  quarantine: 'capilarpro:v1:cases:quarantine',
 } as const
 
 const memoryStore = new Map<string, string>()
@@ -62,19 +63,55 @@ const remove = (key: string) => {
   memoryStore.delete(key)
 }
 
+const readQuarantinedCases = (): unknown[] => {
+  const raw = read(KEYS.quarantine)
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const quarantineInvalidCases = (items: unknown[]) => {
+  if (items.length === 0) return
+  const existing = readQuarantinedCases()
+  const seen = new Set(existing.map((item) => JSON.stringify(item)))
+  const additions = items.filter((item) => {
+    const key = JSON.stringify(item)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  if (additions.length === 0) return
+  write(
+    KEYS.quarantine,
+    JSON.stringify([...existing, ...additions].slice(-100)),
+  )
+}
+
+export const quarantinedCaseCount = (): number =>
+  readQuarantinedCases().length
+
 export const loadCases = (): SavedCase[] => {
   const raw = read(KEYS.cases)
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw) as unknown
-    if (Array.isArray(parsed)) {
-      const cases = parsed
-        .map((item) => savedCaseSchema.safeParse(item))
-        .filter((item) => item.success)
-        .map((item) => item.data as unknown as SavedCase)
-      return cases
+    if (!Array.isArray(parsed)) return []
+    const cases: SavedCase[] = []
+    const invalid: unknown[] = []
+    for (const item of parsed) {
+      const result = savedCaseSchema.safeParse(item)
+      if (result.success) {
+        cases.push(result.data as unknown as SavedCase)
+      } else {
+        invalid.push(item)
+      }
     }
-    return []
+    quarantineInvalidCases(invalid)
+    return cases
   } catch {
     return []
   }
@@ -112,6 +149,7 @@ export const clearAllData = () => {
   remove(KEYS.cases)
   remove(KEYS.settings)
   remove(KEYS.meta)
+  remove(KEYS.quarantine)
   memoryStore.clear()
 }
 

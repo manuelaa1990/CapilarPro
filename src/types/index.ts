@@ -172,6 +172,10 @@ export interface CapillaryResult {
   pressureDropKPa: number
   choked: boolean
   correctionFactor: number
+  /** Estado del candidato elegido. Opcional para leer casos guardados antiguos. */
+  status?: CapillaryCandidate['status']
+  /** Nota del candidato elegido. Opcional para leer casos guardados antiguos. */
+  note?: string
   alternatives: CapillaryCandidate[]
   selectedIsInstalled: boolean
   installedPrediction: {
@@ -262,6 +266,8 @@ export interface AppSettings {
   learningEnabled: boolean
   autoCalculate: boolean
   showAdvanced: boolean
+  /** Envío anónimo a Neon. Desactivado por defecto. */
+  neonSyncEnabled: boolean
 }
 
 export interface CalibrationSummary {

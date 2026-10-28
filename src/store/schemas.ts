@@ -41,6 +41,14 @@ const nullablePositive = (min: number, max: number) =>
     .max(max)
     .nullable()
 
+/** Límites compartidos por el formulario y la validación persistida. */
+export const inputLimits = {
+  targetSubcoolK: { min: 0, max: 30 },
+  notesMaxLength: 1200,
+  installedDiameterMm: { min: 0.3, max: 3.5 },
+  installedLengthM: { min: 0.1, max: 10 },
+} as const
+
 const calculationInputObjectSchema = z
   .object({
     refrigerantId: refrigerantEnum,
@@ -64,13 +72,22 @@ const calculationInputObjectSchema = z
     targetReturnGasTempC: z.number().min(-55).max(100),
     targetAmbientTempC: z.number().min(-20).max(60),
     targetSuperheatK: z.number().min(0).max(200),
-    targetSubcoolK: z.number().min(0).max(30),
+    targetSubcoolK: z
+      .number()
+      .min(inputLimits.targetSubcoolK.min)
+      .max(inputLimits.targetSubcoolK.max),
     slhxActivo: z.boolean(),
     slhxPorcentaje: z.number().min(30).max(70),
     slhxDiametroSuccion: z.enum(slhxSuctionTubeDiameters),
-    installedDiameterMm: nullablePositive(0.3, 3.5),
-    installedLengthM: nullablePositive(0.1, 10),
-    notes: z.string().max(1200),
+    installedDiameterMm: nullablePositive(
+      inputLimits.installedDiameterMm.min,
+      inputLimits.installedDiameterMm.max,
+    ),
+    installedLengthM: nullablePositive(
+      inputLimits.installedLengthM.min,
+      inputLimits.installedLengthM.max,
+    ),
+    notes: z.string().max(inputLimits.notesMaxLength),
   })
 
 export const calculationInputSchema = z
@@ -190,6 +207,7 @@ export const settingsSchema = z.object({
   learningEnabled: z.boolean(),
   autoCalculate: z.boolean(),
   showAdvanced: z.boolean(),
+  neonSyncEnabled: z.boolean().optional().default(false),
 })
 
 const outcomeSchema = z.object({
@@ -279,6 +297,7 @@ export const defaultSettings = (): AppSettings => ({
   learningEnabled: defaults.ui.learningEnabled,
   autoCalculate: defaults.ui.autoCalculate,
   showAdvanced: defaults.ui.showAdvanced,
+  neonSyncEnabled: false,
 })
 
 export const defaultInput = (): CalculationInput => {

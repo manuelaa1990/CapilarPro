@@ -95,7 +95,7 @@ const EmptyHistory = ({
       <p className="mt-2 text-[12px] leading-relaxed text-ink-600">
         Guarda cálculos y registra la longitud real del capilar instalado.
         CapilarPro usa esos residuos para corregir futuras recomendaciones, sin
-        enviar nada a ningún servidor.
+        enviar nada a ningún servidor por defecto.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         <button type="button" onClick={onDemo} className="btn-primary">

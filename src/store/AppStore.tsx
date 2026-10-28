@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -34,17 +35,22 @@ import {
   importData,
   loadCases,
   loadSettings,
+  quarantinedCaseCount,
   saveCases,
   saveSettings,
   storageMode,
 } from './userData'
-import { defaultInput, defaultSettings } from './schemas'
+import { defaultInput, defaultSettings, savedCaseSchema } from './schemas'
 import { fingerprintOf } from '../engine/fingerprint'
 import {
   wattsToCapacity,
   cubicCentimetersToDisplacement,
 } from '../engine/units'
-import { getOrCreateOwnerId } from '../lib/saveCalculation'
+import {
+  clearSyncData,
+  flushPendingQueue,
+  getOrCreateOwnerId,
+} from '../lib/saveCalculation'
 
 const parseTab = (): TabId => {
   const raw = window.location.hash.replace(/^#\/?/, '')
@@ -126,6 +132,9 @@ const buildCase = (
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [cases, setCases] = useState<SavedCase[]>(() => loadCases())
+  const [quarantinedCases, setQuarantinedCases] = useState(() =>
+    quarantinedCaseCount(),
+  )
   const [input, setInput] = useState<CalculationInput>(() => {
     const stored = loadCases().at(0)
     if (stored) return stored.result.input
@@ -136,28 +145,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [learned, setLearned] = useState<LearnedModel>(() =>
     computeLearnedModel(loadCases(), defaultInput(), true),
   )
-  const [hydrated, setHydrated] = useState(false)
+  const initialCases = useRef(cases)
+  const initialSettings = useRef(settings)
   const mode = useMemo(() => storageMode(), [])
 
   useEffect(() => {
+    const onHash = () => setTab(parseTab())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  useEffect(() => {
+    if (!settings.neonSyncEnabled) return
     try {
       getOrCreateOwnerId()
     } catch (error) {
       console.error('No se pudo preparar el identificador local de Neon.', error)
     }
-    const onHash = () => setTab(parseTab())
-    window.addEventListener('hashchange', onHash)
-    setHydrated(true)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
+  }, [settings.neonSyncEnabled])
 
   useEffect(() => {
-    if (hydrated) saveCases(cases)
-  }, [cases, hydrated])
+    if (!settings.neonSyncEnabled) return
+    const flush = () => {
+      void flushPendingQueue().catch((error) => {
+        console.warn('No se pudo vaciar la cola de sincronización.', error)
+      })
+    }
+    flush()
+    window.addEventListener('online', flush)
+    return () => window.removeEventListener('online', flush)
+  }, [settings.neonSyncEnabled])
 
   useEffect(() => {
-    if (hydrated) saveSettings(settings)
-  }, [settings, hydrated])
+    if (cases === initialCases.current) return
+    saveCases(cases)
+  }, [cases])
+
+  useEffect(() => {
+    if (settings === initialSettings.current) return
+    saveSettings(settings)
+  }, [settings])
 
   useEffect(() => {
     setLearned(computeLearnedModel(cases, input, settings.learningEnabled))
@@ -344,26 +371,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ) => {
       const current = resultOverride ?? resultState.result
       if (!current) return null
-      let saved: SavedCase | null = null
-      setCases((previous) => {
-        const existing = previous.find(
-          (item) => item.fingerprint === current.fingerprint,
-        )
-        if (existing) {
-          saved = {
+
+      const existing = cases.find(
+        (item) => item.fingerprint === current.fingerprint,
+      )
+      const candidate = existing
+        ? {
             ...existing,
             updatedAt: nowIso(),
             result: current,
-            source: existing.source === 'demo' ? 'calculation' : source,
+            source:
+              existing.source === 'demo' ? ('calculation' as const) : source,
           }
-          return previous.map((item) => (item.id === existing.id ? saved! : item))
+        : buildCase(current.input, current, null, source)
+
+      const parsed = savedCaseSchema.safeParse(candidate)
+      if (!parsed.success) {
+        console.error(
+          'El caso no cumple el esquema y no se guardó.',
+          parsed.error.issues,
+        )
+        return null
+      }
+
+      const saved = parsed.data as unknown as SavedCase
+      setCases((previous) => {
+        const currentExisting = previous.find(
+          (item) => item.fingerprint === current.fingerprint,
+        )
+        if (currentExisting) {
+          return previous.map((item) =>
+            item.id === currentExisting.id
+              ? { ...saved, id: currentExisting.id, createdAt: currentExisting.createdAt }
+              : item,
+          )
         }
-        saved = buildCase(current.input, current, null, source)
         return [saved, ...previous].slice(0, defaults.ui.maxCases)
       })
       return saved
     },
-    [resultState.result],
+    [cases, resultState.result],
   )
 
   const recordActual = useCallback(
@@ -510,8 +557,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const resetEverything = useCallback(() => {
+    clearSyncData()
     clearAllData()
     setCases([])
+    setQuarantinedCases(0)
     setSettings(defaultSettings())
     setInput(defaultInput())
     setTab('calculator')
@@ -523,6 +572,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const value: AppStore = {
     settings,
     cases,
+    quarantinedCases,
     input,
     result: resultState.result,
     calculationError,

@@ -108,4 +108,19 @@ describe('SLHX acoplado al capilar (integración)', () => {
       withoutSlhx.capillary.diameterMm,
     )
   })
+
+  it('propaga el estado y la nota del candidato seleccionado', () => {
+    const result = withSlhx(50, '5/16')
+    const { lengthM, status, note } = result.capillary
+
+    expect(status).toBeDefined()
+    expect(note).toBeTruthy()
+
+    if (lengthM >= 0.35 && lengthM <= 4.5) {
+      expect(status).toBe('recommended')
+    } else {
+      expect(['short', 'long']).toContain(status)
+      expect(note).toContain('menos desfavorable')
+    }
+  })
 })
