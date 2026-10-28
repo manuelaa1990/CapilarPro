@@ -231,6 +231,62 @@ export const saturationAtPressure = (
   }
 }
 
+export interface SaturationSpecificVolumeDerivatives {
+  liquidM3KgPerPa: number
+  vaporM3KgPerPa: number
+}
+
+/**
+ * Analytic derivatives of the interpolated saturated specific volumes.
+ * The property tables are piecewise linear in pressure/temperature, so each
+ * derivative is the exact slope within the active table interval.
+ */
+export const saturationSpecificVolumeDerivativesAtPressure = (
+  fluid: RefrigerantId,
+  pressureKPa: number,
+): SaturationSpecificVolumeDerivatives | null => {
+  const table = fluidTable(fluid)
+  const blend = refrigerantById(fluid).glideK >= 0.25
+  const meanPressures = table.rows.map((row) => (row[1] + row[2]) / 2)
+
+  const derivativeFor = (
+    pressureValues: number[],
+    densityIndex: 3 | 4,
+  ): number | null => {
+    if (
+      pressureKPa < pressureValues[0] ||
+      pressureKPa > pressureValues[pressureValues.length - 1]
+    ) {
+      return null
+    }
+    const [low, high, fraction] = findBracket(pressureValues, pressureKPa)
+    if (low === high) return null
+    const pressureSpanPa = (pressureValues[high] - pressureValues[low]) * 1000
+    if (pressureSpanPa <= 0) return null
+    const densityLow = table.rows[low][densityIndex]
+    const densityHigh = table.rows[high][densityIndex]
+    const density = lerp(densityLow, densityHigh, fraction)
+    if (density <= 0) return null
+    const densityDerivative = (densityHigh - densityLow) / pressureSpanPa
+    const volumeDerivative = -densityDerivative / (density * density)
+    return Number.isFinite(volumeDerivative) ? volumeDerivative : null
+  }
+
+  const liquidDerivative = derivativeFor(
+    blend ? table.rows.map((row) => row[1]) : meanPressures,
+    3,
+  )
+  const vaporDerivative = derivativeFor(
+    blend ? table.rows.map((row) => row[2]) : meanPressures,
+    4,
+  )
+  if (liquidDerivative === null || vaporDerivative === null) return null
+  return {
+    liquidM3KgPerPa: liquidDerivative,
+    vaporM3KgPerPa: vaporDerivative,
+  }
+}
+
 const compressibilityAtSaturation = (saturation: DetailedSaturation) => {
   const specificGasConstant = R_UNIVERSAL / saturation.molarMass
   return (

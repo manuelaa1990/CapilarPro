@@ -1,7 +1,10 @@
 import { correlations, solutions } from '../data/catalog'
 import type { CalculationInput, CapillaryCandidate, CapillaryResult, RefrigerantId } from '../types'
 import { rankCandidates } from './grid'
-import { saturationAtPressure } from './properties'
+import {
+  saturationAtPressure,
+  saturationSpecificVolumeDerivativesAtPressure,
+} from './properties'
 
 export interface OperatingPoint {
   fluid: RefrigerantId
@@ -131,90 +134,127 @@ export const simulateCapillaryLength = (
   let choked = false
 
   for (let index = 0; index < steps; index += 1) {
-    const p0 = integrationInletPressureKPa - pressureStep * index
-    const p1 = p0 - pressureStep
-    const midpoint = (p0 + p1) / 2
+    let p0 = integrationInletPressureKPa - pressureStep * index
+    const segmentEndPressure = p0 - pressureStep
+    let refinementDepth = 0
 
-    const state0 = saturationAtPressure(operating.fluid, p0)
-    const state1 = saturationAtPressure(operating.fluid, Math.max(p1, 1))
-    const middle = saturationAtPressure(operating.fluid, Math.max(midpoint, 1))
+    while (p0 > segmentEndPressure) {
+      const refinedStep = pressureStep / 2 ** refinementDepth
+      const p1 = Math.max(p0 - refinedStep, segmentEndPressure)
+      const midpoint = (p0 + p1) / 2
 
-    const x0 = qualityFromEnergy(
-      state0.liquidEnthalpyKJkg * 1000,
-      state0.vaporEnthalpyKJkg * 1000,
-      1 / state0.liquidDensity,
-      1 / state0.vaporDensity,
-      massFluxSquared,
-      stagnationEnthalpy,
-    )
-    const x1 = qualityFromEnergy(
-      state1.liquidEnthalpyKJkg * 1000,
-      state1.vaporEnthalpyKJkg * 1000,
-      1 / state1.liquidDensity,
-      1 / state1.vaporDensity,
-      massFluxSquared,
-      stagnationEnthalpy,
-    )
-    const volume0 =
-      1 / state0.liquidDensity +
-      x0 * (1 / state0.vaporDensity - 1 / state0.liquidDensity)
-    const volume1 =
-      1 / state1.liquidDensity +
-      x1 * (1 / state1.vaporDensity - 1 / state1.liquidDensity)
-    const averageVolume = (volume0 + volume1) / 2
-    const averageQuality = clamp((x0 + x1) / 2, 0, 1)
+      const state0 = saturationAtPressure(operating.fluid, p0)
+      const state1 = saturationAtPressure(operating.fluid, Math.max(p1, 1))
+      const middle = saturationAtPressure(operating.fluid, Math.max(midpoint, 1))
 
-    const viscosity =
-      1 /
-      Math.max(
-        averageQuality / middle.muV + (1 - averageQuality) / middle.muL,
-        1e-12,
+      const x0 = qualityFromEnergy(
+        state0.liquidEnthalpyKJkg * 1000,
+        state0.vaporEnthalpyKJkg * 1000,
+        1 / state0.liquidDensity,
+        1 / state0.vaporDensity,
+        massFluxSquared,
+        stagnationEnthalpy,
       )
-    const reynolds = (massFlux * diameterM) / Math.max(viscosity, 1e-9)
-    const friction =
-      reynolds > config.criticalReynolds
-        ? config.frictionTurbulentCoefficient *
-          Math.pow(reynolds, -config.frictionTurbulentExponent)
-        : config.frictionLaminarCoefficient / Math.max(reynolds, 1)
+      const x1 = qualityFromEnergy(
+        state1.liquidEnthalpyKJkg * 1000,
+        state1.vaporEnthalpyKJkg * 1000,
+        1 / state1.liquidDensity,
+        1 / state1.vaporDensity,
+        massFluxSquared,
+        stagnationEnthalpy,
+      )
+      const volume0 =
+        1 / state0.liquidDensity +
+        x0 * (1 / state0.vaporDensity - 1 / state0.liquidDensity)
+      const volume1 =
+        1 / state1.liquidDensity +
+        x1 * (1 / state1.vaporDensity - 1 / state1.liquidDensity)
+      const averageVolume = (volume0 + volume1) / 2
+      const averageQuality = clamp((x0 + x1) / 2, 0, 1)
 
-    const slipMultiplier =
-      1 +
-      config.twoPhaseMultiplierCoefficient *
-        averageQuality *
-        Math.sqrt(Math.max(1, volume1 / Math.max(volume0, 1e-12)))
+      if (
+        volume1 > volume0 * 1.2 &&
+        refinementDepth < 10 &&
+        p0 - p1 > pressureStep / 1024
+      ) {
+        refinementDepth += 1
+        continue
+      }
 
-    const frictionPressureGradient =
-      (slipMultiplier * friction * massFluxSquared * averageVolume) /
-      (2 * diameterM)
+      const viscosity =
+        1 /
+        Math.max(
+          averageQuality / middle.muV + (1 - averageQuality) / middle.muL,
+          1e-12,
+        )
+      const reynolds = (massFlux * diameterM) / Math.max(viscosity, 1e-9)
+      const friction =
+        reynolds > config.criticalReynolds
+          ? config.frictionTurbulentCoefficient *
+            Math.pow(reynolds, -config.frictionTurbulentExponent)
+          : config.frictionLaminarCoefficient / Math.max(reynolds, 1)
 
-    if (
-      !Number.isFinite(frictionPressureGradient) ||
-      frictionPressureGradient <= 0
-    ) {
-      return null
+      const slipMultiplier =
+        1 +
+        config.twoPhaseMultiplierCoefficient *
+          averageQuality *
+          Math.sqrt(Math.max(1, volume1 / Math.max(volume0, 1e-12)))
+
+      const frictionPressureGradient =
+        (slipMultiplier * friction * massFluxSquared * averageVolume) /
+        (2 * diameterM)
+
+      if (
+        !Number.isFinite(frictionPressureGradient) ||
+        frictionPressureGradient <= 0
+      ) {
+        return null
+      }
+
+      const deltaPressurePa = (p0 - p1) * 1000
+      const saturationDerivatives =
+        saturationSpecificVolumeDerivativesAtPressure(
+          operating.fluid,
+          midpoint,
+        )
+      const analyticVolumeGradient = saturationDerivatives
+        ? (1 - averageQuality) * saturationDerivatives.liquidM3KgPerPa +
+          averageQuality * saturationDerivatives.vaporM3KgPerPa
+        : null
+      const specificVolumeGradient =
+        analyticVolumeGradient ??
+        (volume1 - volume0) / -deltaPressurePa
+      // c² = -v²/(dv/dP); unlike v/(dv/dP), this has velocity-squared units.
+      const soundSpeedSquared =
+        specificVolumeGradient < 0
+          ? -(averageVolume * averageVolume) / specificVolumeGradient
+          : Number.NaN
+      const fluidVelocity = massFlux * averageVolume
+      const isSonic =
+        Number.isFinite(soundSpeedSquared) &&
+        soundSpeedSquared > 0 &&
+        fluidVelocity > Math.sqrt(soundSpeedSquared)
+      const momentumFactor = 1 + massFluxSquared * specificVolumeGradient
+
+      if (!Number.isFinite(momentumFactor)) return null
+      if (isSonic) {
+        choked = true
+        lastPressure = p0
+        outletQuality = x0
+        break
+      }
+
+      if (momentumFactor <= 0) return null
+      const pressureGradient = frictionPressureGradient / momentumFactor
+      length += deltaPressurePa / pressureGradient
+      // La salida del tubo es el estado a P_out, es decir x1 (no x0, que es
+      // el extremo de entrada del último tramo).
+      outletQuality = x1
+      lastPressure = p1
+      p0 = p1
     }
 
-    const deltaPressurePa = (p0 - p1) * 1000
-    const specificVolumeGradient =
-      (volume1 - volume0) / deltaPressurePa
-    // Rearranging dP/dz = friction + G²·dv/dz exposes the HEM sonic limit.
-    const momentumFactor =
-      1 - massFluxSquared * specificVolumeGradient
-
-    if (!Number.isFinite(momentumFactor)) return null
-    if (momentumFactor <= 1e-6) {
-      choked = true
-      lastPressure = p0
-      outletQuality = x0
-      break
-    }
-
-    const pressureGradient = frictionPressureGradient / momentumFactor
-    length += deltaPressurePa / pressureGradient
-    // La salida del tubo es el estado a P_out, es decir x1 (no x0, que es
-    // el extremo de entrada del último tramo).
-    outletQuality = x1
-    lastPressure = p1
+    if (choked) break
   }
 
   if (!Number.isFinite(length) || length <= 0) return null

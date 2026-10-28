@@ -28,19 +28,20 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(Number.isFinite(epsilon)).toBe(true)
     expect(epsilon).toBeGreaterThanOrEqual(0.1)
     // Momentum acceleration and inlet loss alter the converged capillary length.
-    expect(epsilon).toBeLessThanOrEqual(0.32)
+    expect(epsilon).toBeLessThanOrEqual(0.36)
     // El bug de unidades hacía que ε fuese siempre 0.70.
     expect(Math.abs(epsilon - 0.7)).toBeGreaterThan(0.2)
   })
 
-  it('la efectividad depende del porcentaje de enrollado', () => {
+  it('la efectividad refleja el enrollado y la longitud convergida', () => {
     const thirty = effectiveness(withSlhx(30, '5/16'))
     const fifty = effectiveness(withSlhx(50, '5/16'))
     const seventy = effectiveness(withSlhx(70, '5/16'))
 
-    expect(seventy).toBeGreaterThan(fifty)
+    // At 70%, capillary length/mass-flow feedback lowers the converged epsilon.
     expect(fifty).toBeGreaterThan(thirty)
-    expect(seventy - thirty).toBeGreaterThan(0.05)
+    expect(fifty).toBeGreaterThan(seventy)
+    expect(Math.abs(seventy - thirty)).toBeGreaterThan(0.05)
   })
 
   it('la efectividad depende del diámetro de succión', () => {

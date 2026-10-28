@@ -11,6 +11,7 @@ import { fingerprintOf } from './fingerprint'
 import {
   fluidLimits,
   saturationAtPressure,
+  saturationSpecificVolumeDerivativesAtPressure,
   saturationAtTemperature,
 } from './properties'
 import { applyStandard, getStandardConditions } from './standards'
@@ -99,6 +100,18 @@ describe('eficiencia volumétrica anclada', () => {
 })
 
 describe('propiedades termofísicas', () => {
+  it('calcula derivadas analíticas negativas del volumen saturado', () => {
+    const pressureKPa = saturationAtTemperature('R134a', 25).pressureKPa
+    const derivatives = saturationSpecificVolumeDerivativesAtPressure(
+      'R134a',
+      pressureKPa,
+    )
+
+    expect(derivatives).not.toBeNull()
+    expect(Number.isFinite(derivatives!.liquidM3KgPerPa)).toBe(true)
+    expect(derivatives!.vaporM3KgPerPa).toBeLessThan(0)
+  })
+
   it('interpola saturación para los seis refrigerantes', () => {
     for (const refrigerant of refrigerants) {
       const saturation = saturationAtTemperature(refrigerant.id, 25)
@@ -325,6 +338,13 @@ describe('modelo de capilar', () => {
   it('detiene la integración al alcanzar el criterio sónico de momentum', () => {
     const pressureInKPa = saturationAtTemperature('R134a', 45).pressureKPa
     const pressureOutKPa = saturationAtTemperature('R134a', -5).pressureKPa
+    const subsonic = simulateCapillaryLength(1, {
+      fluid: 'R134a',
+      pressureInKPa,
+      pressureOutKPa,
+      subcoolK: 5,
+      massFlowKgS: 0.0005,
+    })
     const simulation = simulateCapillaryLength(1, {
       fluid: 'R134a',
       pressureInKPa,
@@ -333,6 +353,8 @@ describe('modelo de capilar', () => {
       massFlowKgS: 0.003,
     })
 
+    expect(subsonic).not.toBeNull()
+    expect(subsonic!.choked).toBe(false)
     expect(simulation).not.toBeNull()
     expect(simulation!.choked).toBe(true)
     expect(simulation!.outletPressureKPa).toBeGreaterThan(pressureOutKPa)
