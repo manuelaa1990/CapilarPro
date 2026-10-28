@@ -134,10 +134,19 @@ export const CalculatorPage = () => {
   const { setStatus: setNeonStatus } = useNeonStatus()
 
   useEffect(() => {
+    if (!toast || typeof window === 'undefined') return
+
+    const timeoutId = window.setTimeout(() => setToast(null), 4200)
+    return () => window.clearTimeout(timeoutId)
+  }, [toast])
+
+  useEffect(() => {
     if (!result || autoSavedFingerprints.current.has(result.fingerprint)) return
 
+    let active = true
     autoSavedFingerprints.current.add(result.fingerprint)
     void saveCalculation(result).then((savedRemotely) => {
+      if (!active) return
       if (savedRemotely) {
         setNeonStatus('connected')
         return
@@ -145,14 +154,17 @@ export const CalculatorPage = () => {
       setNeonStatus('local')
       setToastIsError(true)
       setToast('Guardado localmente. No se pudo sincronizar con Neon.')
-      window.setTimeout(() => setToast(null), 4200)
     }).catch((error: unknown) => {
+      if (!active) return
       setNeonStatus('local')
       console.error('No se pudo guardar el cálculo ni en Neon ni localmente.', error)
       setToastIsError(true)
       setToast('No se pudo guardar el cálculo localmente.')
-      window.setTimeout(() => setToast(null), 4200)
     })
+
+    return () => {
+      active = false
+    }
   }, [result, setNeonStatus])
 
   const compressor = compressors.find((item) => item.id === input.compressorId)
@@ -174,7 +186,6 @@ export const CalculatorPage = () => {
     saveCurrentCase()
     setToastIsError(false)
     setToast('Caso guardado. La memoria local se actualizará si registras la longitud real.')
-    window.setTimeout(() => setToast(null), 4200)
   }
 
   const resetPlate = () => {

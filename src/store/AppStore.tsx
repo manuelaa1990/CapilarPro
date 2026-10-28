@@ -243,11 +243,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         ),
         refEvapC: compressor.ratedEvapC,
         refCondC: compressor.ratedCondC,
-        ...deriveReferenceSuperheatAndSubcooling({
-          ...current,
-          refEvapC: compressor.ratedEvapC,
-          refCondC: compressor.ratedCondC,
-        }),
+        refSuperheatK: compressor.ratedSuperheatK,
+        refSubcoolK: compressor.ratedSubcoolK,
         targetEvapC,
         targetReturnGasTempC:
           current.targetReturnGasTempC +
@@ -307,11 +304,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         ),
         refEvapC: replacement.ratedEvapC,
         refCondC: replacement.ratedCondC,
-        ...deriveReferenceSuperheatAndSubcooling({
-          ...current,
-          refEvapC: replacement.ratedEvapC,
-          refCondC: replacement.ratedCondC,
-        }),
+        refSuperheatK: replacement.ratedSuperheatK,
+        refSubcoolK: replacement.ratedSubcoolK,
         targetEvapC,
         targetReturnGasTempC:
           current.targetReturnGasTempC +

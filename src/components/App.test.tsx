@@ -2,6 +2,27 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../App'
+import { AppProvider } from '../store/AppStore'
+import { useApp } from '../store/useApp'
+
+const CompressorStateProbe = () => {
+  const { input, chooseCompressor } = useApp()
+  return (
+    <>
+      <button type="button" onClick={() => chooseCompressor('secop-sc15g')}>
+        Select SC15G
+      </button>
+      <output data-testid="compressor-input">
+        {JSON.stringify({
+          compressorId: input.compressorId,
+          refSuperheatK: input.refSuperheatK,
+          refSubcoolK: input.refSubcoolK,
+          frequencyHz: input.frequencyHz,
+        })}
+      </output>
+    </>
+  )
+}
 
 describe('CapilarPro', () => {
   beforeEach(() => {
@@ -189,8 +210,28 @@ describe('CapilarPro', () => {
     const [capacity, displacement] = screen.getAllByRole('spinbutton')
     expect(capacity).toHaveValue(1300)
     expect(displacement).toHaveValue(15.3)
-    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(25)
-    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(22.2)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(11.1)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(8.3)
+  })
+
+  it('guarda los datos de placa y frecuencia del SC15G en el estado global', async () => {
+    const user = userEvent.setup()
+    render(
+      <AppProvider>
+        <CompressorStateProbe />
+      </AppProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Select SC15G' }))
+
+    expect(screen.getByTestId('compressor-input')).toHaveTextContent(
+      JSON.stringify({
+        compressorId: 'secop-sc15g',
+        refSuperheatK: 11.1,
+        refSubcoolK: 8.3,
+        frequencyHz: 50,
+      }),
+    )
   })
 
   it('guarda los nombres personalizados recientes sin autocompletar la placa', async () => {
