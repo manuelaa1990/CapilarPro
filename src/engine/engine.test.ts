@@ -309,6 +309,35 @@ describe('refrigerantes zeotrópicos', () => {
 })
 
 describe('modelo de capilar', () => {
+  it('aplica la pérdida de entrada antes de integrar la longitud', () => {
+    const pressureInKPa = saturationAtTemperature('R134a', 45).pressureKPa
+    const simulation = simulateCapillaryLength(1, {
+      fluid: 'R134a',
+      pressureInKPa,
+      pressureOutKPa: pressureInKPa - 2,
+      subcoolK: 5,
+      massFlowKgS: 0.005,
+    })
+
+    expect(simulation).toBeNull()
+  })
+
+  it('detiene la integración al alcanzar el criterio sónico de momentum', () => {
+    const pressureInKPa = saturationAtTemperature('R134a', 45).pressureKPa
+    const pressureOutKPa = saturationAtTemperature('R134a', -5).pressureKPa
+    const simulation = simulateCapillaryLength(1, {
+      fluid: 'R134a',
+      pressureInKPa,
+      pressureOutKPa,
+      subcoolK: 5,
+      massFlowKgS: 0.003,
+    })
+
+    expect(simulation).not.toBeNull()
+    expect(simulation!.choked).toBe(true)
+    expect(simulation!.outletPressureKPa).toBeGreaterThan(pressureOutKPa)
+  })
+
   it('predice una longitud mayor al aumentar el diámetro', () => {
     const result = calculateWith()
     const highPressure = saturationAtTemperature('R134a', 45).pressureKPa

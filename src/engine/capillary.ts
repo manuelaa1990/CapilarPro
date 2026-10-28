@@ -114,17 +114,24 @@ export const simulateCapillaryLength = (
     inlet.liquidDensity * (1 + 0.0016 * inletSubcoolK)
   const inletSpecificVolume = 1 / inletDensity
   const massFluxSquared = massFlux * massFlux
+  const inletLossPa =
+    config.inletLossCoefficient * massFluxSquared * inletSpecificVolume / 2
+  const integrationInletPressureKPa =
+    operating.pressureInKPa - inletLossPa / 1000
+  if (integrationInletPressureKPa <= operating.pressureOutKPa) return null
   const stagnationEnthalpy =
     inletEnthalpy + 0.5 * massFluxSquared * inletSpecificVolume ** 2
 
   const steps = config.pressureSteps
-  const pressureStep = (operating.pressureInKPa - operating.pressureOutKPa) / steps
+  const pressureStep =
+    (integrationInletPressureKPa - operating.pressureOutKPa) / steps
   let length = 0
   let outletQuality = 0
-  let lastPressure = operating.pressureInKPa
+  let lastPressure = integrationInletPressureKPa
+  let choked = false
 
   for (let index = 0; index < steps; index += 1) {
-    const p0 = operating.pressureInKPa - pressureStep * index
+    const p0 = integrationInletPressureKPa - pressureStep * index
     const p1 = p0 - pressureStep
     const midpoint = (p0 + p1) / 2
 
@@ -176,15 +183,33 @@ export const simulateCapillaryLength = (
         averageQuality *
         Math.sqrt(Math.max(1, volume1 / Math.max(volume0, 1e-12)))
 
-    const pressureGradient =
+    const frictionPressureGradient =
       (slipMultiplier * friction * massFluxSquared * averageVolume) /
       (2 * diameterM)
 
-    if (!Number.isFinite(pressureGradient) || pressureGradient <= 0) {
+    if (
+      !Number.isFinite(frictionPressureGradient) ||
+      frictionPressureGradient <= 0
+    ) {
       return null
     }
 
     const deltaPressurePa = (p0 - p1) * 1000
+    const specificVolumeGradient =
+      (volume1 - volume0) / deltaPressurePa
+    // Rearranging dP/dz = friction + G²·dv/dz exposes the HEM sonic limit.
+    const momentumFactor =
+      1 - massFluxSquared * specificVolumeGradient
+
+    if (!Number.isFinite(momentumFactor)) return null
+    if (momentumFactor <= 1e-6) {
+      choked = true
+      lastPressure = p0
+      outletQuality = x0
+      break
+    }
+
+    const pressureGradient = frictionPressureGradient / momentumFactor
     length += deltaPressurePa / pressureGradient
     // La salida del tubo es el estado a P_out, es decir x1 (no x0, que es
     // el extremo de entrada del último tramo).
@@ -195,9 +220,6 @@ export const simulateCapillaryLength = (
   if (!Number.isFinite(length) || length <= 0) return null
 
   const inletVelocity = massFlux / inletDensity
-  const choked =
-    lastPressure <= operating.pressureOutKPa + pressureStep * 0.05 &&
-    outletQuality > 0.92
 
   return {
     diameterMm,
@@ -205,7 +227,7 @@ export const simulateCapillaryLength = (
     massFluxKgM2s: massFlux,
     inletVelocityMs: inletVelocity,
     outletQuality,
-    outletPressureKPa: Math.min(lastPressure, operating.pressureOutKPa),
+    outletPressureKPa: lastPressure,
     choked,
   }
 }
