@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   CircleAlert,
+  Download,
   Gauge,
   ShieldCheck,
   Thermometer,
@@ -12,6 +13,7 @@ import type {
 } from '../types'
 import { UnitToggle } from './UnitToggle'
 import { fmt, fmtKW } from '../lib/format'
+import { exportCalculationToPdf } from '../lib/exportPdf'
 import {
   diameterDigits,
   diameterFromMm,
@@ -441,7 +443,16 @@ export const ResultCard = ({
           </div>
         </div>
 
-        <div className="flex justify-end pt-1">
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => exportCalculationToPdf(result)}
+            className="flex h-[42px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/65 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Descargar reporte PDF"
+          >
+            <Download size={15} />
+            Reporte PDF
+          </button>
           <button
             type="button"
             onClick={onShowDetails}
