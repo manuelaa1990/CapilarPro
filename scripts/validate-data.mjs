@@ -126,28 +126,6 @@ check(
   'Los diámetros capilares deben ser positivos y crecientes',
 )
 
-for (const demo of solutions.demoCases) {
-  const compressor = compressors.find((item) => item.id === demo.compressorId)
-  check(Boolean(compressor), `Demo con compresor inexistente: ${demo.id}`)
-  if (!compressor) continue
-  check(
-    compressor.refrigerants.includes(demo.refrigerantId),
-    `Demo incompatible con compresor: ${demo.id}`,
-  )
-  check(
-    demo.targetCondC > demo.targetEvapC + 8,
-    `Demo con salto térmico inválido: ${demo.id}`,
-  )
-  check(
-    solutions.capillaryIdsMm.includes(demo.installedDiameterMm),
-    `Demo con diámetro no comercial: ${demo.id}`,
-  )
-  check(
-    demo.installedLengthM > 0.1 && demo.installedLengthM < 10,
-    `Demo con longitud inválida: ${demo.id}`,
-  )
-}
-
 const defaultCompressor = compressors.find(
   (item) => item.id === defaults.defaults.compressorId,
 )
@@ -169,10 +147,6 @@ check(
 check(
   correlations.capillary.pressureSteps >= 32,
   'La integración del capilar necesita más pasos de presión',
-)
-check(
-  correlations.learning.minimumCalibrationSamples >= 2,
-  'La calibración no puede basarse en un solo caso',
 )
 check(
   correlations.uncertainty.capillaryModel > 0 &&
@@ -236,6 +210,6 @@ if (errors.length > 0) {
 
 console.log(
   `Datos válidos: ${refrigerants.length} refrigerantes, ${compressors.length} compresores, ` +
-    `${standards.length} normas, ${solutions.demoCases.length} demos y ` +
+    `${standards.length} normas y ` +
     `${supported.reduce((sum, fluid) => sum + tables[fluid].rows.length, 0)} filas termofísicas.`,
 )

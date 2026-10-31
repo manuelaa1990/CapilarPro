@@ -1,19 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
-  ArrowRight,
-  Check,
   ChevronDown,
   CircleAlert,
-  Cloud,
-  CloudOff,
   Database,
   Gauge,
   Info,
   Layers3,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   Thermometer,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -40,20 +35,17 @@ import {
   convertDisplacement,
 } from '../engine/units'
 import { useApp } from '../store/useApp'
-import { calculationInputSchema, inputLimits } from '../store/schemas'
+import { inputLimits } from '../store/schemas'
 import { Badge, Card, NumberField, SectionHeading, SelectField } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { ResultCard } from '../components/ResultCard'
-import { LearningCard } from '../components/LearningCard'
 import { BreakdownModal } from '../components/BreakdownModal'
 import { CompressorSearch } from '../components/CompressorSearch'
-import { saveCalculation } from '../lib/saveCalculation'
 import { deriveReferenceSuperheatAndSubcooling } from '../engine/standards'
 import {
   isSlhxSuctionTubeDiameter,
   slhxSuctionTubeOptions,
 } from '../engine/slhx'
-import { useNeonStatus } from '../store/neonStatusContext'
 
 const pressureAt = (
   refrigerantId: RefrigerantId,
@@ -111,69 +103,18 @@ export const CalculatorPage = () => {
     input,
     result,
     calculationError,
-    learned,
-    settings,
-    currentSaved,
-    cases,
     chooseCompressor,
     chooseRefrigerant,
     chooseStandard,
     chooseApplication,
     updateInput,
-    saveCurrentCase,
-    navigate,
     dismissError,
   } = useApp()
   const [showDetails, setShowDetails] = useState(false)
-  const [advanced, setAdvanced] = useState(settings.showAdvanced)
+  const [advanced, setAdvanced] = useState(false)
   const [manualReferenceValues, setManualReferenceValues] = useState(false)
   const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
   const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
-  const [toast, setToast] = useState<string | null>(null)
-  const [toastIsError, setToastIsError] = useState(false)
-  const autoSavedFingerprints = useRef(new Set<string>())
-  const { setStatus: setNeonStatus } = useNeonStatus()
-
-  useEffect(() => {
-    if (!toast || typeof window === 'undefined') return
-
-    const timeoutId = window.setTimeout(() => setToast(null), 4200)
-    return () => window.clearTimeout(timeoutId)
-  }, [toast])
-
-  useEffect(() => {
-    if (!settings.neonSyncEnabled) return
-    if (!result || autoSavedFingerprints.current.has(result.fingerprint)) return
-
-    let active = true
-    autoSavedFingerprints.current.add(result.fingerprint)
-    void saveCalculation(result, true)
-      .then((status) => {
-        if (!active) return
-        if (status === 'synced') {
-          setNeonStatus('connected')
-          return
-        }
-        setNeonStatus('local')
-        if (status === 'queued') {
-          setToastIsError(false)
-          setToast(
-            'Guardado localmente. Se sincronizará cuando Neon esté disponible.',
-          )
-        }
-      })
-      .catch((error: unknown) => {
-        if (!active) return
-        setNeonStatus('local')
-        console.error('No se pudo guardar el cálculo ni en Neon ni localmente.', error)
-        setToastIsError(true)
-        setToast('No se pudo guardar el cálculo localmente.')
-      })
-
-    return () => {
-      active = false
-    }
-  }, [result, setNeonStatus, settings.neonSyncEnabled])
 
   const compressor = compressors.find((item) => item.id === input.compressorId)
   const standard = standards.find((item) => item.id === input.standardId) ?? standards[0]
@@ -189,25 +130,6 @@ export const CalculatorPage = () => {
   )
   const ratio =
     targetPressure > 0 ? condPressure / targetPressure : result?.compressor.targetPressureRatio ?? 0
-
-  const save = () => {
-    const validation = calculationInputSchema.safeParse(input)
-    if (!validation.success) {
-      setToastIsError(true)
-      setToast(
-        'No se puede guardar: revisa los límites y los campos obligatorios del caso.',
-      )
-      return
-    }
-    const saved = saveCurrentCase()
-    if (!saved) {
-      setToastIsError(true)
-      setToast('No se puede guardar: revisa los datos del caso.')
-      return
-    }
-    setToastIsError(false)
-    setToast('Caso guardado. La memoria local se actualizará si registras la longitud real.')
-  }
 
   const installedPairIncomplete =
     (input.installedDiameterMm === null) !== (input.installedLengthM === null)
@@ -260,14 +182,6 @@ export const CalculatorPage = () => {
           <Database size={11} />
           CoolProp HEOS
         </Badge>
-        <Badge>
-          <Cloud size={11} />
-          Neon opcional
-        </Badge>
-        <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-ink-600 md:flex">
-          <span className="h-1 w-1 rounded-full bg-frost-300" />
-          {cases.length} cálculos en memoria
-        </span>
       </div>
 
       {calculationError && (
@@ -876,7 +790,7 @@ export const CalculatorPage = () => {
                     Capilar instalado y notas
                   </p>
                   <p className="mt-0.5 text-[10px] text-ink-600">
-                    Opcional · acelera el aprendizaje con tu longitud real
+                    Opcional · compara el capilar instalado con la estimación
                   </p>
                 </div>
               </div>
@@ -960,36 +874,17 @@ export const CalculatorPage = () => {
                 </div>
                 <div className="mt-3 flex items-start gap-2 rounded-xl bg-ember-500/[0.07] px-3 py-2.5 text-[10px] leading-relaxed text-[#8a5a1f]">
                   <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                  Un capilar medido no es una validación completa. Para entrenar
-                  el modelo, registra también la longitud real desde el historial
-                  y, si puedes, la evaporación observada.
+                  Estos datos solo se usan para comparar la instalación actual con
+                  el resultado calculado; no se conservan al cerrar o recargar.
                 </div>
               </div>
             )}
           </Card>
 
           <div className="flex flex-wrap items-center gap-3 pb-2">
-            <button type="button" onClick={save} className="btn-primary" disabled={!result}>
-              <Sparkles size={15} />
-              Guardar y aprender
-            </button>
             <button type="button" onClick={resetPlate} className="btn-secondary">
               <RefreshCw size={14} />
               Restaurar placa
-            </button>
-            {currentSaved && (
-              <span className="flex items-center gap-1.5 text-[10px] font-semibold text-mint-700">
-                <Check size={13} />
-                Este cálculo ya está en tu historial
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate('history')}
-              className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-ink-600 hover:text-ink-950"
-            >
-              Ver historial
-              <ArrowRight size={12} />
             </button>
           </div>
         </div>
@@ -999,10 +894,7 @@ export const CalculatorPage = () => {
             <>
               <ResultCard
                 result={result}
-                currentSaved={Boolean(currentSaved)}
-                onSave={save}
                 onShowDetails={() => setShowDetails(true)}
-                calibration={learned.calibration}
                 diameterUnit={diameterUnit}
                 lengthUnit={lengthUnit}
                 slhxActivo={input.slhxActivo}
@@ -1036,12 +928,6 @@ export const CalculatorPage = () => {
                   </div>
                 </div>
               )}
-              <LearningCard
-                learned={learned}
-                calibration={learned.calibration}
-                diameterUnit={diameterUnit}
-                lengthUnit={lengthUnit}
-              />
               <div className="mt-4">
                 <WarningList warnings={result.warnings} />
               </div>
@@ -1075,24 +961,6 @@ export const CalculatorPage = () => {
         />
       )}
 
-      {toast && (
-        <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink-950 px-4 py-2.5 text-[11px] font-semibold text-white shadow-float lg:bottom-8">
-          {toastIsError ? (
-            <CloudOff size={14} className="text-amber-300" />
-          ) : (
-            <Check size={14} className="text-mint-300" />
-          )}
-          {toast}
-        </div>
-      )}
-
-      {!settings.learningEnabled && (
-        <div className="mt-5 flex items-center gap-2 text-[10px] text-ink-600">
-          <Info size={12} />
-          Aprendizaje desactivado en ajustes: el cálculo no aplica correcciones
-          empíricas.
-        </div>
-      )}
     </div>
   )
 }

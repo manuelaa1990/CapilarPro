@@ -11,7 +11,6 @@ import {
   Gauge,
   GitBranch,
   Info,
-  LockKeyhole,
   Ruler,
   ShieldCheck,
   Sigma,
@@ -314,7 +313,7 @@ export const ModelPage = () => {
               ['Modelo de capilar', `${fmt(correlations.uncertainty.capillaryModel * 100, 0)} %`],
               ['Capacidad de placa', `${fmt(correlations.uncertainty.nameplateCapacity * 100, 0)} %`],
               ['Tolerancia de diámetro', `${fmt(correlations.uncertainty.diameterTolerance * 4.1, 1)} %`],
-              ['Evidencia base', `${fmt(correlations.uncertainty.calibrationBase * 100, 1)} %`],
+              ['Margen empírico fijo', `${fmt(correlations.uncertainty.empiricalModel * 100, 1)} %`],
               ['Propiedades / ΔT', `${fmt(correlations.uncertainty.properties * 100, 1)} %`],
             ].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between gap-3">
@@ -339,42 +338,7 @@ export const ModelPage = () => {
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-        <ModelSection number="06" eyebrow="Aprendizaje" title="Memoria de taller con contracción">
-          <p className="text-[12px] leading-relaxed text-ink-600">
-            Solo los casos con longitud real y diámetro real entran en la
-            calibración. El residuo se calcula en escala logarítmica, se toma la
-            mediana ponderada por recencia y se contrae hacia 1 según el número de
-            muestras.
-          </p>
-          <div className="mt-4 space-y-2.5">
-            <Formula>
-              r = ln(L<sub>real</sub> / L<sub>modelo</sub>)
-              <br />
-              k = exp[ median(r) · n / (n + {correlations.learning.shrinkagePrior}) ]
-            </Formula>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
-            <div className="rounded-xl bg-frost-50 p-3">
-              <p className="font-semibold text-ink-900">Mínimo para ajustar</p>
-              <p className="mt-1 font-mono text-ink-600">
-                {correlations.learning.minimumCalibrationSamples} casos reales
-              </p>
-            </div>
-            <div className="rounded-xl bg-frost-50 p-3">
-              <p className="font-semibold text-ink-900">Corrección máxima</p>
-              <p className="mt-1 font-mono text-ink-600">
-                ± {fmt(correlations.learning.maxAbsLogCorrection * 100, 0)} %
-              </p>
-            </div>
-          </div>
-          <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-ink-600">
-            <LockKeyhole size={11} className="mt-0.5 shrink-0" />
-            Todo el aprendizaje ocurre en localStorage. No hay cuentas ni
-            telemetría. Solo hay red si activas la sincronización anónima.
-          </p>
-        </ModelSection>
-
-        <ModelSection number="07" eyebrow="Límites" title="Lo que este modelo no es">
+        <ModelSection number="06" eyebrow="Límites" title="Lo que este modelo no es">
           <div className="space-y-2.5">
             {[
               [

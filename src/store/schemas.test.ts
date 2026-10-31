@@ -16,86 +16,12 @@ describe('validación del formulario', () => {
     expect(defaultInput().slhxDiametroSuccion).toBe('5/16')
   })
 
-  it('migrates saved inputs without SLHX settings to the defaults', () => {
-    const legacyInput: Record<string, unknown> = { ...defaultInput() }
-    delete legacyInput.slhxActivo
-    delete legacyInput.slhxPorcentaje
-    delete legacyInput.slhxDiametroSuccion
-
-    const result = calculationInputSchema.safeParse(legacyInput)
-    expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.slhxActivo).toBe(false)
-      expect(result.data.slhxPorcentaje).toBe(50)
-      expect(result.data.slhxDiametroSuccion).toBe('5/16')
-    }
-  })
-
   it('rechaza porcentajes SLHX fuera de 30-70', () => {
     const result = calculationInputSchema.safeParse({
       ...defaultInput(),
       slhxPorcentaje: 75,
     })
     expect(result.success).toBe(false)
-  })
-
-  it('migrates saved test temperatures to the standard defaults', () => {
-    const legacyInput: Record<string, unknown> = { ...defaultInput() }
-    delete legacyInput.ambientTempC
-    delete legacyInput.returnGasTempC
-
-    const result = calculationInputSchema.safeParse(legacyInput)
-    expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.ambientTempC).toBe(32.2)
-      expect(result.data.returnGasTempC).toBe(32.2)
-    }
-  })
-
-  it('migrates saved operation points and derives return-gas temperature from legacy SH', () => {
-    const legacyInput: Record<string, unknown> = {
-      ...defaultInput(),
-      targetEvapC: -10,
-      targetSuperheatK: 12,
-    }
-    delete legacyInput.targetReturnGasTempC
-    delete legacyInput.targetAmbientTempC
-
-    const result = calculationInputSchema.safeParse(legacyInput)
-    expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.targetReturnGasTempC).toBe(2)
-      expect(result.data.targetAmbientTempC).toBe(32.2)
-    }
-  })
-
-  it('migrates RPM from previously saved cases to a supported frequency', () => {
-    const legacyInput: Record<string, unknown> = { ...defaultInput(), rpm: 2900 }
-    delete legacyInput.frequencyHz
-    const result = calculationInputSchema.safeParse(legacyInput)
-    expect(result.success).toBe(true)
-    if (result.success) expect(result.data.frequencyHz).toBe(50)
-  })
-
-  it('migrates saved plate fields and assigns default metric units', () => {
-    const legacyInput: Record<string, unknown> = {
-      ...defaultInput(),
-      ratedCapacityW: 1300,
-      displacementCm3Rev: 15.3,
-    }
-    delete legacyInput.ratedCapacity
-    delete legacyInput.capacityUnit
-    delete legacyInput.displacement
-    delete legacyInput.displacementUnit
-
-    const result = calculationInputSchema.safeParse(legacyInput)
-    expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.ratedCapacity).toBe(1300)
-      expect(result.data.capacityUnit).toBe('W')
-      expect(result.data.displacement).toBe(15.3)
-      expect(result.data.displacementUnit).toBe('cm³/rev')
-    }
   })
 
   it('rechaza un salto térmico insuficiente', () => {

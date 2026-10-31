@@ -2,9 +2,7 @@ import { useId, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { Compressor } from '../types'
 
-const RECENT_COMPRESSORS_KEY = 'capilarpro:recent_compressors'
 const MAX_SUGGESTIONS = 8
-const MAX_RECENT_COMPRESSORS = 8
 
 type Suggestion =
   | {
@@ -14,51 +12,6 @@ type Suggestion =
       kind: 'catalog'
       compressor: Compressor
     }
-  | {
-      id: string
-      label: string
-      description: string
-      kind: 'recent'
-    }
-
-const readRecentCompressorLabels = (): string[] => {
-  const stored = window.localStorage.getItem(RECENT_COMPRESSORS_KEY)
-  if (!stored) return []
-
-  try {
-    const labels: unknown = JSON.parse(stored)
-    if (!Array.isArray(labels) || !labels.every((label) => typeof label === 'string')) {
-      throw new Error('El historial local de compresores tiene un formato inválido.')
-    }
-    return labels.slice(0, MAX_RECENT_COMPRESSORS)
-  } catch (error) {
-    console.error('No se pudo leer el historial local de compresores.', error)
-    return []
-  }
-}
-
-const saveRecentCompressorLabel = (label: string, currentLabels: string[]) => {
-  const normalized = label.trim()
-  if (!normalized || normalized.toLowerCase() === 'compresor personalizado') {
-    return currentLabels
-  }
-
-  const nextLabels = [
-    normalized,
-    ...currentLabels.filter(
-      (item) => item.toLocaleLowerCase() !== normalized.toLocaleLowerCase(),
-    ),
-  ].slice(0, MAX_RECENT_COMPRESSORS)
-  try {
-    window.localStorage.setItem(
-      RECENT_COMPRESSORS_KEY,
-      JSON.stringify(nextLabels),
-    )
-  } catch (error) {
-    console.error('No se pudo guardar el historial local de compresores.', error)
-  }
-  return nextLabels
-}
 
 export const CompressorSearch = ({
   compressors,
@@ -74,7 +27,6 @@ export const CompressorSearch = ({
   const inputId = useId()
   const listboxId = useId()
   const blurTimeout = useRef<number | null>(null)
-  const [recentLabels, setRecentLabels] = useState(readRecentCompressorLabels)
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const displayValue = value === 'Compresor personalizado' ? '' : value
@@ -101,48 +53,19 @@ export const CompressorSearch = ({
         compressor,
       }))
 
-    const catalogLabels = new Set(
-      catalogSuggestions.map((suggestion) => suggestion.label.toLocaleLowerCase()),
-    )
-    const recentSuggestions = recentLabels
-      .filter((label) => {
-        const normalized = label.toLocaleLowerCase()
-        return (
-          (!query || normalized.includes(query)) && !catalogLabels.has(normalized)
-        )
-      })
-      .map(
-        (label): Suggestion => ({
-          id: `recent-${label.toLocaleLowerCase()}`,
-          label,
-          description: 'Compresor personalizado',
-          kind: 'recent',
-        }),
-      )
-
-    return [...catalogSuggestions, ...recentSuggestions].slice(
-      0,
-      MAX_SUGGESTIONS,
-    )
-  }, [compressors, query, recentLabels])
+    return catalogSuggestions.slice(0, MAX_SUGGESTIONS)
+  }, [compressors, query])
 
   const selectSuggestion = (suggestion: Suggestion) => {
     if (blurTimeout.current !== null) {
       window.clearTimeout(blurTimeout.current)
     }
-    if (suggestion.kind === 'catalog') {
-      onSelectCompressor(suggestion.compressor.id)
-    } else {
-      onValueChange(suggestion.label)
-    }
+    onSelectCompressor(suggestion.compressor.id)
     setIsOpen(false)
     setActiveIndex(-1)
   }
 
   const commitCustomLabel = () => {
-    setRecentLabels((current) =>
-      saveRecentCompressorLabel(displayValue, current),
-    )
     setIsOpen(false)
     setActiveIndex(-1)
   }

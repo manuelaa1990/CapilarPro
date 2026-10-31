@@ -22,7 +22,7 @@ export type StandardId =
 
 export type CompressorApplication = 'LBP' | 'MBP' | 'HBP'
 
-export type TabId = 'calculator' | 'history' | 'model' | 'settings'
+export type TabId = 'calculator' | 'model' | 'settings'
 
 export interface Refrigerant {
   id: RefrigerantId
@@ -171,7 +171,6 @@ export interface CapillaryResult {
   outletPressureKPa: number
   pressureDropKPa: number
   choked: boolean
-  correctionFactor: number
   /** Estado del candidato elegido. Opcional para leer casos guardados antiguos. */
   status?: CapillaryCandidate['status']
   /** Nota del candidato elegido. Opcional para leer casos guardados antiguos. */
@@ -204,7 +203,6 @@ export interface UncertaintyResult {
     diameterMm: [number, number]
     lengthM: [number, number]
   }
-  calibrationSamples: number
   method: string
 }
 
@@ -239,66 +237,4 @@ export interface CalculationResult {
     properties: string
     standards: string
   }
-}
-
-export interface ActualOutcome {
-  diameterMm: number | null
-  lengthM: number | null
-  measuredEvapC: number | null
-  measuredCapacityW: number | null
-  modeledLengthAtActualM: number | null
-  notes: string
-  recordedAt: string
-}
-
-export interface SavedCase {
-  id: string
-  createdAt: string
-  updatedAt: string
-  fingerprint: string
-  result: CalculationResult
-  actual: ActualOutcome | null
-  source: 'calculation' | 'demo' | 'imported'
-}
-
-export interface AppSettings {
-  appName: string
-  learningEnabled: boolean
-  autoCalculate: boolean
-  showAdvanced: boolean
-  /** Envío anónimo a Neon. Desactivado por defecto. */
-  neonSyncEnabled: boolean
-}
-
-export interface CalibrationSummary {
-  factor: number
-  samples: number
-  scope: 'refrigerant' | 'global' | 'none'
-  medianDeviationPct: number
-  adjusted: boolean
-}
-
-export interface MemorySuggestion {
-  diameterMm: number
-  lengthM: number
-  sampleCount: number
-  similarity: number
-  label: string
-  refrigerantId: RefrigerantId
-  lastSeen: string
-}
-
-export interface LearnedModel {
-  calibration: CalibrationSummary
-  byRefrigerant: Partial<Record<RefrigerantId, CalibrationSummary>>
-  suggestion: MemorySuggestion | null
-  actualCases: number
-  totalCases: number
-}
-
-export interface StoredState {
-  version: number
-  settings: AppSettings
-  cases: SavedCase[]
-  lastUpdated: string
 }

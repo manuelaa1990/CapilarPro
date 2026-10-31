@@ -24,9 +24,20 @@ const CompressorStateProbe = () => {
   )
 }
 
+const EphemeralInputProbe = () => {
+  const { input, updateInput } = useApp()
+  return (
+    <>
+      <button type="button" onClick={() => updateInput({ refrigerantId: 'R600a' })}>
+        Change refrigerant
+      </button>
+      <output data-testid="refrigerant-input">{input.refrigerantId}</output>
+    </>
+  )
+}
+
 describe('CapilarPro', () => {
   beforeEach(() => {
-    window.localStorage.clear()
     window.location.hash = ''
   })
 
@@ -34,7 +45,7 @@ describe('CapilarPro', () => {
     render(<App />)
 
     expect(
-      await screen.findByRole('status', { name: '🟡 Modo Local' }),
+      await screen.findByRole('status', { name: 'Cálculo efímero' }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Del dato de placa al capilar/i }),
@@ -220,7 +231,7 @@ describe('CapilarPro', () => {
     expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(8.3)
   })
 
-  it('guarda los datos de placa y frecuencia del SC15G en el estado global', async () => {
+  it('actualiza los datos de placa y frecuencia del SC15G en memoria', async () => {
     const user = userEvent.setup()
     render(
       <AppProvider>
@@ -240,7 +251,27 @@ describe('CapilarPro', () => {
     )
   })
 
-  it('guarda los nombres personalizados recientes sin autocompletar la placa', async () => {
+  it('reinicia la entrada a los valores de fábrica en una nueva sesión', async () => {
+    const user = userEvent.setup()
+    const view = render(
+      <AppProvider>
+        <EphemeralInputProbe />
+      </AppProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Change refrigerant' }))
+    expect(screen.getByTestId('refrigerant-input')).toHaveTextContent('R600a')
+
+    view.unmount()
+    render(
+      <AppProvider>
+        <EphemeralInputProbe />
+      </AppProvider>,
+    )
+    expect(screen.getByTestId('refrigerant-input')).toHaveTextContent('R134a')
+  })
+
+  it('no conserva sugerencias de compresores personalizados', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -256,15 +287,9 @@ describe('CapilarPro', () => {
 
     expect(compressorSearch).toHaveValue('Compresor de Juan')
     expect(capacity).toHaveValue(1377)
-    expect(window.localStorage.getItem('capilarpro:recent_compressors')).toContain(
-      'Compresor de Juan',
-    )
-
     await user.clear(compressorSearch)
     await user.type(compressorSearch, 'juan')
-    expect(
-      screen.getByRole('option', { name: /Compresor de Juan/ }),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Compresor de Juan/ })).not.toBeInTheDocument()
   })
 
   it('conserva los datos de placa del compresor personalizado al cambiar de refrigerante', async () => {
@@ -444,28 +469,14 @@ describe('CapilarPro', () => {
     expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(15)
   })
 
-  it('navega al historial y carga los casos de demostración', async () => {
+  it('muestra la política efímera en ajustes y no ofrece historial ni guardado', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getAllByRole('button', { name: 'Historial' })[0])
-    expect(
-      await screen.findByRole('heading', {
-        name: /Cada caso real hace que el modelo sea tuyo/i,
-      }),
-    ).toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole('button', {
-        name: /Cargar 3 casos de demostración/i,
-      }),
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('Cálculos')).toBeInTheDocument()
-    })
-    expect(screen.getByText('3 de 3')).toBeInTheDocument()
-    expect(screen.getAllByText('Validados').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: /Historial/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Guardar y aprender/i })).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Ajustes' })[0])
+    expect(await screen.findByText('Esta app no guarda ningún dato. Todos los cálculos son efímeros.')).toBeInTheDocument()
   })
 
   it('permite editar SH y muestra alerta de bajo salto del condensador', async () => {
@@ -501,54 +512,4 @@ describe('CapilarPro', () => {
     ).toBeInTheDocument()
   })
 
-  it('no muestra un error de sincronización cuando el envío está desactivado', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    const ambient = screen.getByRole('spinbutton', {
-      name: 'Temperatura Ambiente',
-    })
-    await user.clear(ambient)
-    await user.type(ambient, '42')
-
-    expect(
-      await screen.findByText(/Salto térmico bajo entre ambiente y condensación/),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText(/No se pudo sincronizar con Neon/),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByText(/Se sincronizará cuando Neon esté disponible/),
-    ).not.toBeInTheDocument()
-    expect(
-      window.localStorage.getItem('capilarpro:v1:pending_solutions'),
-    ).toBeNull()
-  })
-
-  it('bloquea el guardado si el capilar instalado está incompleto', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(
-      screen.getByRole('button', { name: /Capilar instalado y notas/i }),
-    )
-    await user.type(screen.getByLabelText('Diámetro interior instalado'), '0.7')
-
-    await user.click(
-      screen.getAllByRole('button', { name: 'Guardar y aprender' })[0],
-    )
-
-    expect(
-      await screen.findByText(/No se puede guardar: revisa los límites/),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/0 cálculos en memoria/)).toBeInTheDocument()
-
-    await user.type(screen.getByLabelText('Longitud instalada'), '1.2')
-    await user.click(
-      screen.getAllByRole('button', { name: 'Guardar y aprender' })[0],
-    )
-
-    expect(await screen.findByText(/Caso guardado\./)).toBeInTheDocument()
-    expect(screen.getByText(/1 cálculos en memoria/)).toBeInTheDocument()
-  })
 })

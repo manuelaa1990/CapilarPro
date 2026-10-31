@@ -398,7 +398,7 @@ describe('modelo de capilar', () => {
 })
 
 describe('incertidumbre', () => {
-  it('la evidencia de campo reduce el término empírico', () => {
+  it('mantiene fijo el margen empírico sin muestras de uso', () => {
     const base = {
       lengthM: 1.8,
       diameterMm: 1.1,
@@ -406,20 +406,10 @@ describe('incertidumbre', () => {
       targetPressureRatio: 5,
       capacityAnchored: true,
     }
-    const withoutEvidence = estimateUncertainty({
-      ...base,
-      calibrationSamples: 0,
-    })
-    const withEvidence = estimateUncertainty({
-      ...base,
-      calibrationSamples: 20,
-    })
-    const contribution = (samples: number) =>
-      estimateUncertainty({ ...base, calibrationSamples: samples })
-        .contributions.find((item) => item.id === 'calibration')!.sigmaPct
-
-    expect(contribution(20)).toBeLessThan(contribution(0))
-    expect(withEvidence.totalPct).toBeLessThanOrEqual(withoutEvidence.totalPct)
+    const result = estimateUncertainty(base)
+    expect(
+      result.contributions.find((item) => item.id === 'empirical-model')?.sigmaPct,
+    ).toBe(6.5)
   })
 
   it('declara una confianza coherente con la banda', () => {
@@ -428,7 +418,6 @@ describe('incertidumbre', () => {
       diameterMm: 1.1,
       referencePressureRatio: 4,
       targetPressureRatio: 4,
-      calibrationSamples: 0,
       capacityAnchored: true,
     })
     expect(['Alta', 'Buena', 'Moderada', 'Baja']).toContain(

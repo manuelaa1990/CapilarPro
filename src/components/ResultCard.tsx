@@ -1,18 +1,15 @@
 import {
-  BookmarkCheck,
   Check,
   ChevronRight,
   CircleAlert,
   Gauge,
   ShieldCheck,
-  Sparkles,
   Thermometer,
   Waves,
 } from 'lucide-react'
 import clsx from 'clsx'
 import type {
   CalculationResult,
-  CalibrationSummary,
 } from '../types'
 import { Badge } from './ui'
 import { UnitToggle } from './UnitToggle'
@@ -262,10 +259,7 @@ const AlternativeRow = ({
 
 export const ResultCard = ({
   result,
-  currentSaved,
-  onSave,
   onShowDetails,
-  calibration,
   diameterUnit,
   lengthUnit,
   slhxActivo,
@@ -274,10 +268,7 @@ export const ResultCard = ({
   onLengthUnitChange,
 }: {
   result: CalculationResult
-  currentSaved: boolean
-  onSave: () => void
   onShowDetails: () => void
-  calibration: CalibrationSummary
   diameterUnit: DiameterDisplayUnit
   lengthUnit: LengthDisplayUnit
   slhxActivo: boolean
@@ -288,7 +279,7 @@ export const ResultCard = ({
   const capillary = result.capillary
   const primary = {
     ...capillary,
-    rawLengthM: capillary.lengthM / Math.max(capillary.correctionFactor, 0.1),
+    rawLengthM: capillary.lengthM,
     status: capillary.status ?? 'recommended',
     note: capillary.note ?? '',
   }
@@ -461,34 +452,7 @@ export const ResultCard = ({
           </div>
         </div>
 
-        {calibration.adjusted && (
-          <div className="flex items-start gap-2 rounded-xl border border-mint-400/15 bg-mint-400/[0.06] px-3 py-2">
-            <Sparkles size={13} className="mt-0.5 shrink-0 text-mint-300" />
-            <div className="text-[10px] leading-relaxed text-mint-100/70">
-              Longitud ajustada{' '}
-              <span className="font-mono text-mint-300">
-                {calibration.factor >= 1 ? '+' : ''}
-                {fmt((calibration.factor - 1) * 100, 1)} %
-              </span>{' '}
-              por {calibration.samples} caso(s) de campo.
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-2 pt-1">
-          <button type="button" onClick={onSave} className="btn-mint flex-1">
-            {currentSaved ? (
-              <>
-                <BookmarkCheck size={16} />
-                Guardado
-              </>
-            ) : (
-              <>
-                <Sparkles size={16} />
-                Guardar y aprender
-              </>
-            )}
-          </button>
+        <div className="flex justify-end pt-1">
           <button
             type="button"
             onClick={onShowDetails}

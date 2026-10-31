@@ -34,10 +34,6 @@ export interface Simulation {
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value))
 
-/** Rango de corrección aprendida admitido por el motor. */
-export const clampCorrectionFactor = (factor: number) =>
-  clamp(factor, 0.7, 1.35)
-
 /**
  * Resuelve la calidad termodinámica local a partir del balance de energía
  * de estancamiento:
@@ -274,12 +270,10 @@ export const simulateCapillaryLength = (
 
 export const asCandidate = (
   simulation: Simulation,
-  correctionFactor: number,
 ): CapillaryCandidate => {
-  const factor = clampCorrectionFactor(correctionFactor)
   return {
     diameterMm: simulation.diameterMm,
-    lengthM: simulation.lengthM * factor,
+    lengthM: simulation.lengthM,
     rawLengthM: simulation.lengthM,
     massFluxKgM2s: simulation.massFluxKgM2s,
     inletVelocityMs: simulation.inletVelocityMs,
@@ -296,7 +290,6 @@ interface AssemblyContext {
   operating: OperatingPoint
   pressureInKPa: number
   pressureOutKPa: number
-  correctionFactor: number
 }
 
 /**
@@ -311,7 +304,6 @@ export const assembleCapillaryResult = (
     operating,
     pressureInKPa,
     pressureOutKPa,
-    correctionFactor,
   }: AssemblyContext,
 ): CapillaryResult => {
   if (ranked.length === 0) {
@@ -320,7 +312,6 @@ export const assembleCapillaryResult = (
     )
   }
   const selected = ranked[0]
-  const factor = clampCorrectionFactor(correctionFactor)
   const installed =
     input.installedDiameterMm && input.installedDiameterMm >= 0.3
       ? simulateCapillaryLength(input.installedDiameterMm, operating)
@@ -349,7 +340,6 @@ export const assembleCapillaryResult = (
     outletPressureKPa: selected.outletPressureKPa,
     pressureDropKPa: pressureInKPa - pressureOutKPa,
     choked: selected.choked,
-    correctionFactor: factor,
     status: selected.status,
     note: selected.note,
     alternatives: ranked.slice(1, 6),
@@ -365,7 +355,6 @@ export const computeCapillary = (
   massFlowKgS: number,
   pressureInKPa: number,
   pressureOutKPa: number,
-  correctionFactor = 1,
   inletOverrides?: InletConditionOverrides,
 ): CapillaryResult => {
   const config = correlations.capillary
@@ -381,7 +370,7 @@ export const computeCapillary = (
   const candidates = solutions.capillaryIdsMm
     .map((diameter) => simulateCapillaryLength(diameter, operating))
     .filter((simulation): simulation is Simulation => simulation !== null)
-    .map((simulation) => asCandidate(simulation, correctionFactor))
+    .map((simulation) => asCandidate(simulation))
     .filter((candidate) => candidate.lengthM <= config.maxLengthM * 2.2)
 
   const ranked = rankCandidates(candidates, {
@@ -395,7 +384,6 @@ export const computeCapillary = (
     operating,
     pressureInKPa,
     pressureOutKPa,
-    correctionFactor,
   })
 }
 

@@ -4,37 +4,5 @@
   "note": "Catálogo de referencia de diámetros interiores comerciales. No sustituye la ficha dimensional del proveedor.",
   "capillaryIdsMm": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 2.0, 2.2, 2.5],
   "recommendedLengthRangeM": [0.6, 3.5],
-  "designTargetLengthM": 1.8,
-  "demoCases": [
-    {
-      "id": "demo-134a-sc15g",
-      "label": "R134a · media temperatura",
-      "refrigerantId": "R134a",
-      "compressorId": "secop-sc15g",
-      "targetEvapC": -5,
-      "targetCondC": 45,
-      "installedDiameterMm": 1.1,
-      "installedLengthM": 1.7
-    },
-    {
-      "id": "demo-600a-em2x",
-      "label": "R600a · baja temperatura",
-      "refrigerantId": "R600a",
-      "compressorId": "embraco-em2x1107u",
-      "targetEvapC": -23.3,
-      "targetCondC": 45,
-      "installedDiameterMm": 0.7,
-      "installedLengthM": 1.6
-    },
-    {
-      "id": "demo-290-ffu",
-      "label": "R290 · media temperatura",
-      "refrigerantId": "R290",
-      "compressorId": "embraco-ffu130hax",
-      "targetEvapC": -5,
-      "targetCondC": 45,
-      "installedDiameterMm": 1.0,
-      "installedLengthM": 1.65
-    }
-  ]
+  "designTargetLengthM": 1.8
 }

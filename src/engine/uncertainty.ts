@@ -6,7 +6,6 @@ interface UncertaintyInput {
   diameterMm: number
   referencePressureRatio: number
   targetPressureRatio: number
-  calibrationSamples: number
   capacityAnchored: boolean
 }
 
@@ -29,15 +28,14 @@ const confidenceLabelFor = (
 /**
  * Propagación de incertidumbre por suma cuadrática de contribuciones
  * relativas. La incertidumbre del modelo no se oculta: pesa más que la de
- * los datos de placa. Los casos reales del taller reducen el término
- * empírico, nunca la incertidumbre termodinámica de base.
+ * los datos de placa. El término empírico permanece fijo y no depende de la
+ * sesión de cálculo.
  */
 export const estimateUncertainty = ({
   lengthM,
   diameterMm,
   referencePressureRatio,
   targetPressureRatio,
-  calibrationSamples,
   capacityAnchored,
 }: UncertaintyInput): UncertaintyResult => {
   const config = correlations.uncertainty
@@ -49,11 +47,7 @@ export const estimateUncertainty = ({
     config.etaExtrapolationBase + Math.min(0.055, ratioDistance * 0.035)
   const temperatureEffect =
     config.temperature * 2.1 * (1 + Math.min(1, ratioDistance))
-  const calibration =
-    Math.max(
-      config.calibrationMinimum,
-      config.calibrationBase / Math.sqrt(1 + calibrationSamples * 1.4),
-    )
+  const empiricalModel = config.empiricalModel
   const diameterTolerance = config.diameterTolerance * 4.1
 
   const contributions: UncertaintyContribution[] = [
@@ -82,13 +76,10 @@ export const estimateUncertainty = ({
       note: 'La longitud escala de forma aproximada con D⁻⁴.',
     },
     {
-      id: 'calibration',
-      label: 'Evidencia de campo',
-      sigmaPct: calibration * 100,
-      note:
-        calibrationSamples > 0
-          ? `${calibrationSamples} caso(s) con longitud real reducen este término.`
-          : 'Sin casos validados: se usa la incertidumbre empírica base.',
+      id: 'empirical-model',
+      label: 'Incertidumbre empírica',
+      sigmaPct: empiricalModel * 100,
+      note: 'Margen fijo del modelo; no se ajusta con datos de uso.',
     },
     {
       id: 'temperature',
@@ -148,7 +139,6 @@ export const estimateUncertainty = ({
         lengthM * (1 + lengthFraction),
       ],
     },
-    calibrationSamples,
     method: 'Propagación RSS de 8 fuentes + evidencia local',
   }
 }

@@ -9,14 +9,12 @@ import type {
   CalculationInput,
   CalculationResult,
   CalculationWarning,
-  CalibrationSummary,
   CapillaryCandidate,
   CapillaryResult,
 } from '../types'
 import {
   assembleCapillaryResult,
   asCandidate,
-  clampCorrectionFactor,
   computeCapillary,
   simulateCapillaryLength,
   type OperatingPoint,
@@ -44,7 +42,6 @@ import {
 } from './units'
 
 interface CalculateOptions {
-  calibration?: CalibrationSummary | null
   now?: Date
 }
 
@@ -288,10 +285,6 @@ export const calculate = (
     targetPressureRatio,
   })
 
-  const calibration =
-    options.calibration && options.calibration.adjusted
-      ? options.calibration
-      : null
   // El motor trabaja en J/(kg·K); las tablas guardan kJ/(kg·K).
   const cpLiquid = targetCondSaturation.cpL * 1000
   const cpSuction = targetSaturation.cpV * 1000
@@ -308,7 +301,6 @@ export const calculate = (
   ) {
     throw new Error('No hay capacidades caloríficas válidas para calcular el SLHX')
   }
-  const correctionFactor = calibration?.factor ?? 1
   const massFlowGuess =
     sweptVolumeM3s * targetSuctionIn.densityKgM3 * efficiency.etaTarget
   let capillary: CapillaryResult
@@ -323,13 +315,11 @@ export const calculate = (
     // estados ya convergidos: así el ranking no puede alternar entre dos
     // medidas casi empatadas y realimentar el bucle.
     const config = correlations.capillary
-    const clampedFactor = clampCorrectionFactor(correctionFactor)
     const baselineCapillary = computeCapillary(
       input,
       massFlowGuess,
       targetCondSaturation.pressureKPa,
       targetSaturation.pressureKPa,
-      correctionFactor,
     )
     const converged = new Map<number, SlhxOperatingState>()
 
@@ -347,7 +337,7 @@ export const calculate = (
       })
       if (
         !currentSimulation ||
-        currentSimulation.lengthM * clampedFactor > config.maxLengthM * 2.2
+        currentSimulation.lengthM > config.maxLengthM * 2.2
       ) {
         continue
       }
@@ -357,7 +347,7 @@ export const calculate = (
           massFlowKgS: currentMassFlow,
           gasSpecificHeatJKgK: cpSuction,
           inletTemperatureDifferenceK: inletTemperatureDifference,
-          totalCapillaryLengthM: currentSimulation.lengthM * clampedFactor,
+          totalCapillaryLengthM: currentSimulation.lengthM,
           windingPercentage: input.slhxPorcentaje,
           suctionTubeDiameter: input.slhxDiametroSuccion,
         })
@@ -420,7 +410,7 @@ export const calculate = (
 
     const candidates: CapillaryCandidate[] = []
     for (const state of converged.values()) {
-      const candidate = asCandidate(state.simulation, correctionFactor)
+      const candidate = asCandidate(state.simulation)
       if (candidate.lengthM <= config.maxLengthM * 2.2) {
         candidates.push(candidate)
       }
@@ -450,7 +440,6 @@ export const calculate = (
       operating: selectedState.operating,
       pressureInKPa: targetCondSaturation.pressureKPa,
       pressureOutKPa: targetSaturation.pressureKPa,
-      correctionFactor,
     })
   } else {
     capillary = computeCapillary(
@@ -458,7 +447,6 @@ export const calculate = (
       massFlowGuess,
       targetCondSaturation.pressureKPa,
       targetSaturation.pressureKPa,
-      correctionFactor,
     )
   }
 
@@ -474,7 +462,6 @@ export const calculate = (
     diameterMm: capillary.diameterMm,
     referencePressureRatio,
     targetPressureRatio,
-    calibrationSamples: calibration?.samples ?? 0,
     capacityAnchored: efficiency.anchored,
   })
 

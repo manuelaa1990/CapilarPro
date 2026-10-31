@@ -3,22 +3,18 @@ import { AppProvider } from './store/AppStore'
 import { useApp } from './store/useApp'
 import { Layout } from './components/Layout'
 import { CalculatorPage } from './pages/CalculatorPage'
-import { HistoryPage } from './pages/HistoryPage'
 import { ModelPage } from './pages/ModelPage'
 import { SettingsPage } from './pages/SettingsPage'
-import { NeonStatusProvider } from './store/NeonStatus'
 
 const RoutedPage = () => {
-  const { tab, settings } = useApp()
+  const { tab } = useApp()
 
   useEffect(() => {
-    document.title = `${settings.appName} · Ingeniería de capilares`
+    document.title = 'CapilarPro · Ingeniería de capilares'
     document.documentElement.lang = 'es'
-  }, [settings.appName])
+  }, [])
 
   switch (tab) {
-    case 'history':
-      return <HistoryPage />
     case 'model':
       return <ModelPage />
     case 'settings':
@@ -48,8 +44,7 @@ class ErrorBoundary extends Component<
               La interfaz no pudo continuar
             </h1>
             <p className="mt-2 text-sm text-ink-600">
-              Tus datos locales no se han borrado. Recarga la página para volver
-              a abrir CapilarPro.
+              Recarga la página para volver a abrir CapilarPro.
             </p>
             <pre className="mt-4 overflow-auto rounded-xl bg-ink-950 p-3 text-left font-mono text-[10px] text-red-200">
               {this.state.error.message}
@@ -72,11 +67,9 @@ class ErrorBoundary extends Component<
 export const App = () => (
   <ErrorBoundary>
     <AppProvider>
-      <NeonStatusProvider>
-        <Layout>
-          <RoutedPage />
-        </Layout>
-      </NeonStatusProvider>
+      <Layout>
+        <RoutedPage />
+      </Layout>
     </AppProvider>
   </ErrorBoundary>
 )

@@ -27,15 +27,6 @@
     "twoPhaseMultiplierCoefficient": 0.3,
     "viscosityModel": "mass-weighted-dynamic"
   },
-  "learning": {
-    "minimumCalibrationSamples": 2,
-    "minimumRefrigerantSamples": 2,
-    "maxAbsLogCorrection": 0.3,
-    "shrinkagePrior": 3,
-    "recencyHalfLifeDays": 540,
-    "maxSimilarCases": 4,
-    "minimumSimilarity": 0.38
-  },
   "uncertainty": {
     "nameplateCapacity": 0.05,
     "displacement": 0.015,
@@ -45,8 +36,7 @@
     "etaExtrapolationBase": 0.055,
     "capillaryModel": 0.11,
     "diameterTolerance": 0.025,
-    "calibrationBase": 0.065,
-    "calibrationMinimum": 0.025,
+    "empiricalModel": 0.065,
     "confidenceScale": 100,
     "highThresholdPct": 8,
     "goodThresholdPct": 13,

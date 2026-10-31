@@ -2,14 +2,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
-import { compressorById, compressors, defaults, solutions } from '../data/catalog'
+import { compressorById, compressors } from '../data/catalog'
 import { calculate } from '../engine/calculate'
-import { predictLengthForDiameter } from '../engine/capillary'
-import { saturationAtTemperature } from '../engine/properties'
 import {
   deriveReferenceSuperheatAndSubcooling,
   getStandard,
@@ -17,50 +14,26 @@ import {
   standardNameForId,
 } from '../engine/standards'
 import type {
-  ActualOutcome,
-  AppSettings,
   CalculationInput,
-  CalculationResult,
-  LearnedModel,
   RefrigerantId,
-  SavedCase,
   StandardId,
   TabId,
 } from '../types'
 import { AppContext, type AppStore } from './useApp'
-import { computeLearnedModel } from './mergedData'
-import {
-  clearAllData,
-  exportData,
-  importData,
-  loadCases,
-  loadSettings,
-  quarantinedCaseCount,
-  saveCases,
-  saveSettings,
-  storageMode,
-} from './userData'
-import { defaultInput, defaultSettings, savedCaseSchema } from './schemas'
-import { fingerprintOf } from '../engine/fingerprint'
+import { defaultInput } from './schemas'
 import {
   wattsToCapacity,
   cubicCentimetersToDisplacement,
 } from '../engine/units'
-import {
-  clearSyncData,
-  flushPendingQueue,
-  getOrCreateOwnerId,
-} from '../lib/saveCalculation'
 
 const parseTab = (): TabId => {
   const raw = window.location.hash.replace(/^#\/?/, '')
-  if (raw === 'history' || raw === 'model' || raw === 'settings') return raw
+  if (raw === 'model' || raw === 'settings') return raw
   return 'calculator'
 }
 
 const tabHash = (tab: TabId) => (tab === 'calculator' ? '#/' : `#/${tab}`)
 
-const nowIso = () => new Date().toISOString()
 const applicationForEvap = (
   temperatureC: number,
 ): CalculationInput['application'] =>
@@ -103,51 +76,10 @@ const referenceConditionsFor = (
   }
 }
 
-const makeId = () =>
-  `case-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
-
-const pressuresFor = (input: CalculationInput) => ({
-  high: saturationAtTemperature(input.refrigerantId, input.targetCondC, 'bubble')
-    .pressureKPa,
-  low: saturationAtTemperature(input.refrigerantId, input.targetEvapC, 'dew')
-    .pressureKPa,
-})
-
-const buildCase = (
-  input: CalculationInput,
-  result: CalculationResult,
-  actual: ActualOutcome | null,
-  source: SavedCase['source'],
-  createdAt = nowIso(),
-): SavedCase => ({
-  id: makeId(),
-  createdAt,
-  updatedAt: createdAt,
-  fingerprint: fingerprintOf(input),
-  result,
-  actual,
-  source,
-})
-
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
-  const [cases, setCases] = useState<SavedCase[]>(() => loadCases())
-  const [quarantinedCases, setQuarantinedCases] = useState(() =>
-    quarantinedCaseCount(),
-  )
-  const [input, setInput] = useState<CalculationInput>(() => {
-    const stored = loadCases().at(0)
-    if (stored) return stored.result.input
-    return defaultInput()
-  })
+  const [input, setInput] = useState<CalculationInput>(() => defaultInput())
   const [tab, setTab] = useState<TabId>(() => parseTab())
   const [calculationError, setCalculationError] = useState<string | null>(null)
-  const [learned, setLearned] = useState<LearnedModel>(() =>
-    computeLearnedModel(loadCases(), defaultInput(), true),
-  )
-  const initialCases = useRef(cases)
-  const initialSettings = useRef(settings)
-  const mode = useMemo(() => storageMode(), [])
 
   useEffect(() => {
     const onHash = () => setTab(parseTab())
@@ -155,47 +87,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  useEffect(() => {
-    if (!settings.neonSyncEnabled) return
-    try {
-      getOrCreateOwnerId()
-    } catch (error) {
-      console.error('No se pudo preparar el identificador local de Neon.', error)
-    }
-  }, [settings.neonSyncEnabled])
-
-  useEffect(() => {
-    if (!settings.neonSyncEnabled) return
-    const flush = () => {
-      void flushPendingQueue().catch((error) => {
-        console.warn('No se pudo vaciar la cola de sincronización.', error)
-      })
-    }
-    flush()
-    window.addEventListener('online', flush)
-    return () => window.removeEventListener('online', flush)
-  }, [settings.neonSyncEnabled])
-
-  useEffect(() => {
-    if (cases === initialCases.current) return
-    saveCases(cases)
-  }, [cases])
-
-  useEffect(() => {
-    if (settings === initialSettings.current) return
-    saveSettings(settings)
-  }, [settings])
-
-  useEffect(() => {
-    setLearned(computeLearnedModel(cases, input, settings.learningEnabled))
-  }, [cases, input, settings.learningEnabled])
-
   const resultState = useMemo(() => {
     try {
       return {
-        result: calculate(input, {
-          calibration: learned.calibration,
-        }),
+        result: calculate(input),
         error: null as string | null,
       }
     } catch (error) {
@@ -207,19 +102,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             : 'No se pudo completar el cálculo',
       }
     }
-  }, [input, learned.calibration])
+  }, [input])
 
   useEffect(() => {
     setCalculationError(resultState.error)
   }, [resultState.error])
-
-  const currentSaved = useMemo(
-    () =>
-      cases.find(
-        (item) => item.fingerprint === resultState.result?.fingerprint,
-      ) ?? null,
-    [cases, resultState.result?.fingerprint],
-  )
 
   const navigate = useCallback((next: TabId) => {
     window.location.hash = tabHash(next)
@@ -364,236 +251,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     [],
   )
 
-  const saveCurrentCase = useCallback(
-    (
-      source: SavedCase['source'] = 'calculation',
-      resultOverride?: CalculationResult,
-    ) => {
-      const current = resultOverride ?? resultState.result
-      if (!current) return null
-
-      const existing = cases.find(
-        (item) => item.fingerprint === current.fingerprint,
-      )
-      const candidate = existing
-        ? {
-            ...existing,
-            updatedAt: nowIso(),
-            result: current,
-            source:
-              existing.source === 'demo' ? ('calculation' as const) : source,
-          }
-        : buildCase(current.input, current, null, source)
-
-      const parsed = savedCaseSchema.safeParse(candidate)
-      if (!parsed.success) {
-        console.error(
-          'El caso no cumple el esquema y no se guardó.',
-          parsed.error.issues,
-        )
-        return null
-      }
-
-      const saved = parsed.data as unknown as SavedCase
-      setCases((previous) => {
-        const currentExisting = previous.find(
-          (item) => item.fingerprint === current.fingerprint,
-        )
-        if (currentExisting) {
-          return previous.map((item) =>
-            item.id === currentExisting.id
-              ? { ...saved, id: currentExisting.id, createdAt: currentExisting.createdAt }
-              : item,
-          )
-        }
-        return [saved, ...previous].slice(0, defaults.ui.maxCases)
-      })
-      return saved
-    },
-    [cases, resultState.result],
-  )
-
-  const recordActual = useCallback(
-    (
-      caseId: string,
-      actual: {
-        diameterMm: number
-        lengthM: number
-        measuredEvapC: number | null
-        measuredCapacityW: number | null
-        notes: string
-      },
-    ) => {
-      setCases((previous) =>
-        previous.map((item) => {
-          if (item.id !== caseId) return item
-          const pressures = pressuresFor(item.result.input)
-          const modeled = predictLengthForDiameter(
-            item.result.input,
-            item.result.compressor.massFlowKgS,
-            pressures.high,
-            pressures.low,
-            actual.diameterMm,
-          )
-          return {
-            ...item,
-            updatedAt: nowIso(),
-            actual: {
-              diameterMm: actual.diameterMm,
-              lengthM: actual.lengthM,
-              measuredEvapC: actual.measuredEvapC,
-              measuredCapacityW: actual.measuredCapacityW,
-              modeledLengthAtActualM: modeled,
-              notes: actual.notes,
-              recordedAt: nowIso(),
-            },
-          }
-        }),
-      )
-    },
-    [],
-  )
-
-  const deleteCase = useCallback((id: string) => {
-    setCases((previous) => previous.filter((item) => item.id !== id))
-  }, [])
-
-  const clearCases = useCallback(() => setCases([]), [])
-
-  const updateSettings = useCallback((patch: Partial<AppSettings>) => {
-    setSettings((current) => ({ ...current, ...patch }))
-  }, [])
-
-  const loadDemoCases = useCallback(() => {
-    const created: SavedCase[] = []
-    const base = defaultInput()
-    const start = Date.now()
-    solutions.demoCases.forEach((demo, index) => {
-      const compressor = compressorById(demo.compressorId)
-      if (!compressor) return
-      const demoInput: CalculationInput = {
-        ...base,
-        refrigerantId: demo.refrigerantId as RefrigerantId,
-        compressorId: compressor.id,
-        compressorLabel: `${compressor.brand} ${compressor.model}`,
-        standardId: compressor.standardId,
-        application: applicationForEvap(compressor.ratedEvapC),
-        ratedCapacity: compressor.ratedCapacityW,
-        capacityUnit: 'W',
-        displacement: compressor.displacementCm3Rev,
-        displacementUnit: 'cm³/rev',
-        refEvapC: compressor.ratedEvapC,
-        refCondC: compressor.ratedCondC,
-        refSuperheatK: compressor.ratedSuperheatK,
-        refSubcoolK: compressor.ratedSubcoolK,
-        targetEvapC: demo.targetEvapC,
-        targetCondC: demo.targetCondC,
-        targetSuperheatK: 10,
-        targetSubcoolK: 5,
-        installedDiameterMm: demo.installedDiameterMm,
-        installedLengthM: demo.installedLengthM,
-        notes: 'Caso de demostración',
-      }
-      try {
-        const demoResult = calculate(demoInput)
-        const highPressure = saturationAtTemperature(
-          demoInput.refrigerantId,
-          demoInput.targetCondC,
-          'bubble',
-        ).pressureKPa
-        const lowPressure = saturationAtTemperature(
-          demoInput.refrigerantId,
-          demoInput.targetEvapC,
-          'dew',
-        ).pressureKPa
-        const modeled = predictLengthForDiameter(
-          demoInput,
-          demoResult.compressor.massFlowKgS,
-          highPressure,
-          lowPressure,
-          demo.installedDiameterMm,
-        )
-        const createdAt = new Date(start - index * 86_400_000 * 4).toISOString()
-        created.push(
-          buildCase(
-            demoInput,
-            demoResult,
-            {
-              diameterMm: demo.installedDiameterMm,
-              lengthM: demo.installedLengthM,
-              measuredEvapC: demo.targetEvapC,
-              measuredCapacityW: null,
-              modeledLengthAtActualM: modeled,
-              notes: 'Caso de demostración cargado desde la biblioteca.',
-              recordedAt: createdAt,
-            },
-            'demo',
-            createdAt,
-          ),
-        )
-      } catch {
-        // Un demo incompatible no debe bloquear la carga del resto.
-      }
-    })
-    setCases((previous) => {
-      const existing = new Set(previous.map((item) => item.fingerprint))
-      const unique = created.filter((item) => !existing.has(item.fingerprint))
-      return [...unique, ...previous].slice(0, defaults.ui.maxCases)
-    })
-    return created.length
-  }, [])
-
-  const exportAll = useCallback(() => {
-    exportData(settings, cases)
-  }, [settings, cases])
-
-  const importAll = useCallback(async (file: File) => {
-    const imported = await importData(file)
-    setCases((previous) =>
-      [...imported.cases, ...previous].slice(0, defaults.ui.maxCases),
-    )
-    if (imported.settings) setSettings(imported.settings)
-    return { received: imported.received, duplicates: imported.duplicates }
-  }, [])
-
-  const resetEverything = useCallback(() => {
-    clearSyncData()
-    clearAllData()
-    setCases([])
-    setQuarantinedCases(0)
-    setSettings(defaultSettings())
-    setInput(defaultInput())
-    setTab('calculator')
-    window.location.hash = '#/'
-  }, [])
-
   const dismissError = useCallback(() => setCalculationError(null), [])
 
   const value: AppStore = {
-    settings,
-    cases,
-    quarantinedCases,
     input,
     result: resultState.result,
     calculationError,
-    learned,
     tab,
-    currentSaved,
-    storageMode: mode,
     updateInput,
     chooseRefrigerant,
     chooseCompressor,
     chooseStandard,
     chooseApplication,
-    saveCurrentCase,
-    recordActual,
-    deleteCase,
-    clearCases,
-    updateSettings,
-    loadDemoCases,
-    exportAll,
-    importAll,
-    resetEverything,
     navigate,
     dismissError,
   }

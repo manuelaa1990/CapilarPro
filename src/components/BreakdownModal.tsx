@@ -224,10 +224,6 @@ export const BreakdownModal = ({
               {fmtFixed(lengthFromM(cap.lengthM, lengthUnit), lengthPrecision)}{' '}
               {lengthUnit}
             </div>
-            <div className="rounded-lg bg-white p-2.5">
-              Corrección empírica = ×{fmt(cap.correctionFactor, 3)} · n ={' '}
-              {result.uncertainty.calibrationSamples}
-            </div>
           </div>
         </FlowStep>
       </div>
@@ -238,9 +234,8 @@ export const BreakdownModal = ({
           Incertidumbre declarada
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-[#8a5b28]">
-          La barra combina las fuentes de forma cuadrática. La mayor aportación
-          sigue siendo el modelo de capilar; la evidencia de campo solo reduce el
-          término empírico, nunca la física.
+          La barra combina las fuentes de incertidumbre de forma cuadrática; la
+          mayor aportación sigue siendo el modelo de capilar.
         </p>
         <div className="mt-3 space-y-2">
           {result.uncertainty.contributions.map((item) => (

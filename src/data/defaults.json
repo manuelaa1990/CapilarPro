@@ -2,17 +2,13 @@
   "schemaVersion": 1,
   "updatedAt": "2026-10-25",
   "defaults": {
-    "appName": "CapilarPro",
     "refrigerantId": "R134a",
     "compressorId": "secop-sc15g",
     "standardId": "ahri540",
     "ratedCapacityW": 1300,
     "displacementCm3Rev": 15.3,
-    "rpm": 2900,
     "refEvapC": 7.2,
     "refCondC": 54.4,
-    "refSuperheatK": 25,
-    "refSubcoolK": 0,
     "targetEvapC": -5,
     "targetCondC": 45,
     "targetSuperheatK": 10,
@@ -20,13 +16,6 @@
     "installedDiameterMm": null,
     "installedLengthM": null,
     "notes": ""
-  },
-  "ui": {
-    "defaultTab": "calculator",
-    "showAdvanced": false,
-    "autoCalculate": true,
-    "learningEnabled": true,
-    "maxCases": 500
   },
   "version": "1.0.0"
 }

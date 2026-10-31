@@ -1,9 +1,7 @@
 import { z } from 'zod'
 import type {
-  AppSettings,
   CalculationInput,
   RefrigerantId,
-  SavedCase,
   StandardId,
 } from '../types'
 import { defaults } from '../data/catalog'
@@ -41,7 +39,7 @@ const nullablePositive = (min: number, max: number) =>
     .max(max)
     .nullable()
 
-/** Límites compartidos por el formulario y la validación persistida. */
+/** Límites compartidos por el formulario y la validación del cálculo. */
 export const inputLimits = {
   targetSubcoolK: { min: 0, max: 30 },
   notesMaxLength: 1200,
@@ -90,64 +88,7 @@ const calculationInputObjectSchema = z
     notes: z.string().max(inputLimits.notesMaxLength),
   })
 
-export const calculationInputSchema = z
-  .preprocess((value) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return value
-    const input = value as Record<string, unknown>
-    let migrated: Record<string, unknown> = input
-    if (migrated.ratedCapacity === undefined && typeof input.ratedCapacityW === 'number') {
-      migrated = { ...migrated, ratedCapacity: input.ratedCapacityW }
-    }
-    if (migrated.displacement === undefined && typeof input.displacementCm3Rev === 'number') {
-      migrated = { ...migrated, displacement: input.displacementCm3Rev }
-    }
-    if (migrated.ratedCapacityW !== undefined || migrated.displacementCm3Rev !== undefined) {
-      migrated = { ...migrated }
-      delete migrated.ratedCapacityW
-      delete migrated.displacementCm3Rev
-    }
-    const legacyRpm = input.rpm
-    if (input.frequencyHz === undefined && typeof legacyRpm === 'number') {
-      const legacyInput = { ...migrated }
-      delete legacyInput.rpm
-      migrated = {
-        ...legacyInput,
-        frequencyHz: legacyRpm <= 3300 ? 50 : 60,
-      }
-    }
-    if (migrated.application === undefined) {
-      const refEvapC =
-        typeof migrated.refEvapC === 'number' ? migrated.refEvapC : 7
-      migrated = {
-        ...migrated,
-        application: refEvapC <= -20 ? 'LBP' : refEvapC <= 0 ? 'MBP' : 'HBP',
-      }
-    }
-    migrated = {
-      ...migrated,
-      capacityUnit: migrated.capacityUnit ?? 'W',
-      displacementUnit: migrated.displacementUnit ?? 'cm³/rev',
-      slhxActivo: migrated.slhxActivo ?? false,
-      slhxPorcentaje: migrated.slhxPorcentaje ?? 50,
-      slhxDiametroSuccion: migrated.slhxDiametroSuccion ?? '5/16',
-      ambientTempC: migrated.ambientTempC ?? 32.2,
-      returnGasTempC: migrated.returnGasTempC ?? 32.2,
-    }
-    if (migrated.targetReturnGasTempC === undefined) {
-      migrated = {
-        ...migrated,
-        targetReturnGasTempC:
-          (typeof migrated.targetEvapC === 'number' ? migrated.targetEvapC : -5) +
-          (typeof migrated.targetSuperheatK === 'number' ? migrated.targetSuperheatK : 10),
-      }
-    }
-    migrated = {
-      ...migrated,
-      targetAmbientTempC: migrated.targetAmbientTempC ?? 32.2,
-    }
-    return migrated
-  }, calculationInputObjectSchema)
-  .superRefine((value, context) => {
+export const calculationInputSchema = calculationInputObjectSchema.superRefine((value, context) => {
     const ratedCapacityW = capacityToWatts(
       value.ratedCapacity,
       value.capacityUnit,
@@ -202,104 +143,6 @@ export const calculationInputSchema = z
     }
   })
 
-export const settingsSchema = z.object({
-  appName: z.string().min(2).max(30),
-  learningEnabled: z.boolean(),
-  autoCalculate: z.boolean(),
-  showAdvanced: z.boolean(),
-  neonSyncEnabled: z.boolean().optional().default(false),
-})
-
-const outcomeSchema = z.object({
-  diameterMm: z.number().nullable(),
-  lengthM: z.number().nullable(),
-  measuredEvapC: z.number().nullable(),
-  measuredCapacityW: z.number().nullable(),
-  modeledLengthAtActualM: z.number().nullable(),
-  notes: z.string(),
-  recordedAt: z.string(),
-})
-
-const resultCoreSchema = z
-  .object({
-    version: z.string(),
-    calculatedAt: z.string(),
-    fingerprint: z.string(),
-    input: calculationInputSchema,
-    capillary: z.object({
-      diameterMm: z.number(),
-      lengthM: z.number(),
-    }).passthrough(),
-    compressor: z.object({
-      capacityW: z.number(),
-      massFlowKgS: z.number(),
-      etaVolumetricTarget: z.number(),
-    }).passthrough(),
-    uncertainty: z.object({
-      totalPct: z.number(),
-      confidenceScore: z.number(),
-    }).passthrough(),
-    warnings: z.array(z.unknown()),
-  })
-  .passthrough()
-
-export const savedCaseSchema = z.object({
-  id: z.string().min(3),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  fingerprint: z.string(),
-  result: resultCoreSchema,
-  actual: outcomeSchema.nullable(),
-  source: z.enum(['calculation', 'demo', 'imported']),
-})
-
-const storedStateSchema = z.object({
-  version: z.number(),
-  settings: settingsSchema,
-  cases: z.array(savedCaseSchema),
-  lastUpdated: z.string(),
-})
-
-export const exportEnvelopeSchema = z.object({
-  app: z.literal('CapilarPro'),
-  schemaVersion: z.number(),
-  exportedAt: z.string(),
-  settings: settingsSchema.optional(),
-  cases: z.array(savedCaseSchema),
-})
-
-export type ParsedCase = z.infer<typeof savedCaseSchema>
-export type ParsedStoredState = z.infer<typeof storedStateSchema>
-
-export const parseStoredState = (raw: string) => {
-  const parsed = JSON.parse(raw) as unknown
-  return storedStateSchema.safeParse(parsed)
-}
-
-export const parseImportedCases = (raw: string) => {
-  const parsed = JSON.parse(raw) as unknown
-  const envelope = exportEnvelopeSchema.safeParse(parsed)
-  if (envelope.success) return envelope.data
-  const cases = z.array(savedCaseSchema).safeParse(parsed)
-  if (cases.success) {
-    return {
-      app: 'CapilarPro' as const,
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      cases: cases.data,
-    }
-  }
-  return null
-}
-
-export const defaultSettings = (): AppSettings => ({
-  appName: defaults.defaults.appName,
-  learningEnabled: defaults.ui.learningEnabled,
-  autoCalculate: defaults.ui.autoCalculate,
-  showAdvanced: defaults.ui.showAdvanced,
-  neonSyncEnabled: false,
-})
-
 export const defaultInput = (): CalculationInput => {
   const seed = defaults.defaults
   return {
@@ -334,6 +177,3 @@ export const defaultInput = (): CalculationInput => {
     notes: '',
   }
 }
-
-export const normalizeCase = (value: ParsedCase): SavedCase =>
-  value as unknown as SavedCase

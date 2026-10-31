@@ -2,17 +2,14 @@ import {
   BookOpen,
   Calculator,
   Database,
-  History,
   Settings2,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
 import type { TabId } from '../types'
 import { Logo } from './Logo'
 import { useApp } from '../store/useApp'
-import { useNeonStatus } from '../store/neonStatusContext'
 
 const navItems: Array<{
   id: TabId
@@ -21,21 +18,12 @@ const navItems: Array<{
   icon: typeof Calculator
 }> = [
   { id: 'calculator', label: 'Calculadora', short: 'Calcular', icon: Calculator },
-  { id: 'history', label: 'Historial', short: 'Historial', icon: History },
   { id: 'model', label: 'El modelo', short: 'Modelo', icon: BookOpen },
   { id: 'settings', label: 'Ajustes', short: 'Ajustes', icon: Settings2 },
 ]
 
 export const Layout = ({ children }: { children: ReactNode }) => {
-  const { tab, navigate, settings, cases, learned, storageMode } = useApp()
-  const { status } = useNeonStatus()
-  const neonConnected = status === 'connected'
-  const neonEnabled = settings.neonSyncEnabled
-  const statusLabel = neonConnected
-    ? '🟢 Neon Conectado'
-    : neonEnabled
-      ? '🟡 Neon pendiente'
-      : '🟡 Modo Local'
+  const { tab, navigate } = useApp()
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
@@ -49,7 +37,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             className="text-left"
             aria-label="CapilarPro — Ir a la calculadora"
           >
-            <Logo name={settings.appName} light />
+            <Logo name="CapilarPro" light />
           </button>
 
           <div className="mt-12 text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
@@ -83,11 +71,6 @@ export const Layout = ({ children }: { children: ReactNode }) => {
                     <Icon size={16} strokeWidth={2.2} />
                   </span>
                   {item.label}
-                  {item.id === 'history' && cases.length > 0 && (
-                    <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/60">
-                      {cases.length}
-                    </span>
-                  )}
                   {active && (
                     <span className="ml-auto h-1.5 w-1.5 rounded-full bg-mint-400 shadow-[0_0_8px_#40d7bd]" />
                   )}
@@ -97,49 +80,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           </nav>
 
           <div className="mt-auto space-y-3 pt-8">
-            <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.045] p-4">
-              <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-mint-400/10 blur-2xl" />
-              <div className="relative">
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-mint-300">
-                  <Sparkles size={12} />
-                  Memoria de taller
-                </div>
-                <p className="mt-2 font-display text-[24px] font-semibold leading-none text-white">
-                  {learned.actualCases}
-                  <span className="ml-1.5 text-[11px] font-medium text-white/60">
-                    validados
-                  </span>
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-mint-500 to-mint-300 transition-all duration-500"
-                      style={{
-                        width: `${Math.min(100, learned.actualCases * 12 + 6)}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="font-mono text-[9px] text-white/60">
-                    {cases.length} casos
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('history')}
-                  className="mt-3 text-[10px] font-bold uppercase tracking-[0.13em] text-mint-300/80 transition-colors hover:text-mint-200"
-                >
-                  Ver historial →
-                </button>
-              </div>
-            </div>
-
             <div className="flex items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-[10px] text-white/60">
               <ShieldCheck size={13} className="text-mint-400/70" />
-              <span className="leading-tight">
-                Cálculo local · {storageMode}
-                <br />
-                Neon solo si lo activas
-              </span>
+              <span className="leading-tight">Sin almacenamiento ni conexión de datos</span>
             </div>
 
             <div className="flex items-center justify-between px-1 font-mono text-[9px] uppercase tracking-wider text-white/60">
@@ -160,36 +103,10 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             onClick={() => navigate('calculator')}
             aria-label="CapilarPro — Ir a la calculadora"
           >
-            <Logo name={settings.appName} compact />
+            <Logo name="CapilarPro" compact />
           </button>
           <div className="flex items-center gap-2">
-            <span
-              role="status"
-              aria-label={statusLabel}
-              className={clsx(
-                'flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-[9px] font-bold tracking-wide sm:text-[10px]',
-                neonConnected
-                  ? 'border-mint-500/25 text-mint-700'
-                  : 'border-amber-500/25 text-amber-700',
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className={clsx(
-                  'h-1.5 w-1.5 rounded-full',
-                  neonConnected ? 'bg-mint-500' : 'bg-amber-500',
-                )}
-              />
-              <span>{neonConnected ? 'Neon Conectado' : neonEnabled ? 'Neon pendiente' : 'Modo Local'}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => navigate('history')}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-ink-900/10 bg-white text-ink-800"
-              aria-label="Abrir historial"
-            >
-              <History size={15} />
-            </button>
+            <span role="status" aria-label="Cálculo efímero" className="text-[10px] font-semibold text-ink-600">Cálculo efímero</span>
           </div>
         </header>
 
@@ -199,7 +116,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       </div>
 
       <nav
-        className="fixed bottom-4 left-4 right-4 z-40 grid grid-cols-4 rounded-2xl border border-white/10 bg-ink-950/95 p-1.5 shadow-float backdrop-blur-xl lg:hidden"
+        className="fixed bottom-4 left-4 right-4 z-40 grid grid-cols-3 rounded-2xl border border-white/10 bg-ink-950/95 p-1.5 shadow-float backdrop-blur-xl lg:hidden"
         aria-label="Navegación móvil"
       >
         {navItems.map((item) => {
