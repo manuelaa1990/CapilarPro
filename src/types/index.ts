@@ -105,9 +105,6 @@ export interface CalculationInput {
     | '3/4'
     | '7/8'
   lHxM?: number
-  installedDiameterMm: number | null
-  installedLengthM: number | null
-  notes: string
 }
 
 export interface SaturationPoint {
@@ -176,13 +173,6 @@ export interface CapillaryResult {
   /** Nota del candidato elegido. Opcional para leer casos guardados antiguos. */
   note?: string
   alternatives: CapillaryCandidate[]
-  selectedIsInstalled: boolean
-  installedPrediction: {
-    diameterMm: number
-    modeledLengthM: number
-    actualLengthM: number
-    deviationPct: number
-  } | null
 }
 
 export interface UncertaintyContribution {

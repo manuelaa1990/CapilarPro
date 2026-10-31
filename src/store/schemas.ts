@@ -32,19 +32,9 @@ const standardEnum = z.enum([
 ])
 const applicationEnum = z.enum(['LBP', 'MBP', 'HBP'])
 
-const nullablePositive = (min: number, max: number) =>
-  z
-    .number()
-    .min(min)
-    .max(max)
-    .nullable()
-
 /** Límites compartidos por el formulario y la validación del cálculo. */
 export const inputLimits = {
   targetSubcoolK: { min: 0, max: 30 },
-  notesMaxLength: 1200,
-  installedDiameterMm: { min: 0.3, max: 3.5 },
-  installedLengthM: { min: 0.1, max: 10 },
 } as const
 
 const calculationInputObjectSchema = z
@@ -77,15 +67,6 @@ const calculationInputObjectSchema = z
     slhxActivo: z.boolean(),
     slhxPorcentaje: z.number().min(30).max(70),
     slhxDiametroSuccion: z.enum(slhxSuctionTubeDiameters),
-    installedDiameterMm: nullablePositive(
-      inputLimits.installedDiameterMm.min,
-      inputLimits.installedDiameterMm.max,
-    ),
-    installedLengthM: nullablePositive(
-      inputLimits.installedLengthM.min,
-      inputLimits.installedLengthM.max,
-    ),
-    notes: z.string().max(inputLimits.notesMaxLength),
   })
 
 export const calculationInputSchema = calculationInputObjectSchema.superRefine((value, context) => {
@@ -132,15 +113,6 @@ export const calculationInputSchema = calculationInputObjectSchema.superRefine((
         message: 'La referencia debe tener al menos 8 K de salto',
       })
     }
-    const hasDiameter = value.installedDiameterMm !== null
-    const hasLength = value.installedLengthM !== null
-    if (hasDiameter !== hasLength) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: [hasDiameter ? 'installedLengthM' : 'installedDiameterMm'],
-        message: 'Introduce diámetro y longitud del capilar instalado juntos',
-      })
-    }
   })
 
 export const defaultInput = (): CalculationInput => {
@@ -172,8 +144,5 @@ export const defaultInput = (): CalculationInput => {
     slhxActivo: false,
     slhxPorcentaje: 50,
     slhxDiametroSuccion: '5/16',
-    installedDiameterMm: null,
-    installedLengthM: null,
-    notes: '',
   }
 }

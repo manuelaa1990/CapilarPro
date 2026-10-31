@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
-  ChevronDown,
   CircleAlert,
   Database,
   Gauge,
@@ -111,7 +110,6 @@ export const CalculatorPage = () => {
     dismissError,
   } = useApp()
   const [showDetails, setShowDetails] = useState(false)
-  const [advanced, setAdvanced] = useState(false)
   const [manualReferenceValues, setManualReferenceValues] = useState(false)
   const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
   const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
@@ -130,16 +128,6 @@ export const CalculatorPage = () => {
   )
   const ratio =
     targetPressure > 0 ? condPressure / targetPressure : result?.compressor.targetPressureRatio ?? 0
-
-  const installedPairIncomplete =
-    (input.installedDiameterMm === null) !== (input.installedLengthM === null)
-  const installedValuesInvalid =
-    (input.installedDiameterMm !== null &&
-      (input.installedDiameterMm < inputLimits.installedDiameterMm.min ||
-        input.installedDiameterMm > inputLimits.installedDiameterMm.max)) ||
-    (input.installedLengthM !== null &&
-      (input.installedLengthM < inputLimits.installedLengthM.min ||
-        input.installedLengthM > inputLimits.installedLengthM.max))
 
   const resetPlate = () => {
     if (!compressor) return
@@ -772,113 +760,6 @@ export const CalculatorPage = () => {
                 </p>
               )}
             </div>
-          </Card>
-
-          <Card>
-            <button
-              type="button"
-              onClick={() => setAdvanced((value) => !value)}
-              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left sm:px-6"
-              aria-expanded={advanced}
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-frost-100 text-ink-700">
-                  <Layers3 size={14} />
-                </span>
-                <div>
-                  <p className="text-[11px] font-bold text-ink-900">
-                    Capilar instalado y notas
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-ink-600">
-                    Opcional · compara el capilar instalado con la estimación
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                size={16}
-                className={clsx(
-                  'shrink-0 text-ink-600 transition-transform',
-                  advanced && 'rotate-180',
-                )}
-              />
-            </button>
-            {advanced && (
-              <div className="border-t border-ink-900/[0.06] px-5 pb-5 pt-4 sm:px-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <NumberField
-                    label="Diámetro interior instalado"
-                    value={input.installedDiameterMm ?? 0}
-                    onChange={(value) =>
-                      updateInput({
-                        installedDiameterMm: value > 0 ? value : null,
-                      })
-                    }
-                    unit="mm"
-                    min={0}
-                    max={inputLimits.installedDiameterMm.max}
-                    step={0.01}
-                    hint={`Entre ${inputLimits.installedDiameterMm.min} y ${inputLimits.installedDiameterMm.max} mm. Si ya montaste un capilar, indícalo para comparar.`}
-                  />
-                  <NumberField
-                    label="Longitud instalada"
-                    value={input.installedLengthM ?? 0}
-                    onChange={(value) =>
-                      updateInput({
-                        installedLengthM: value > 0 ? value : null,
-                      })
-                    }
-                    unit="m"
-                    min={0}
-                    max={inputLimits.installedLengthM.max}
-                    step={0.01}
-                    hint={`Entre ${inputLimits.installedLengthM.min} y ${inputLimits.installedLengthM.max} m. La longitud real medida, no la que crees que tiene.`}
-                  />
-                </div>
-                {installedPairIncomplete && (
-                  <p
-                    role="alert"
-                    className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-[10px] leading-relaxed text-amber-800"
-                  >
-                    Introduce diámetro y longitud del capilar instalado juntos, o
-                    deja ambos campos vacíos.
-                  </p>
-                )}
-                {installedValuesInvalid && (
-                  <p
-                    role="alert"
-                    className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-[10px] leading-relaxed text-amber-800"
-                  >
-                    Revisa el rango del capilar instalado: diámetro entre{' '}
-                    {inputLimits.installedDiameterMm.min} y{' '}
-                    {inputLimits.installedDiameterMm.max} mm; longitud entre{' '}
-                    {inputLimits.installedLengthM.min} y{' '}
-                    {inputLimits.installedLengthM.max} m.
-                  </p>
-                )}
-                <div className="mt-4">
-                  <label className="field-label" htmlFor="notes">
-                    Notas del caso
-                  </label>
-                  <textarea
-                    id="notes"
-                    value={input.notes}
-                    maxLength={inputLimits.notesMaxLength}
-                    onChange={(event) => updateInput({ notes: event.target.value })}
-                    rows={2}
-                    placeholder="Equipo, aceite, diámetro de línea, observaciones de campo…"
-                    className="w-full resize-none rounded-xl border border-ink-900/10 bg-white px-3.5 py-2.5 text-[13px] text-ink-950 outline-none transition-all placeholder:text-ink-600/40 focus:border-mint-500 focus:ring-4 focus:ring-mint-500/10"
-                  />
-                  <p className="mt-1 text-right font-mono text-[9px] text-ink-600">
-                    {input.notes.length}/{inputLimits.notesMaxLength}
-                  </p>
-                </div>
-                <div className="mt-3 flex items-start gap-2 rounded-xl bg-ember-500/[0.07] px-3 py-2.5 text-[10px] leading-relaxed text-[#8a5a1f]">
-                  <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                  Estos datos solo se usan para comparar la instalación actual con
-                  el resultado calculado; no se conservan al cerrar o recargar.
-                </div>
-              </div>
-            )}
           </Card>
 
           <div className="flex flex-wrap items-center gap-3 pb-2">

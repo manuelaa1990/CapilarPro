@@ -29,10 +29,7 @@ describe('fingerprint', () => {
     const first = fingerprintOf(base)
     const second = fingerprintOf({
       ...base,
-      notes: 'otra nota que no cambia la física',
       compressorLabel: 'Etiqueta distinta',
-      installedDiameterMm: 1.1,
-      installedLengthM: 1.6,
     })
     expect(first).toBe(second)
     expect(first).toMatch(/^CP-[0-9A-F]{8}$/)

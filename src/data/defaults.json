@@ -12,10 +12,7 @@
     "targetEvapC": -5,
     "targetCondC": 45,
     "targetSuperheatK": 10,
-    "targetSubcoolK": 5,
-    "installedDiameterMm": null,
-    "installedLengthM": null,
-    "notes": ""
+    "targetSubcoolK": 5
   },
   "version": "1.0.0"
 }

@@ -286,8 +286,6 @@ export const asCandidate = (
 }
 
 interface AssemblyContext {
-  input: CalculationInput
-  operating: OperatingPoint
   pressureInKPa: number
   pressureOutKPa: number
 }
@@ -299,12 +297,7 @@ interface AssemblyContext {
  */
 export const assembleCapillaryResult = (
   ranked: CapillaryCandidate[],
-  {
-    input,
-    operating,
-    pressureInKPa,
-    pressureOutKPa,
-  }: AssemblyContext,
+  { pressureInKPa, pressureOutKPa }: AssemblyContext,
 ): CapillaryResult => {
   if (ranked.length === 0) {
     throw new Error(
@@ -312,23 +305,6 @@ export const assembleCapillaryResult = (
     )
   }
   const selected = ranked[0]
-  const installed =
-    input.installedDiameterMm && input.installedDiameterMm >= 0.3
-      ? simulateCapillaryLength(input.installedDiameterMm, operating)
-      : null
-
-  const installedPrediction =
-    installed && input.installedLengthM
-      ? {
-          diameterMm: installed.diameterMm,
-          modeledLengthM: installed.lengthM,
-          actualLengthM: input.installedLengthM,
-          deviationPct:
-            ((input.installedLengthM - installed.lengthM) /
-              Math.max(installed.lengthM, 0.01)) *
-            100,
-        }
-      : null
 
   return {
     diameterMm: selected.diameterMm,
@@ -343,10 +319,6 @@ export const assembleCapillaryResult = (
     status: selected.status,
     note: selected.note,
     alternatives: ranked.slice(1, 6),
-    selectedIsInstalled:
-      Boolean(input.installedDiameterMm) &&
-      Math.abs((input.installedDiameterMm ?? 0) - selected.diameterMm) < 0.025,
-    installedPrediction,
   }
 }
 
@@ -380,8 +352,6 @@ export const computeCapillary = (
   })
 
   return assembleCapillaryResult(ranked, {
-    input,
-    operating,
     pressureInKPa,
     pressureOutKPa,
   })

@@ -160,18 +160,6 @@ const warningsFor = (
     })
   }
 
-  if (
-    result.capillary.installedPrediction &&
-    Math.abs(result.capillary.installedPrediction.deviationPct) > 30
-  ) {
-    warnings.push({
-      code: 'installed-deviation',
-      severity: 'info',
-      title: 'El capilar instalado se separa del modelo',
-      message: `Diferencia de ${result.capillary.installedPrediction.deviationPct.toFixed(0)} %. Al guardar el caso, esta evidencia ajustará futuras recomendaciones.`,
-    })
-  }
-
   return warnings
 }
 
@@ -436,8 +424,6 @@ export const calculate = (
     targetLiquidEnthalpyKJkg = selectedState.liquidEnthalpyKJkg
     slhxResult = selectedState.slhx
     capillary = assembleCapillaryResult(ranked, {
-      input,
-      operating: selectedState.operating,
       pressureInKPa: targetCondSaturation.pressureKPa,
       pressureOutKPa: targetSaturation.pressureKPa,
     })

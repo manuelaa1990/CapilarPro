@@ -1,5 +1,4 @@
 import {
-  Check,
   ChevronRight,
   CircleAlert,
   Gauge,
@@ -11,7 +10,6 @@ import clsx from 'clsx'
 import type {
   CalculationResult,
 } from '../types'
-import { Badge } from './ui'
 import { UnitToggle } from './UnitToggle'
 import { fmt, fmtKW } from '../lib/format'
 import {
@@ -386,15 +384,6 @@ export const ResultCard = ({
                 />
               </button>
             </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {capillary.selectedIsInstalled && (
-              <Badge tone="mint" className="border-mint-400/20 bg-mint-400/10 text-mint-300">
-                <Check size={10} />
-                coincide con instalado
-              </Badge>
-            )}
           </div>
         </div>
       </div>
