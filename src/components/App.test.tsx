@@ -469,16 +469,6 @@ describe('CapilarPro', () => {
     expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(15)
   })
 
-  it('muestra la política efímera en ajustes y no ofrece historial ni guardado', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    expect(screen.queryByRole('button', { name: /Historial/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Guardar y aprender/i })).not.toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: 'Ajustes' })[0])
-    expect(await screen.findByText('Esta app no guarda ningún dato. Todos los cálculos son efímeros.')).toBeInTheDocument()
-  })
-
   it('permite editar SH y muestra alerta de bajo salto del condensador', async () => {
     const user = userEvent.setup()
     render(<App />)

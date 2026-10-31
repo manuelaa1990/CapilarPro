@@ -22,7 +22,7 @@ export type StandardId =
 
 export type CompressorApplication = 'LBP' | 'MBP' | 'HBP'
 
-export type TabId = 'calculator' | 'model' | 'settings'
+export type TabId = 'calculator' | 'model'
 
 export interface Refrigerant {
   id: RefrigerantId

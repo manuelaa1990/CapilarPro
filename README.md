@@ -142,7 +142,7 @@ src/
   data/           Catálogos JSON y tablas termofísicas versionadas
   engine/         Propiedades, capilar, ηv, incertidumbre, normas, fingerprint
   lib/            Formateo y utilidades
-  pages/          Calculadora, Modelo y Ajustes
+  pages/          Calculadora y Modelo
   store/          Estado volátil y validación del formulario
   types/          Contratos TypeScript
   App.tsx         Router por hash y límites de error
@@ -152,7 +152,7 @@ scripts/
   validate-data.mjs         Validación de datos para CI
 ```
 
-La navegación usa hash routing (`#/`, `#/model`, `#/settings`) para funcionar en cualquier hosting estático, incluido GitHub Pages bajo subruta.
+La navegación usa hash routing (`#/`, `#/model`) para funcionar en cualquier hosting estático, incluido GitHub Pages bajo subruta.
 
 ## Despliegue
 

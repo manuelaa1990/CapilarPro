@@ -28,7 +28,7 @@ import {
 
 const parseTab = (): TabId => {
   const raw = window.location.hash.replace(/^#\/?/, '')
-  if (raw === 'model' || raw === 'settings') return raw
+  if (raw === 'model') return raw
   return 'calculator'
 }
 

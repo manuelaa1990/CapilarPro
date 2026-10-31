@@ -2,7 +2,6 @@ import {
   BookOpen,
   Calculator,
   Database,
-  Settings2,
   ShieldCheck,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -19,7 +18,6 @@ const navItems: Array<{
 }> = [
   { id: 'calculator', label: 'Calculadora', short: 'Calcular', icon: Calculator },
   { id: 'model', label: 'El modelo', short: 'Modelo', icon: BookOpen },
-  { id: 'settings', label: 'Ajustes', short: 'Ajustes', icon: Settings2 },
 ]
 
 export const Layout = ({ children }: { children: ReactNode }) => {
@@ -116,7 +114,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       </div>
 
       <nav
-        className="fixed bottom-4 left-4 right-4 z-40 grid grid-cols-3 rounded-2xl border border-white/10 bg-ink-950/95 p-1.5 shadow-float backdrop-blur-xl lg:hidden"
+        className="fixed bottom-4 left-4 right-4 z-40 grid grid-cols-2 rounded-2xl border border-white/10 bg-ink-950/95 p-1.5 shadow-float backdrop-blur-xl lg:hidden"
         aria-label="Navegación móvil"
       >
         {navItems.map((item) => {

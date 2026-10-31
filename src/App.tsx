@@ -4,7 +4,6 @@ import { useApp } from './store/useApp'
 import { Layout } from './components/Layout'
 import { CalculatorPage } from './pages/CalculatorPage'
 import { ModelPage } from './pages/ModelPage'
-import { SettingsPage } from './pages/SettingsPage'
 
 const RoutedPage = () => {
   const { tab } = useApp()
@@ -17,8 +16,6 @@ const RoutedPage = () => {
   switch (tab) {
     case 'model':
       return <ModelPage />
-    case 'settings':
-      return <SettingsPage />
     default:
       return <CalculatorPage />
   }
