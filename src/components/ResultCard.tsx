@@ -18,6 +18,7 @@ import { exportCalculationToPdf } from '../lib/exportPdf'
 import {
   diameterDigits,
   diameterFromMm,
+  diameterUnitSuffix,
   fmtFixed,
   lengthDigits,
   lengthFromM,
@@ -240,8 +241,8 @@ const AlternativeRow = ({
       {fmtFixed(
         diameterFromMm(candidate.diameterMm, diameterUnit),
         diameterDigits(diameterUnit),
-      )}{' '}
-      {diameterUnit}
+      )}
+      {diameterUnitSuffix(diameterUnit)}
       <span className="text-white/60"> × </span>
       {fmtFixed(lengthFromM(candidate.lengthM, lengthUnit), lengthDigits(lengthUnit))}{' '}
       {lengthUnit}
@@ -343,6 +344,9 @@ export const ResultCard = ({
                   className="font-display text-[46px] font-semibold leading-none tracking-[-0.06em] text-white"
                 >
                   {selectedDiameter}
+                  <span className="text-[24px] font-normal text-white/50">
+                    {diameterUnitSuffix(diameterUnit)}
+                  </span>
                 </span>
                 <UnitToggle
                   label="Unidad del diámetro"

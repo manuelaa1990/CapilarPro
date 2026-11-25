@@ -28,6 +28,10 @@ export const lengthFromM = (
 export const diameterDigits = (unit: DiameterDisplayUnit): number =>
   unit === 'in' ? 3 : 2
 
+/** Sufijo de unidad para el diámetro: pulgadas como comillas, mm como texto. */
+export const diameterUnitSuffix = (unit: DiameterDisplayUnit): string =>
+  unit === 'in' ? '"' : ' mm'
+
 export const lengthDigits = (unit: LengthDisplayUnit): number =>
   unit === 'cm' ? 1 : 2
 

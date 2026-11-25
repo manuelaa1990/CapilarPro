@@ -77,7 +77,9 @@ describe('CapilarPro', () => {
     expect(pressureRatioMetric).toHaveTextContent('RC')
     expect(pressureRatioMetric?.children[1]).toHaveTextContent(/^\d+,\d{2}$/)
     expect(plateRatio).toHaveTextContent(/^placa \d+,\d{2}$/)
-    expect(screen.getByLabelText('Diámetro seleccionado')).toBeInTheDocument()
+    expect(screen.getByLabelText('Diámetro seleccionado')).toHaveTextContent(
+      /0,\d{3}"/,
+    )
     expect(screen.getByLabelText('Longitud seleccionada')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Datos del compresor y placa/i }),
@@ -122,7 +124,7 @@ describe('CapilarPro', () => {
     const alternatives = screen
       .getByText('Alternativas de selección')
       .parentElement?.parentElement
-    expect(alternatives).toHaveTextContent(/\bin\s*×.*cm/)
+    expect(alternatives).toHaveTextContent(/"\s*×.*cm/)
 
     await user.click(screen.getByRole('button', { name: 'Ver desglose técnico' }))
     const dialog = screen.getByRole('dialog', { name: 'Trazabilidad del cálculo' })
@@ -463,28 +465,36 @@ describe('CapilarPro', () => {
     )
 
     expect(
-      await screen.findByText('Base: 1300 W (HBP) × 0.36 = 473 W'),
+      await screen.findByText('Base: 1300 W (LBP) × 2.75 = 3575 W'),
     ).toBeInTheDocument()
-    expect(screen.getByText('473 W')).toBeInTheDocument()
+    expect(screen.getByText('3575 W')).toBeInTheDocument()
     expect(
       screen.getByText('Capacidad ajustada por condición'),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('1300 W (LBP) × 2.75 = 3575 W (HBP)'),
+    ).toBeInTheDocument()
   })
 
-  it('sincroniza aplicación y estándar, y respeta BTU/h en la tarjeta', async () => {
+  it('mantiene la condición declarada al cambiar la aplicación', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     const condition = screen.getByRole('combobox', {
       name: 'Condición de la capacidad',
     })
-    await user.selectOptions(condition, 'LBP')
-    await user.selectOptions(condition, 'MBP')
+    const application = screen.getByRole('combobox', {
+      name: 'Aplicación',
+    })
 
-    // La aplicación principal y el estándar siguen la condición elegida.
-    expect(
-      screen.getByRole('combobox', { name: 'Aplicación' }),
-    ).toHaveValue('MBP')
+    // La condición solo declara la capacidad: no cambia la aplicación.
+    await user.selectOptions(condition, 'LBP')
+    expect(application).toHaveValue('HBP')
+    expect(condition).toHaveValue('LBP')
+
+    // Cambiar la aplicación actualiza el estándar, pero no la condición.
+    await user.selectOptions(application, 'MBP')
+    expect(condition).toHaveValue('LBP')
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-6.7)
     expect(screen.getByLabelText('Cond. referencia')).toHaveValue(54.4)
     expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(35)
@@ -509,6 +519,12 @@ describe('CapilarPro', () => {
       ),
     ).toBeInTheDocument()
     expect(screen.getByText('1575 BTU/h')).toBeInTheDocument()
+
+    // Banner de conversión sobre el cuadro de estándar de ensayo.
+    expect(screen.getByText('Capacidad convertida')).toBeInTheDocument()
+    expect(
+      screen.getByText('750 BTU/h (LBP) × 2.10 = 1575 BTU/h (MBP)'),
+    ).toBeInTheDocument()
   })
 
   it('limita los campos numéricos a dos decimales', async () => {

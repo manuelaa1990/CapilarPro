@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
   CircleAlert,
+  CircleCheck,
   Database,
   Gauge,
   Info,
@@ -14,6 +15,7 @@ import clsx from 'clsx'
 import type {
   CalculationInput,
   CalculationWarning,
+  CapacityNormalization,
   CapacityUnit,
   CompressorApplication,
   DisplacementUnit,
@@ -98,6 +100,49 @@ const WarningList = ({ warnings }: { warnings: CalculationWarning[] }) => {
   )
 }
 
+const CapacityConversionBanner = ({
+  normalization,
+  application,
+  unit,
+}: {
+  normalization: CapacityNormalization
+  application: CompressorApplication
+  unit: CapacityUnit
+}) => {
+  if (normalization.ratioUsed === 1) return null
+
+  const originalCapacity = convertCapacity(
+    normalization.originalCapacityW,
+    'W',
+    unit,
+  )
+  const normalizedCapacity = convertCapacity(
+    normalization.capacityW,
+    'W',
+    unit,
+  )
+
+  return (
+    <div
+      role="status"
+      className="mt-4 flex items-start gap-3 rounded-2xl border border-mint-500/25 bg-mint-500/10 px-4 py-3"
+    >
+      <CircleCheck size={16} className="mt-0.5 shrink-0 text-mint-700" />
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mint-700">
+          Capacidad convertida
+        </p>
+        <p className="mt-1 font-mono text-[12px] leading-relaxed text-ink-800">
+          {fmt(originalCapacity, 0)} {unit} (
+          {normalization.declaredApplication}) ×{' '}
+          {normalization.ratioUsed.toFixed(2)} = {fmt(normalizedCapacity, 0)}{' '}
+          {unit} ({application})
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export const CalculatorPage = () => {
   const {
     input,
@@ -112,7 +157,7 @@ export const CalculatorPage = () => {
   } = useApp()
   const [showDetails, setShowDetails] = useState(false)
   const [manualReferenceValues, setManualReferenceValues] = useState(false)
-  const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('mm')
+  const [diameterUnit, setDiameterUnit] = useState<DiameterDisplayUnit>('in')
   const [lengthUnit, setLengthUnit] = useState<LengthDisplayUnit>('m')
 
   const compressor = compressors.find((item) => item.id === input.compressorId)
@@ -363,28 +408,16 @@ export const CalculatorPage = () => {
                     />
                     <SelectField
                       label="Condición de la capacidad"
-                      value={
-                        input.declaredApplication &&
-                        input.declaredApplication !== input.application
-                          ? input.application
-                          : ''
+                      value={input.declaredApplication ?? ''}
+                      onChange={(value) =>
+                        updateInput({
+                          declaredApplication:
+                            value === ''
+                              ? undefined
+                              : (value as CompressorApplication),
+                        })
                       }
-                      onChange={(value) => {
-                        if (value === '') {
-                          updateInput({ declaredApplication: undefined })
-                          return
-                        }
-                        const target = value as CompressorApplication
-                        if (target === input.application) {
-                          updateInput({ declaredApplication: undefined })
-                          return
-                        }
-                        // La capacidad pasa a estar declarada en la aplicación
-                        // anterior y se normaliza a la nueva condición objetivo.
-                        updateInput({ declaredApplication: input.application })
-                        chooseApplication(target)
-                      }}
-                      hint="Condición objetivo del cálculo. La capacidad se convierte desde la aplicación actual."
+                      hint="Condición en la que está declarada la capacidad de placa. Es independiente de la aplicación."
                     >
                       <option value="">Misma aplicación (actual)</option>
                       <option value="LBP">LBP (congelación)</option>
@@ -467,6 +500,14 @@ export const CalculatorPage = () => {
                     </p>
                   </div>
               </div>
+
+              {result && (
+                <CapacityConversionBanner
+                  normalization={result.capacityNormalization}
+                  application={input.application}
+                  unit={input.capacityUnit}
+                />
+              )}
 
               <div className="mt-4 rounded-2xl border border-ink-900/[0.06] bg-frost-50/70 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
