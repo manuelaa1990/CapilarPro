@@ -363,16 +363,28 @@ export const CalculatorPage = () => {
                     />
                     <SelectField
                       label="Condición de la capacidad"
-                      value={input.declaredApplication ?? ''}
-                      onChange={(value) =>
-                        updateInput({
-                          declaredApplication:
-                            value === ''
-                              ? undefined
-                              : (value as CompressorApplication),
-                        })
+                      value={
+                        input.declaredApplication &&
+                        input.declaredApplication !== input.application
+                          ? input.application
+                          : ''
                       }
-                      hint="Condición de la placa si no coincide con la aplicación."
+                      onChange={(value) => {
+                        if (value === '') {
+                          updateInput({ declaredApplication: undefined })
+                          return
+                        }
+                        const target = value as CompressorApplication
+                        if (target === input.application) {
+                          updateInput({ declaredApplication: undefined })
+                          return
+                        }
+                        // La capacidad pasa a estar declarada en la aplicación
+                        // anterior y se normaliza a la nueva condición objetivo.
+                        updateInput({ declaredApplication: input.application })
+                        chooseApplication(target)
+                      }}
+                      hint="Condición objetivo del cálculo. La capacidad se convierte desde la aplicación actual."
                     >
                       <option value="">Misma aplicación (actual)</option>
                       <option value="LBP">LBP (congelación)</option>
@@ -468,7 +480,7 @@ export const CalculatorPage = () => {
                     </p>
                   </div>
                   <span className="rounded-full bg-white px-2.5 py-1 font-mono text-[9px] text-ink-600">
-                    {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
+                    {input.application} · {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

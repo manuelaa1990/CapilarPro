@@ -122,6 +122,11 @@ describe('integración con el motor', () => {
       base.compressor.rawEtaVolumetricRef * 2.75,
       8,
     )
+    expect(normalized.capacityNormalization).toMatchObject({
+      declaredApplication: 'LBP',
+      originalCapacityW: 1300,
+      ratioUsed: 2.75,
+    })
     expect(
       normalized.warnings.some(
         (warning) => warning.code === 'capacity-normalized',

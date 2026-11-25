@@ -12,7 +12,8 @@ import type {
   CalculationResult,
 } from '../types'
 import { UnitToggle } from './UnitToggle'
-import { fmt, fmtKW } from '../lib/format'
+import { fmt } from '../lib/format'
+import { wattsToCapacity } from '../engine/units'
 import { exportCalculationToPdf } from '../lib/exportPdf'
 import {
   diameterDigits,
@@ -306,9 +307,13 @@ export const ResultCard = ({
       )
     : null
   const capacityNormalization = result.capacityNormalization
+  const capacityUnit = result.input.capacityUnit
+  const formatCapacity = (watts: number) =>
+    `${fmt(wattsToCapacity(watts, capacityUnit), 0)} ${capacityUnit}`
+  const normalizedCapacityLabel = formatCapacity(capacityNormalization.capacityW)
   const normalizationBase =
     capacityNormalization.ratioUsed !== 1
-      ? `Base: ${Math.round(capacityNormalization.originalCapacityW)} W (${capacityNormalization.declaredApplication}) × ${Number(capacityNormalization.ratioUsed.toFixed(2))}`
+      ? `Base: ${formatCapacity(capacityNormalization.originalCapacityW)} (${capacityNormalization.declaredApplication}) × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
       : undefined
 
   return (
@@ -409,7 +414,7 @@ export const ResultCard = ({
           <Metric
             icon={Gauge}
             label="Capacidad"
-            value={fmtKW(result.compressor.capacityW)}
+            value={normalizedCapacityLabel}
             sub={`ηv ${fmt(result.compressor.etaVolumetricTarget * 100, 1)} %`}
             footnote={normalizationBase}
           />

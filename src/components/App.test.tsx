@@ -443,10 +443,7 @@ describe('CapilarPro', () => {
       ),
     ).toBeInTheDocument()
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Aplicación' }),
-      'LBP',
-    )
+    await user.selectOptions(condition, '')
     expect(
       screen.queryByText(
         'Se aplicará un factor de conversión por cambio de condición',
@@ -466,11 +463,52 @@ describe('CapilarPro', () => {
     )
 
     expect(
-      await screen.findByText('Base: 1300 W (LBP) × 2.75'),
+      await screen.findByText('Base: 1300 W (HBP) × 0.36 = 473 W'),
     ).toBeInTheDocument()
+    expect(screen.getByText('473 W')).toBeInTheDocument()
     expect(
       screen.getByText('Capacidad ajustada por condición'),
     ).toBeInTheDocument()
+  })
+
+  it('sincroniza aplicación y estándar, y respeta BTU/h en la tarjeta', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const condition = screen.getByRole('combobox', {
+      name: 'Condición de la capacidad',
+    })
+    await user.selectOptions(condition, 'LBP')
+    await user.selectOptions(condition, 'MBP')
+
+    // La aplicación principal y el estándar siguen la condición elegida.
+    expect(
+      screen.getByRole('combobox', { name: 'Aplicación' }),
+    ).toHaveValue('MBP')
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-6.7)
+    expect(screen.getByLabelText('Cond. referencia')).toHaveValue(54.4)
+    expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(35)
+    expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(18.3)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(25)
+    expect(screen.getByText(/MBP · AHRI 540/)).toBeInTheDocument()
+
+    // La capacidad se declara en LBP y se muestra en BTU/h.
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Unidad de capacidad' }),
+      'BTU/h',
+    )
+    const capacity = screen.getByRole('spinbutton', {
+      name: /Capacidad declarada/,
+    })
+    await user.clear(capacity)
+    await user.type(capacity, '750')
+
+    expect(
+      await screen.findByText(
+        'Base: 750 BTU/h (LBP) × 2.1 = 1575 BTU/h',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('1575 BTU/h')).toBeInTheDocument()
   })
 
   it('limita los campos numéricos a dos decimales', async () => {
