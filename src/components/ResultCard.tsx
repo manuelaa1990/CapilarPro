@@ -314,7 +314,7 @@ export const ResultCard = ({
   const normalizedCapacityLabel = formatCapacity(capacityNormalization.capacityW)
   const normalizationBase =
     capacityNormalization.ratioUsed !== 1
-      ? `Base: ${formatCapacity(capacityNormalization.originalCapacityW)} (${capacityNormalization.declaredApplication}) × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
+      ? `Condición de diseño ${capacityNormalization.declaredApplication} → Condición requerida ${result.input.application} · ${formatCapacity(capacityNormalization.originalCapacityW)} × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
       : undefined
 
   return (

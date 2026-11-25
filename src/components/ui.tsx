@@ -47,23 +47,34 @@ export const Badge = ({
   )
 }
 
-export const InfoTip = ({ label, children }: { label: string; children: ReactNode }) => (
-  <span className="group relative inline-flex">
-    <button
-      type="button"
-      aria-label={label}
-      className="inline-flex h-4 w-4 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-ink-900/5 hover:text-ink-800"
-    >
-      <Info size={12} strokeWidth={2.5} />
-    </button>
-    <span
-      role="tooltip"
-      className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 rounded-lg bg-ink-950 px-3 py-2 text-[11px] font-medium normal-case leading-relaxed tracking-normal text-white/90 opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-    >
-      {children}
+export const InfoTip = ({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) => {
+  const id = useId()
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        aria-label={label}
+        aria-describedby={id}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-ink-900/5 hover:text-ink-800"
+      >
+        <Info size={12} strokeWidth={2.5} />
+      </button>
+      <span
+        id={id}
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 rounded-lg bg-ink-950 px-3 py-2 text-[11px] font-medium normal-case leading-relaxed tracking-normal text-white/90 opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {children}
+      </span>
     </span>
-  </span>
-)
+  )
+}
 
 export const NumberField = ({
   label,
@@ -179,6 +190,7 @@ export const SelectField = ({
   onChange,
   children,
   hint,
+  tip,
   className,
 }: {
   label: string
@@ -186,14 +198,16 @@ export const SelectField = ({
   onChange: (value: string) => void
   children: ReactNode
   hint?: ReactNode
+  tip?: string
   className?: string
 }) => {
   const id = useId()
   return (
     <div className={className}>
-      <label htmlFor={id} className="field-label">
-        {label}
-      </label>
+      <div className="field-label">
+        <label htmlFor={id}>{label}</label>
+        {tip && <InfoTip label={`Más información sobre ${label}`}>{tip}</InfoTip>}
+      </div>
       <div className="relative">
         <select
           id={id}

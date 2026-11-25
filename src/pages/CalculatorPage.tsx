@@ -132,11 +132,14 @@ const CapacityConversionBanner = ({
         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mint-700">
           Capacidad convertida
         </p>
+        <p className="mt-1 text-[11px] font-semibold text-ink-800">
+          Condición de diseño: {normalization.declaredApplication} → Condición
+          requerida: {application}
+        </p>
         <p className="mt-1 font-mono text-[12px] leading-relaxed text-ink-800">
-          {fmt(originalCapacity, 0)} {unit} (
-          {normalization.declaredApplication}) ×{' '}
-          {normalization.ratioUsed.toFixed(2)} = {fmt(normalizedCapacity, 0)}{' '}
-          {unit} ({application})
+          {fmt(originalCapacity, 0)} {unit} ×{' '}
+          {normalization.ratioUsed.toFixed(2)} ={' '}
+          {fmt(normalizedCapacity, 0)} {unit}
         </p>
       </div>
     </div>
@@ -301,17 +304,17 @@ export const CalculatorPage = () => {
                 </SelectField>
 
                 <SelectField
-                    label="Aplicación"
-                    value={input.application}
+                  label="Condición requerida"
+                  value={input.application}
                   onChange={(value) => {
                     setManualReferenceValues(false)
                     chooseApplication(value as CalculationInput['application'])
                   }}
-                    hint="Define el rango: baja, media o alta temperatura."
+                  tip="Régimen de operación necesario para el caso o aplicación requerida. La capacidad declarada se ajusta a esta condición."
                 >
-                    <option value="LBP">LBP · baja temperatura</option>
-                    <option value="MBP">MBP · media temperatura</option>
-                    <option value="HBP">HBP · alta temperatura</option>
+                  <option value="LBP">LBP · baja temperatura</option>
+                  <option value="MBP">MBP · media temperatura</option>
+                  <option value="HBP">HBP · alta temperatura</option>
                 </SelectField>
               </div>
 
@@ -407,7 +410,7 @@ export const CalculatorPage = () => {
                       tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
                     />
                     <SelectField
-                      label="Condición de la capacidad"
+                      label="Condición de diseño"
                       value={input.declaredApplication ?? ''}
                       onChange={(value) =>
                         updateInput({
@@ -417,7 +420,7 @@ export const CalculatorPage = () => {
                               : (value as CompressorApplication),
                         })
                       }
-                      hint="Condición en la que está declarada la capacidad de placa. Es independiente de la aplicación."
+                      tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP o HBP)."
                     >
                       <option value="">Misma aplicación (actual)</option>
                       <option value="LBP">LBP (congelación)</option>

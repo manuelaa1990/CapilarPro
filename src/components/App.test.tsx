@@ -423,34 +423,37 @@ describe('CapilarPro', () => {
     )
   })
 
-  it('avisa cuando la condición de la capacidad difiere de la aplicación', async () => {
-    const user = userEvent.setup()
+  it('muestra la ayuda contextual de las condiciones de diseño y requerida', async () => {
     render(<App />)
 
     const condition = screen.getByRole('combobox', {
-      name: 'Condición de la capacidad',
+      name: 'Condición de diseño',
+    })
+    const requiredCondition = screen.getByRole('combobox', {
+      name: 'Condición requerida',
     })
     expect(condition).toHaveValue('')
-    expect(
-      screen.queryByText(
-        'Se aplicará un factor de conversión por cambio de condición',
-      ),
-    ).not.toBeInTheDocument()
-
-    await user.selectOptions(condition, 'LBP')
-    expect(condition).toHaveValue('LBP')
-    expect(
-      screen.getByText(
-        'Se aplicará un factor de conversión por cambio de condición',
-      ),
-    ).toBeInTheDocument()
-
-    await user.selectOptions(condition, '')
-    expect(
-      screen.queryByText(
-        'Se aplicará un factor de conversión por cambio de condición',
-      ),
-    ).not.toBeInTheDocument()
+    expect(requiredCondition).toHaveValue('HBP')
+    const designHelp = screen.getByRole('button', {
+      name: 'Más información sobre Condición de diseño',
+    })
+    const designTooltipId = designHelp.getAttribute('aria-describedby')
+    expect(designTooltipId).toBeTruthy()
+    const designTooltip = document.getElementById(designTooltipId ?? '')
+    expect(designTooltip).toBeInTheDocument()
+    expect(designTooltip).toHaveTextContent(
+      'Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa',
+    )
+    const requiredHelp = screen.getByRole('button', {
+      name: 'Más información sobre Condición requerida',
+    })
+    const requiredTooltipId = requiredHelp.getAttribute('aria-describedby')
+    expect(requiredTooltipId).toBeTruthy()
+    const requiredTooltip = document.getElementById(requiredTooltipId ?? '')
+    expect(requiredTooltip).toBeInTheDocument()
+    expect(requiredTooltip).toHaveTextContent(
+      'Régimen de operación necesario para el caso o aplicación requerida',
+    )
   })
 
   it('muestra la base de normalización de capacidad y su aviso', async () => {
@@ -460,19 +463,24 @@ describe('CapilarPro', () => {
     expect(screen.queryByText(/^Base:/)).not.toBeInTheDocument()
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Condición de la capacidad' }),
+      screen.getByRole('combobox', { name: 'Condición de diseño' }),
       'LBP',
     )
 
     expect(
-      await screen.findByText('Base: 1300 W (LBP) × 2.75 = 3575 W'),
+      await screen.findByText(
+        'Condición de diseño: LBP → Condición requerida: HBP',
+      ),
     ).toBeInTheDocument()
+    expect(screen.getByText('1300 W × 2.75 = 3575 W')).toBeInTheDocument()
     expect(screen.getByText('3575 W')).toBeInTheDocument()
     expect(
       screen.getByText('Capacidad ajustada por condición'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('1300 W (LBP) × 2.75 = 3575 W (HBP)'),
+      screen.getByText(
+        'Condición de diseño LBP → Condición requerida HBP · 1300 W × 2.75 = 3575 W',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -481,10 +489,10 @@ describe('CapilarPro', () => {
     render(<App />)
 
     const condition = screen.getByRole('combobox', {
-      name: 'Condición de la capacidad',
+      name: 'Condición de diseño',
     })
     const application = screen.getByRole('combobox', {
-      name: 'Aplicación',
+      name: 'Condición requerida',
     })
 
     // La condición solo declara la capacidad: no cambia la aplicación.
@@ -515,15 +523,20 @@ describe('CapilarPro', () => {
 
     expect(
       await screen.findByText(
-        'Base: 750 BTU/h (LBP) × 2.1 = 1575 BTU/h',
+        'Condición de diseño: LBP → Condición requerida: MBP',
       ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('750 BTU/h × 2.10 = 1575 BTU/h'),
     ).toBeInTheDocument()
     expect(screen.getByText('1575 BTU/h')).toBeInTheDocument()
 
     // Banner de conversión sobre el cuadro de estándar de ensayo.
     expect(screen.getByText('Capacidad convertida')).toBeInTheDocument()
     expect(
-      screen.getByText('750 BTU/h (LBP) × 2.10 = 1575 BTU/h (MBP)'),
+      screen.getByText(
+        'Condición de diseño LBP → Condición requerida MBP · 750 BTU/h × 2.1 = 1575 BTU/h',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -544,7 +557,9 @@ describe('CapilarPro', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const application = screen.getByRole('combobox', { name: 'Aplicación' })
+    const application = screen.getByRole('combobox', {
+      name: 'Condición requerida',
+    })
     const expectConditions = (
       evapC: number,
       condC: number,
@@ -606,7 +621,7 @@ describe('CapilarPro', () => {
     expect(screen.getByLabelText('Cond. referencia')).toHaveValue(50)
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Aplicación' }),
+      screen.getByRole('combobox', { name: 'Condición requerida' }),
       'LBP',
     )
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-35)
@@ -637,7 +652,7 @@ describe('CapilarPro', () => {
       'custom',
     )
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Aplicación' }),
+      screen.getByRole('combobox', { name: 'Condición requerida' }),
       'HBP',
     )
     expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-30)
