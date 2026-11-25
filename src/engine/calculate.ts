@@ -36,10 +36,8 @@ import {
   pressureRatio,
 } from './volumetricEfficiency'
 import { rpmFromFrequency } from './frequency'
-import {
-  capacityToWatts,
-  displacementToCubicCentimeters,
-} from './units'
+import { displacementToCubicCentimeters } from './units'
+import { normalizeCapacity } from './normalizeCapacity'
 
 interface CalculateOptions {
   now?: Date
@@ -183,6 +181,7 @@ export const calculate = (
     )
   }
   const calculationInput = { ...input, targetSuperheatK }
+  const capacityNormalization = normalizeCapacity(input, input.application)
   const refrigerant = refrigerantById(input.refrigerantId)
   const standard = standardById(input.standardId)
   const referenceSaturation = saturationAtTemperature(
@@ -261,7 +260,7 @@ export const calculate = (
   )
 
   const rawEtaVolumetricRef =
-    capacityToWatts(input.ratedCapacity, input.capacityUnit) /
+    capacityNormalization.capacityW /
     (sweptVolumeM3s *
       referenceSuction.densityKgM3 *
       referenceEnthalpyDifference *
@@ -477,6 +476,7 @@ export const calculate = (
       rawEtaVolumetricRef,
     },
     capillary,
+    capacityNormalization,
     slhx: slhxResult
       ? {
           lengthWoundM: slhxResult.lengthWoundM,
@@ -493,7 +493,13 @@ export const calculate = (
     },
   }
 
-  return { ...base, warnings: warningsFor(calculationInput, base) }
+  return {
+    ...base,
+    warnings: [
+      ...capacityNormalization.warnings,
+      ...warningsFor(calculationInput, base),
+    ],
+  }
 }
 
 export const saturationPreview = (fluid: CalculationInput['refrigerantId'], tempC: number) =>

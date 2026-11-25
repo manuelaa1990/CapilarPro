@@ -77,6 +77,11 @@ export interface CalculationInput {
   compressorLabel: string
   standardId: StandardId
   application: CompressorApplication
+  /**
+   * Condición real en la que está declarada `ratedCapacity`. Si se omite, se
+   * asume que coincide con `application` (misma aplicación).
+   */
+  declaredApplication?: CompressorApplication
   ratedCapacity: number
   capacityUnit: CapacityUnit
   displacement: number
@@ -203,6 +208,17 @@ export interface CalculationWarning {
   message: string
 }
 
+export interface CapacityNormalization {
+  /** Capacidad tal como se declaró en la placa, en W. */
+  originalCapacityW: number
+  /** Capacidad llevada a la condición de aplicación, en W. */
+  capacityW: number
+  ratioUsed: number
+  declaredApplication: CompressorApplication
+  method: 'ratio-table' | 'none'
+  warnings: CalculationWarning[]
+}
+
 export interface CalculationResult {
   version: string
   calculatedAt: string
@@ -214,6 +230,7 @@ export interface CalculationResult {
   targetSaturation: SaturationPoint
   compressor: CompressorResult
   capillary: CapillaryResult
+  capacityNormalization: CapacityNormalization
   slhx?: {
     lengthWoundM: number
     epsilonReal: number

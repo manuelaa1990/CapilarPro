@@ -15,6 +15,7 @@ import type {
   CalculationInput,
   CalculationWarning,
   CapacityUnit,
+  CompressorApplication,
   DisplacementUnit,
   RefrigerantId,
   StandardId,
@@ -320,45 +321,79 @@ export const CalculatorPage = () => {
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  <NumberField
-                    label="Capacidad declarada"
-                    value={input.ratedCapacity}
-                    onChange={(value) => updateInput({ ratedCapacity: value })}
-                    unit=""
-                    trailing={
-                      <select
-                        aria-label="Unidad de capacidad"
-                        value={input.capacityUnit}
-                        onChange={(event) => {
-                          const capacityUnit = event.target.value as CapacityUnit
-                          updateInput({
-                            ratedCapacity: convertCapacity(
-                              input.ratedCapacity,
-                              input.capacityUnit,
+                  <div className="space-y-4">
+                    <NumberField
+                      label="Capacidad declarada"
+                      value={input.ratedCapacity}
+                      onChange={(value) => updateInput({ ratedCapacity: value })}
+                      unit=""
+                      trailing={
+                        <select
+                          aria-label="Unidad de capacidad"
+                          value={input.capacityUnit}
+                          onChange={(event) => {
+                            const capacityUnit = event.target.value as CapacityUnit
+                            updateInput({
+                              ratedCapacity: convertCapacity(
+                                input.ratedCapacity,
+                                input.capacityUnit,
+                                capacityUnit,
+                              ),
                               capacityUnit,
-                            ),
-                            capacityUnit,
-                          })
-                        }}
-                        className="h-full shrink-0 border-l border-ink-900/10 bg-transparent px-3 text-[11px] font-bold text-ink-700 outline-none focus:bg-mint-50"
-                      >
-                        <option value="W">W</option>
-                        <option value="BTU/h">BTU/h</option>
-                      </select>
-                    }
-                    min={
-                      input.capacityUnit === 'W'
-                        ? 20
-                        : 20 * BTU_PER_HOUR_PER_WATT
-                    }
-                    max={
-                      input.capacityUnit === 'W'
-                        ? 250000
-                        : 250000 * BTU_PER_HOUR_PER_WATT
-                    }
-                    step={input.capacityUnit === 'W' ? 5 : 10}
-                    tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
-                  />
+                            })
+                          }}
+                          className="h-full shrink-0 border-l border-ink-900/10 bg-transparent px-3 text-[11px] font-bold text-ink-700 outline-none focus:bg-mint-50"
+                        >
+                          <option value="W">W</option>
+                          <option value="BTU/h">BTU/h</option>
+                        </select>
+                      }
+                      min={
+                        input.capacityUnit === 'W'
+                          ? 20
+                          : 20 * BTU_PER_HOUR_PER_WATT
+                      }
+                      max={
+                        input.capacityUnit === 'W'
+                          ? 250000
+                          : 250000 * BTU_PER_HOUR_PER_WATT
+                      }
+                      step={input.capacityUnit === 'W' ? 5 : 10}
+                      tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
+                    />
+                    <SelectField
+                      label="Condición de la capacidad"
+                      value={input.declaredApplication ?? ''}
+                      onChange={(value) =>
+                        updateInput({
+                          declaredApplication:
+                            value === ''
+                              ? undefined
+                              : (value as CompressorApplication),
+                        })
+                      }
+                      hint="Condición de la placa si no coincide con la aplicación."
+                    >
+                      <option value="">Misma aplicación (actual)</option>
+                      <option value="LBP">LBP (congelación)</option>
+                      <option value="MBP">MBP (refrigeración)</option>
+                      <option value="HBP">HBP (alta)</option>
+                    </SelectField>
+                    {input.declaredApplication &&
+                      input.declaredApplication !== input.application && (
+                        <p
+                          role="status"
+                          className="flex items-start gap-1.5 rounded-lg border border-sky-200/70 bg-sky-50/70 px-2.5 py-2 text-[10px] font-medium leading-relaxed text-sky-800"
+                        >
+                          <Info
+                            size={12}
+                            className="mt-0.5 shrink-0 text-sky-600"
+                          />
+                          Se aplicará un factor de conversión por cambio de
+                          condición
+                        </p>
+                      )}
+                  </div>
                   <NumberField
                     label="Desplazamiento"
                     value={input.displacement}

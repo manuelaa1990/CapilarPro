@@ -10,9 +10,9 @@
       "evapC": 7.2,
       "condC": 54.4,
       "superheatK": 11.1,
-      "subcoolK": 8.3,
+      "subcoolK": 19.4,
       "reference": "AHRI Standard 540 — Positive Displacement Refrigerant Compressors",
-      "description": "Condición de rating típica para compresores de desplazamiento positivo. Punto de rocío 7,2 °C, descarga 54,4 °C, recalentamiento 11,1 K y subenfriamiento 8,3 K.",
+      "description": "Punto de rating AHRI 540: 7,2 / 54,4 °C con retorno de gas a 18,3 °C (SH 11,1 K) y ambiente 35,0 °C (SC 19,4 K). Las condiciones LBP y MBP se ajustan por aplicación.",
       "isDefault": true
     },
     {

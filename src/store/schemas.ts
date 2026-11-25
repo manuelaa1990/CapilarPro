@@ -10,6 +10,11 @@ import {
   displacementToCubicCentimeters,
 } from '../engine/units'
 import { slhxSuctionTubeDiameters } from '../engine/slhx'
+import {
+  deriveReferenceSuperheatAndSubcooling,
+  getStandardConditions,
+  standardNameForId,
+} from '../engine/standards'
 
 const refrigerantEnum = z.enum([
   'R134a',
@@ -44,6 +49,7 @@ const calculationInputObjectSchema = z
     compressorLabel: z.string().max(160),
     standardId: standardEnum,
     application: applicationEnum,
+    declaredApplication: applicationEnum.optional(),
     ratedCapacity: z.number().positive(),
     capacityUnit: z.enum(['W', 'BTU/h']),
     displacement: z.number().positive(),
@@ -117,24 +123,39 @@ export const calculationInputSchema = calculationInputObjectSchema.superRefine((
 
 export const defaultInput = (): CalculationInput => {
   const seed = defaults.defaults
+  const application: CalculationInput['application'] =
+    seed.refEvapC <= -20 ? 'LBP' : seed.refEvapC <= 0 ? 'MBP' : 'HBP'
+  const referenceConditions = getStandardConditions(
+    application,
+    standardNameForId(seed.standardId as StandardId),
+  )
+  const refEvapC = referenceConditions?.tEvapRef ?? seed.refEvapC
+  const refCondC = referenceConditions?.tCondRef ?? seed.refCondC
+  const ambientTempC = referenceConditions?.ambientTempC ?? 32.2
+  const returnGasTempC = referenceConditions?.returnGasTempC ?? 32.2
+  const derived = deriveReferenceSuperheatAndSubcooling({
+    refEvapC,
+    refCondC,
+    ambientTempC,
+    returnGasTempC,
+  })
   return {
     refrigerantId: seed.refrigerantId as RefrigerantId,
     compressorId: 'custom',
     compressorLabel: '',
     standardId: seed.standardId as StandardId,
-    application:
-      seed.refEvapC <= -20 ? 'LBP' : seed.refEvapC <= 0 ? 'MBP' : 'HBP',
+    application,
     ratedCapacity: seed.ratedCapacityW,
     capacityUnit: 'W',
     displacement: seed.displacementCm3Rev,
     displacementUnit: 'cm³/rev',
     frequencyHz: 60,
-    refEvapC: seed.refEvapC,
-    refCondC: seed.refCondC,
-    ambientTempC: 32.2,
-    returnGasTempC: 32.2,
-    refSuperheatK: 32.2 - seed.refEvapC,
-    refSubcoolK: seed.refCondC - 32.2,
+    refEvapC,
+    refCondC,
+    ambientTempC,
+    returnGasTempC,
+    refSuperheatK: referenceConditions?.shRef ?? derived.refSuperheatK,
+    refSubcoolK: referenceConditions?.scRef ?? derived.refSubcoolK,
     targetEvapC: seed.targetEvapC,
     targetCondC: seed.targetCondC,
     targetReturnGasTempC: seed.targetEvapC + seed.targetSuperheatK,

@@ -24,6 +24,25 @@ const CompressorStateProbe = () => {
   )
 }
 
+const DeclaredApplicationProbe = () => {
+  const { input, result, updateInput } = useApp()
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => updateInput({ declaredApplication: 'MBP' })}
+      >
+        Declare MBP
+      </button>
+      <output data-testid="declared-application">
+        {`${input.declaredApplication ?? 'none'} / ${
+          result?.input.declaredApplication ?? 'none'
+        }`}
+      </output>
+    </>
+  )
+}
+
 const EphemeralInputProbe = () => {
   const { input, updateInput } = useApp()
   return (
@@ -385,6 +404,75 @@ describe('CapilarPro', () => {
     expect(Number(displacementInput.value)).toBe(15.3)
   })
 
+  it('propaga la condición declarada al motor de cálculo', async () => {
+    const user = userEvent.setup()
+    render(
+      <AppProvider>
+        <DeclaredApplicationProbe />
+      </AppProvider>,
+    )
+
+    expect(screen.getByTestId('declared-application')).toHaveTextContent(
+      'none / none',
+    )
+    await user.click(screen.getByRole('button', { name: 'Declare MBP' }))
+    expect(screen.getByTestId('declared-application')).toHaveTextContent(
+      'MBP / MBP',
+    )
+  })
+
+  it('avisa cuando la condición de la capacidad difiere de la aplicación', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const condition = screen.getByRole('combobox', {
+      name: 'Condición de la capacidad',
+    })
+    expect(condition).toHaveValue('')
+    expect(
+      screen.queryByText(
+        'Se aplicará un factor de conversión por cambio de condición',
+      ),
+    ).not.toBeInTheDocument()
+
+    await user.selectOptions(condition, 'LBP')
+    expect(condition).toHaveValue('LBP')
+    expect(
+      screen.getByText(
+        'Se aplicará un factor de conversión por cambio de condición',
+      ),
+    ).toBeInTheDocument()
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Aplicación' }),
+      'LBP',
+    )
+    expect(
+      screen.queryByText(
+        'Se aplicará un factor de conversión por cambio de condición',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it('muestra la base de normalización de capacidad y su aviso', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(screen.queryByText(/^Base:/)).not.toBeInTheDocument()
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Condición de la capacidad' }),
+      'LBP',
+    )
+
+    expect(
+      await screen.findByText('Base: 1300 W (LBP) × 2.75'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Capacidad ajustada por condición'),
+    ).toBeInTheDocument()
+  })
+
   it('limita los campos numéricos a dos decimales', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -396,6 +484,40 @@ describe('CapilarPro', () => {
     await user.type(evaporation, '-10.345')
 
     expect(evaporation).toHaveValue(-10.35)
+  })
+
+  it('aplica las condiciones AHRI 540 al cambiar de aplicación', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const application = screen.getByRole('combobox', { name: 'Aplicación' })
+    const expectConditions = (
+      evapC: number,
+      condC: number,
+      ambientC: number,
+      returnGasC: number,
+      superheatK: number,
+      subcoolK: number,
+    ) => {
+      expect(screen.getByLabelText('Evap. referencia')).toHaveValue(evapC)
+      expect(screen.getByLabelText('Cond. referencia')).toHaveValue(condC)
+      expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(ambientC)
+      expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(returnGasC)
+      expect(screen.getByLabelText('Recalentamiento')).toHaveValue(superheatK)
+      expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(subcoolK)
+    }
+
+    // La entrada por defecto es AHRI 540 en HBP.
+    expectConditions(7.2, 54.4, 35, 18.3, 11.1, 19.4)
+
+    await user.selectOptions(application, 'LBP')
+    expectConditions(-23.3, 54.4, 35, 32.2, 55.5, 19.4)
+
+    await user.selectOptions(application, 'MBP')
+    expectConditions(-6.7, 54.4, 35, 18.3, 25, 19.4)
+
+    await user.selectOptions(application, 'HBP')
+    expectConditions(7.2, 54.4, 35, 18.3, 11.1, 19.4)
   })
 
   it('actualiza las condiciones de referencia por norma y aplicación', async () => {

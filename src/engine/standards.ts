@@ -44,9 +44,9 @@ const applicationConditions: Record<
   Record<CompressorApplication, StandardTemperatureConditions>
 > = {
   ASHRAE: {
-    LBP: { tEvapRef: -23.3, tCondRef: 54.4, ambientTempC: 32.2, returnGasTempC: 32.2 },
-    MBP: { tEvapRef: -6.7, tCondRef: 54.4, ambientTempC: 32.2, returnGasTempC: 32.2 },
-    HBP: { tEvapRef: 7.2, tCondRef: 54.4, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    LBP: { tEvapRef: -23.3, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 32.2 },
+    MBP: { tEvapRef: -6.7, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 18.3 },
+    HBP: { tEvapRef: 7.2, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 18.3 },
   },
   'EN 12900': {
     LBP: { tEvapRef: -35, tCondRef: 40, ambientTempC: 32.2, returnGasTempC: 32.2 },

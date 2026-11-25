@@ -177,6 +177,23 @@ describe('cálculo completo', () => {
     expect(result.input.targetSuperheatK).toBe(12)
   })
 
+  it('calcula la densidad de succión con la temperatura de retorno de gas', () => {
+    const cold = calculateWith({
+      targetEvapC: -5,
+      targetReturnGasTempC: 5,
+    })
+    const warm = calculateWith({
+      targetEvapC: -5,
+      targetReturnGasTempC: 15,
+    })
+
+    expect(cold.input.targetSuperheatK).toBe(10)
+    expect(warm.input.targetSuperheatK).toBe(20)
+    expect(warm.compressor.suctionDensity).toBeLessThan(
+      cold.compressor.suctionDensity,
+    )
+  })
+
   it('recalcula el caudal y el capilar con el intercambiador SLHX activo', () => {
     const withoutSlhx = calculateWith()
     const withSlhx = calculateWith({ slhxActivo: true })
@@ -430,10 +447,26 @@ describe('normas', () => {
     expect(getStandardConditions('LBP', 'ASHRAE')).toEqual({
       tEvapRef: -23.3,
       tCondRef: 54.4,
-      ambientTempC: 32.2,
+      ambientTempC: 35.0,
       returnGasTempC: 32.2,
       shRef: 55.5,
-      scRef: 22.2,
+      scRef: 19.4,
+    })
+    expect(getStandardConditions('MBP', 'ASHRAE')).toEqual({
+      tEvapRef: -6.7,
+      tCondRef: 54.4,
+      ambientTempC: 35.0,
+      returnGasTempC: 18.3,
+      shRef: 25.0,
+      scRef: 19.4,
+    })
+    expect(getStandardConditions('HBP', 'ASHRAE')).toEqual({
+      tEvapRef: 7.2,
+      tCondRef: 54.4,
+      ambientTempC: 35.0,
+      returnGasTempC: 18.3,
+      shRef: 11.1,
+      scRef: 19.4,
     })
     expect(getStandardConditions('MBP', 'EN 12900')).toEqual({
       tEvapRef: -10,

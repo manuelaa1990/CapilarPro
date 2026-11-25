@@ -185,11 +185,13 @@ const Metric = ({
   label,
   value,
   sub,
+  footnote,
 }: {
   icon: typeof Gauge
   label: string
   value: string
   sub?: string
+  footnote?: string
 }) => (
   <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
     <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/60">
@@ -200,6 +202,11 @@ const Metric = ({
       {value}
     </div>
     {sub && <div className="mt-1 text-[9px] text-white/60">{sub}</div>}
+    {footnote && (
+      <div className="mt-0.5 font-mono text-[9px] leading-tight text-ember-300/90">
+        {footnote}
+      </div>
+    )}
   </div>
 )
 
@@ -298,6 +305,11 @@ export const ResultCard = ({
         lengthDigits(lengthUnit),
       )
     : null
+  const capacityNormalization = result.capacityNormalization
+  const normalizationBase =
+    capacityNormalization.ratioUsed !== 1
+      ? `Base: ${Math.round(capacityNormalization.originalCapacityW)} W (${capacityNormalization.declaredApplication}) × ${Number(capacityNormalization.ratioUsed.toFixed(2))}`
+      : undefined
 
   return (
     <div className="overflow-hidden rounded-[24px] bg-ink-950 text-white shadow-float">
@@ -399,6 +411,7 @@ export const ResultCard = ({
             label="Capacidad"
             value={fmtKW(result.compressor.capacityW)}
             sub={`ηv ${fmt(result.compressor.etaVolumetricTarget * 100, 1)} %`}
+            footnote={normalizationBase}
           />
           <Metric
             icon={Waves}

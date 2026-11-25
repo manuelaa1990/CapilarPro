@@ -31,6 +31,9 @@ export const fingerprintOf = (input: CalculationInput): string => {
     compressorId: input.compressorId,
     standardId: input.standardId,
     application: input.application,
+    ...(input.declaredApplication
+      ? { declaredApplication: input.declaredApplication }
+      : {}),
     ratedCapacityW: normalizeNumber(
       capacityToWatts(input.ratedCapacity, input.capacityUnit),
       1,
