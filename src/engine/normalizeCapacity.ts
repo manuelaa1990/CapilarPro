@@ -12,10 +12,31 @@ export const normalizeCapacity = (
   application: 'LBP' | 'MBP' | 'HBP',
 ): NormalizedCapacity => {
   const declared = input.declaredApplication ?? application
+  const designRefrigerant = input.refrigerantId
+  const requiredRefrigerant =
+    input.requiredRefrigerantId ?? designRefrigerant
+  const refrigerantChanged = requiredRefrigerant !== designRefrigerant
   const originalCapacityW = capacityToWatts(
     input.ratedCapacity,
     input.capacityUnit,
   )
+
+  // Con cambio de refrigerante no se usa la tabla empírica del fluido de
+  // diseño: el motor recalcula densidad, ηv y caudal con el fluido requerido.
+  // La capacidad declarada queda como ancla del punto de placa.
+  if (refrigerantChanged) {
+    return {
+      originalCapacityW,
+      capacityW: originalCapacityW,
+      ratioUsed: 1.0,
+      declaredApplication: declared,
+      designRefrigerant,
+      requiredRefrigerant,
+      refrigerantChanged: true,
+      method: 'refrigerant-change',
+      warnings: [],
+    }
+  }
 
   // Si la condición es la misma, no hay conversión
   if (declared === application) {
@@ -24,6 +45,9 @@ export const normalizeCapacity = (
       capacityW: originalCapacityW,
       ratioUsed: 1.0,
       declaredApplication: declared,
+      designRefrigerant,
+      requiredRefrigerant,
+      refrigerantChanged: false,
       method: 'none',
       warnings: [],
     }
@@ -87,6 +111,9 @@ export const normalizeCapacity = (
     capacityW: normalizedW,
     ratioUsed: ratio,
     declaredApplication: declared,
+    designRefrigerant,
+    requiredRefrigerant,
+    refrigerantChanged: false,
     method: ratio !== 1.0 ? 'ratio-table' : 'none',
     warnings,
   }

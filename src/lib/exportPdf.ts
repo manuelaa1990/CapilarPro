@@ -46,7 +46,18 @@ const workRows = (result: CalculationResult): PdfRow[] => {
 const compressorRows = (result: CalculationResult): PdfRow[] => {
   const input = result.input
   return [
-    ['Refrigerante', `${result.refrigerant.name} · ${result.refrigerant.family}`],
+    [
+      'Refrigerante de diseño',
+      `${result.designRefrigerant.name} · ${result.designRefrigerant.family}`,
+    ],
+    ...(result.refrigerantChanged
+      ? ([
+          [
+            'Refrigerante requerido',
+            `${result.requiredRefrigerant.name} · ${result.requiredRefrigerant.family}`,
+          ],
+        ] satisfies PdfRow[])
+      : []),
     [
       'Desplazamiento',
       `${fmt(input.displacement, 2)} ${input.displacementUnit}`,

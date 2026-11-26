@@ -28,6 +28,8 @@ export const fingerprintOf = (input: CalculationInput): string => {
   const payload: Record<string, string> = {
     v: correlations.fingerprint.salt,
     refrigerantId: input.refrigerantId,
+    requiredRefrigerantId:
+      input.requiredRefrigerantId ?? input.refrigerantId,
     compressorId: input.compressorId,
     standardId: input.standardId,
     application: input.application,

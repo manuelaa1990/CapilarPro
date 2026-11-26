@@ -232,6 +232,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     })
   }, [input.compressorId])
 
+  const chooseRequiredRefrigerant = useCallback((id: RefrigerantId) => {
+    setInput((current) => ({
+      ...current,
+      // `undefined` significa "mismo refrigerante que el de diseño".
+      requiredRefrigerantId: id === current.refrigerantId ? undefined : id,
+    }))
+  }, [])
+
   const chooseStandard = useCallback((id: StandardId) => {
     setInput((current) => ({
       ...current,
@@ -260,6 +268,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     tab,
     updateInput,
     chooseRefrigerant,
+    chooseRequiredRefrigerant,
     chooseCompressor,
     chooseStandard,
     chooseApplication,

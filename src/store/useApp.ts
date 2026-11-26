@@ -14,6 +14,7 @@ export interface AppStore {
   tab: TabId
   updateInput: (patch: Partial<CalculationInput>) => void
   chooseRefrigerant: (id: RefrigerantId) => void
+  chooseRequiredRefrigerant: (id: RefrigerantId) => void
   chooseCompressor: (id: string) => void
   chooseStandard: (id: StandardId) => void
   chooseApplication: (application: CalculationInput['application']) => void

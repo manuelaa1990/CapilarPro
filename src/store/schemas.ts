@@ -45,6 +45,7 @@ export const inputLimits = {
 const calculationInputObjectSchema = z
   .object({
     refrigerantId: refrigerantEnum,
+    requiredRefrigerantId: refrigerantEnum.optional(),
     compressorId: z.string().min(1),
     compressorLabel: z.string().max(160),
     standardId: standardEnum,

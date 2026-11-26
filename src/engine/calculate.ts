@@ -139,12 +139,42 @@ const warningsFor = (
     })
   }
 
-  if (result.refrigerant.glideK >= 0.25) {
+  if (
+    !result.refrigerantChanged &&
+    result.requiredRefrigerant.glideK >= 0.25
+  ) {
     warnings.push({
       code: 'blend-glide',
       severity: 'info',
       title: 'Refrigerante zeotrópico',
-      message: `Glide aproximada ${result.refrigerant.glideK.toFixed(2)} K. Ps usa el punto de rocío y Pd el de burbuja; verifica ambas temperaturas en campo.`,
+      message: `Glide aproximada ${result.requiredRefrigerant.glideK.toFixed(2)} K. Ps usa el punto de rocío y Pd el de burbuja; verifica ambas temperaturas en campo.`,
+    })
+  }
+
+  if (result.refrigerantChanged) {
+    warnings.push({
+      code: 'refrigerant-change',
+      severity: 'info',
+      title: 'Cambio de refrigerante',
+      message: `Diseño con ${result.designRefrigerant.id} y operación con ${result.requiredRefrigerant.id}. La densidad de succión, la relación de presiones, la ηv, el caudal másico y la capacidad se recalculan con el refrigerante requerido; el ancla de ηv se mantiene en el punto de placa con ${result.designRefrigerant.id}.`,
+    })
+    warnings.push({
+      code: 'retrofit-lubricant',
+      severity: 'warning',
+      title: 'Retrofit: aceite, lubricante y carga',
+      message: `Al pasar de ${result.designRefrigerant.id} a ${result.requiredRefrigerant.id} verifica la compatibilidad del aceite (mineral, POE o PAG), la higroscopicidad del lubricante, el sellado y la carga. No reutilices la carga del refrigerante anterior sin ajustar el circuito.`,
+    })
+  }
+
+  if (
+    result.refrigerantChanged &&
+    result.requiredRefrigerant.glideK >= 0.25
+  ) {
+    warnings.push({
+      code: 'blend-glide-required',
+      severity: 'info',
+      title: 'Refrigerante requerido zeotrópico',
+      message: `Glide aproximada ${result.requiredRefrigerant.glideK.toFixed(2)} K con ${result.requiredRefrigerant.id}. Carga siempre en fase líquida y verifica las temperaturas de burbuja y rocío.`,
     })
   }
 
@@ -182,25 +212,33 @@ export const calculate = (
   }
   const calculationInput = { ...input, targetSuperheatK }
   const capacityNormalization = normalizeCapacity(input, input.application)
-  const refrigerant = refrigerantById(input.refrigerantId)
+  const designRefrigerantId = input.refrigerantId
+  const requiredRefrigerantId =
+    input.requiredRefrigerantId ?? designRefrigerantId
+  const refrigerantChanged = requiredRefrigerantId !== designRefrigerantId
+  const refrigerant = refrigerantById(designRefrigerantId)
+  const requiredRefrigerant = refrigerantById(requiredRefrigerantId)
+  const capillaryInput: CalculationInput = refrigerantChanged
+    ? { ...calculationInput, refrigerantId: requiredRefrigerantId }
+    : calculationInput
   const standard = standardById(input.standardId)
   const referenceSaturation = saturationAtTemperature(
-    input.refrigerantId,
+    designRefrigerantId,
     input.refEvapC,
     'dew',
   )
   const targetSaturation = saturationAtTemperature(
-    input.refrigerantId,
+    requiredRefrigerantId,
     input.targetEvapC,
     'dew',
   )
   const referenceCondSaturation = saturationAtTemperature(
-    input.refrigerantId,
+    designRefrigerantId,
     input.refCondC,
     'bubble',
   )
   const targetCondSaturation = saturationAtTemperature(
-    input.refrigerantId,
+    requiredRefrigerantId,
     input.targetCondC,
     'bubble',
   )
@@ -210,22 +248,22 @@ export const calculate = (
   }
 
   const referenceSuction = superheatedVaporState(
-    input.refrigerantId,
+    designRefrigerantId,
     referenceSaturation.pressureKPa,
     input.refEvapC + input.refSuperheatK,
   )
   const targetSuctionIn = superheatedVaporState(
-    input.refrigerantId,
+    requiredRefrigerantId,
     targetSaturation.pressureKPa,
     input.targetReturnGasTempC,
   )
   const referenceLiquid = subcooledLiquidState(
-    input.refrigerantId,
+    designRefrigerantId,
     referenceCondSaturation.pressureKPa,
     input.refCondC - input.refSubcoolK,
   )
   const targetLiquidIn = subcooledLiquidState(
-    input.refrigerantId,
+    requiredRefrigerantId,
     targetCondSaturation.pressureKPa,
     input.targetCondC - input.targetSubcoolK,
   )
@@ -247,7 +285,11 @@ export const calculate = (
       rpm) /
     60
   if (sweptVolumeM3s <= 0) {
-    throw new Error('El desplazamiento y la frecuencia deben ser positivos')
+    throw new Error(
+      refrigerantChanged
+        ? 'Sin desplazamiento volumétrico no se puede recalcular con precisión el cambio de densidad y eficiencia volumétrica del refrigerante requerido.'
+        : 'El desplazamiento y la frecuencia deben ser positivos',
+    )
   }
 
   const referencePressureRatio = pressureRatio(
@@ -303,7 +345,7 @@ export const calculate = (
     // medidas casi empatadas y realimentar el bucle.
     const config = correlations.capillary
     const baselineCapillary = computeCapillary(
-      input,
+      capillaryInput,
       massFlowGuess,
       targetCondSaturation.pressureKPa,
       targetSaturation.pressureKPa,
@@ -312,7 +354,7 @@ export const calculate = (
 
     for (const diameterMm of solutions.capillaryIdsMm) {
       const operatingBase = {
-        fluid: input.refrigerantId,
+        fluid: requiredRefrigerantId,
         pressureInKPa: targetCondSaturation.pressureKPa,
         pressureOutKPa: targetSaturation.pressureKPa,
         subcoolK: input.targetSubcoolK,
@@ -343,7 +385,7 @@ export const calculate = (
           input.targetReturnGasTempC + heatTransferPerMass / cpSuction
         const suctionForIteration = {
           ...superheatedVaporState(
-            input.refrigerantId,
+            requiredRefrigerantId,
             targetSaturation.pressureKPa,
             adjustedSuctionTemperature,
           ),
@@ -428,7 +470,7 @@ export const calculate = (
     })
   } else {
     capillary = computeCapillary(
-      input,
+      capillaryInput,
       massFlowGuess,
       targetCondSaturation.pressureKPa,
       targetSaturation.pressureKPa,
@@ -456,6 +498,9 @@ export const calculate = (
     fingerprint: fingerprintOf(calculationInput),
     input: calculationInput,
     refrigerant,
+    designRefrigerant: refrigerant,
+    requiredRefrigerant,
+    refrigerantChanged,
     standard,
     referenceSaturation: asSaturationPoint(referenceSaturation),
     targetSaturation: asSaturationPoint(targetSaturation),

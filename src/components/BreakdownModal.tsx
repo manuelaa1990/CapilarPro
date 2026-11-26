@@ -69,6 +69,11 @@ export const BreakdownModal = ({
     >
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <Badge tone="mint">{result.refrigerant.name}</Badge>
+        {result.refrigerantChanged && (
+          <Badge tone="amber">
+            Requerido: {result.requiredRefrigerant.id}
+          </Badge>
+        )}
         <Badge>{result.input.compressorLabel}</Badge>
         <Badge>
           {fmt(result.input.targetEvapC, 1)} / {fmt(result.input.targetCondC, 1)} °C

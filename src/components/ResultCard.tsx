@@ -312,10 +312,16 @@ export const ResultCard = ({
   const formatCapacity = (watts: number) =>
     `${fmt(wattsToCapacity(watts, capacityUnit), 0)} ${capacityUnit}`
   const normalizedCapacityLabel = formatCapacity(capacityNormalization.capacityW)
+  const capacityMetricLabel =
+    capacityNormalization.method === 'refrigerant-change'
+      ? formatCapacity(result.compressor.capacityW)
+      : normalizedCapacityLabel
   const normalizationBase =
-    capacityNormalization.ratioUsed !== 1
-      ? `Condición de diseño ${capacityNormalization.declaredApplication} → Condición requerida ${result.input.application} · ${formatCapacity(capacityNormalization.originalCapacityW)} × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
-      : undefined
+    capacityNormalization.method === 'refrigerant-change'
+      ? `Condición de diseño ${capacityNormalization.declaredApplication} · ${capacityNormalization.designRefrigerant} → Condición requerida ${result.input.application} · ${capacityNormalization.requiredRefrigerant} · ${formatCapacity(capacityNormalization.originalCapacityW)} → ${formatCapacity(result.compressor.capacityW)}`
+      : capacityNormalization.ratioUsed !== 1
+        ? `Condición de diseño ${capacityNormalization.declaredApplication} → Condición requerida ${result.input.application} · ${formatCapacity(capacityNormalization.originalCapacityW)} × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
+        : undefined
 
   return (
     <div className="overflow-hidden rounded-[24px] bg-ink-950 text-white shadow-float">
@@ -418,7 +424,7 @@ export const ResultCard = ({
           <Metric
             icon={Gauge}
             label="Capacidad"
-            value={normalizedCapacityLabel}
+            value={capacityMetricLabel}
             sub={`ηv ${fmt(result.compressor.etaVolumetricTarget * 100, 1)} %`}
             footnote={normalizationBase}
           />

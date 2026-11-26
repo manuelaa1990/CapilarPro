@@ -14,6 +14,7 @@ import {
 import clsx from 'clsx'
 import type {
   CalculationInput,
+  CalculationResult,
   CalculationWarning,
   CapacityNormalization,
   CapacityUnit,
@@ -104,12 +105,92 @@ const CapacityConversionBanner = ({
   normalization,
   application,
   unit,
+  result,
 }: {
   normalization: CapacityNormalization
   application: CompressorApplication
   unit: CapacityUnit
+  result: CalculationResult | null
 }) => {
-  if (normalization.ratioUsed === 1) return null
+  const refrigerantChanged = normalization.method === 'refrigerant-change'
+  const conditionChanged = normalization.ratioUsed !== 1
+  const designRefrigerant = normalization.designRefrigerant
+  const requiredRefrigerant = normalization.requiredRefrigerant
+
+  if (!refrigerantChanged && !conditionChanged) {
+    return (
+      <div
+        role="status"
+        className="mt-4 flex items-start gap-3 rounded-2xl border border-ink-900/[0.08] bg-frost-50/70 px-4 py-3"
+      >
+        <CircleCheck size={16} className="mt-0.5 shrink-0 text-mint-700" />
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-700">
+            Sin conversión
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-ink-800">
+            Condición de diseño: {normalization.declaredApplication} ·{' '}
+            {designRefrigerant} → Condición requerida: {application} ·{' '}
+            {requiredRefrigerant}
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-ink-600">
+            Misma condición y refrigerante: la capacidad declarada se usa como
+            ancla directa del punto de placa.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (refrigerantChanged) {
+    const declaredCapacity = convertCapacity(
+      normalization.originalCapacityW,
+      'W',
+      unit,
+    )
+    const calculatedCapacity = result
+      ? convertCapacity(result.compressor.capacityW, 'W', unit)
+      : null
+
+    return (
+      <div
+        role="status"
+        className="mt-4 flex items-start gap-3 rounded-2xl border border-ember-500/25 bg-ember-500/10 px-4 py-3"
+      >
+        <RefreshCw size={16} className="mt-0.5 shrink-0 text-[#a55a10]" />
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#a55a10]">
+            Balance de capacidad
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-ink-800">
+            Condición de diseño: {normalization.declaredApplication} ·{' '}
+            {designRefrigerant} → Condición requerida: {application} ·{' '}
+            {requiredRefrigerant}
+          </p>
+          <p className="mt-1 font-mono text-[12px] leading-relaxed text-ink-800">
+            {fmt(declaredCapacity, 0)} {unit} →{' '}
+            {calculatedCapacity === null
+              ? 'recalculando…'
+              : `${fmt(calculatedCapacity, 0)} ${unit}`}
+          </p>
+          {result && (
+            <p className="mt-1 font-mono text-[10px] leading-relaxed text-ink-700">
+              ηv {fmt(result.compressor.etaVolumetricRef * 100, 1)} % →{' '}
+              {fmt(result.compressor.etaVolumetricTarget * 100, 1)} % · ρ{' '}
+              {fmt(result.compressor.suctionDensity, 2)} kg/m³ · caudal{' '}
+              {fmt(result.compressor.massFlowKgS * 1000, 1)} g/s
+            </p>
+          )}
+          <p className="mt-1 text-[10px] leading-relaxed text-ink-600">
+            Sin factor empírico: se recalculan propiedades, densidad de succión,
+            relación de presiones, ηv, caudal másico y capacidad con{' '}
+            {requiredRefrigerant}. El ancla de ηv permanece en el punto de placa
+            con {designRefrigerant}.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const originalCapacity = convertCapacity(
     normalization.originalCapacityW,
@@ -153,6 +234,7 @@ export const CalculatorPage = () => {
     calculationError,
     chooseCompressor,
     chooseRefrigerant,
+    chooseRequiredRefrigerant,
     chooseStandard,
     chooseApplication,
     updateInput,
@@ -166,14 +248,19 @@ export const CalculatorPage = () => {
   const compressor = compressors.find((item) => item.id === input.compressorId)
   const standard = standards.find((item) => item.id === input.standardId) ?? standards[0]
   const refrigerant = refrigerantById(input.refrigerantId)
-  const refrigerantLimits = fluidLimits(input.refrigerantId)
+  const requiredRefrigerantId =
+    input.requiredRefrigerantId ?? input.refrigerantId
+  const requiredRefrigerant = refrigerantById(requiredRefrigerantId)
+  const refrigerantChanged = requiredRefrigerantId !== input.refrigerantId
+  const designRefrigerantLimits = fluidLimits(input.refrigerantId)
+  const requiredRefrigerantLimits = fluidLimits(requiredRefrigerantId)
   const targetPressure = useMemo(
-    () => pressureAt(input.refrigerantId, input.targetEvapC, 'dew'),
-    [input.refrigerantId, input.targetEvapC],
+    () => pressureAt(requiredRefrigerantId, input.targetEvapC, 'dew'),
+    [requiredRefrigerantId, input.targetEvapC],
   )
   const condPressure = useMemo(
-    () => pressureAt(input.refrigerantId, input.targetCondC, 'bubble'),
-    [input.refrigerantId, input.targetCondC],
+    () => pressureAt(requiredRefrigerantId, input.targetCondC, 'bubble'),
+    [requiredRefrigerantId, input.targetCondC],
   )
   const ratio =
     targetPressure > 0 ? condPressure / targetPressure : result?.compressor.targetPressureRatio ?? 0
@@ -205,6 +292,7 @@ export const CalculatorPage = () => {
             </div>
             <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink-600">
               CP-HEM-1.0 · {refrigerant.name}
+              {refrigerantChanged ? ` → ${requiredRefrigerant.name}` : ''}
             </span>
           </div>
         }
@@ -248,9 +336,9 @@ export const CalculatorPage = () => {
             <div className="p-5 sm:p-6">
               <SectionHeading
                 number="01"
-                eyebrow="Punto de partida"
-                title="Datos del compresor y placa"
-                description="Elige el equipo y el refrigerante, y completa los datos de placa. La biblioteca rellena valores que puedes editar."
+                eyebrow="Bloque A"
+                title="Condición de diseño"
+                description="Refrigerante, régimen y capacidad declarada en placa. Desde aquí se ancla la eficiencia volumétrica del compresor."
                 right={
                   <div className="flex items-center gap-3">
                     {compressor ? (
@@ -288,33 +376,35 @@ export const CalculatorPage = () => {
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <SelectField
-                  label="Estándar de ensayo"
-                  value={input.standardId}
-                  onChange={(value) => {
-                    setManualReferenceValues(false)
-                    chooseStandard(value as StandardId)
-                  }}
-                  hint={standard.shortName === 'Personalizada' ? 'Define el punto exacto abajo.' : standard.reference}
+                  label="Refrigerante de diseño"
+                  value={input.refrigerantId}
+                  onChange={(value) => chooseRefrigerant(value as RefrigerantId)}
+                  tip="Refrigerante con el que se declara la capacidad de placa y se ancla la eficiencia volumétrica."
                 >
-                  {standards.map((item) => (
+                  {refrigerants.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.name}
+                      {item.id}
                     </option>
                   ))}
                 </SelectField>
 
                 <SelectField
-                  label="Condición requerida"
-                  value={input.application}
-                  onChange={(value) => {
-                    setManualReferenceValues(false)
-                    chooseApplication(value as CalculationInput['application'])
-                  }}
-                  tip="Régimen de operación necesario para el caso o aplicación requerida. La capacidad declarada se ajusta a esta condición."
+                  label="Condición de diseño"
+                  value={input.declaredApplication ?? ''}
+                  onChange={(value) =>
+                    updateInput({
+                      declaredApplication:
+                        value === ''
+                          ? undefined
+                          : (value as CompressorApplication),
+                    })
+                  }
+                  tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP o HBP)."
                 >
-                  <option value="LBP">LBP · baja temperatura</option>
-                  <option value="MBP">MBP · media temperatura</option>
-                  <option value="HBP">HBP · alta temperatura</option>
+                  <option value="">Misma aplicación (actual)</option>
+                  <option value="LBP">LBP (congelación)</option>
+                  <option value="MBP">MBP (refrigeración)</option>
+                  <option value="HBP">HBP (alta)</option>
                 </SelectField>
               </div>
 
@@ -334,39 +424,14 @@ export const CalculatorPage = () => {
                 </div>
               )}
 
-              <div className="mt-5">
-                <SelectField
-                  label="Refrigerante"
-                  value={input.refrigerantId}
-                  onChange={(value) => chooseRefrigerant(value as RefrigerantId)}
+              {refrigerant.glideK >= 0.25 && (
+                <p
+                  role="status"
+                  className="mt-2 text-[11px] font-medium text-amber-700"
                 >
-                  {refrigerants.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.id}
-                    </option>
-                  ))}
-                </SelectField>
-                {refrigerant.glideK >= 0.25 && (
-                  <p
-                    role="status"
-                    className="mt-2 text-[11px] font-medium text-amber-700"
-                  >
-                    ⚠️ Mezcla zeotrópica. Cargar siempre en fase líquida.
-                  </p>
-                )}
-                {(input.targetEvapC < refrigerantLimits.minDesignEvapC ||
-                  input.targetCondC > refrigerantLimits.maxDesignCondC) && (
-                  <p
-                    role="alert"
-                    className="mt-2 text-[11px] font-medium text-red-700"
-                  >
-                    El punto de diseño está fuera del rango termofísico de{' '}
-                    {input.refrigerantId}. Ajusta la evaporación a ≥{' '}
-                    {fmt(refrigerantLimits.minDesignEvapC, 0)} °C y la
-                    condensación a ≤ {fmt(refrigerantLimits.maxDesignCondC, 0)} °C.
-                  </p>
-                )}
-              </div>
+                  ⚠️ Mezcla zeotrópica. Cargar siempre en fase líquida.
+                </p>
+              )}
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="space-y-4">
@@ -409,38 +474,6 @@ export const CalculatorPage = () => {
                       step={input.capacityUnit === 'W' ? 5 : 10}
                       tip="Capacidad de refrigeración publicada por el fabricante en el punto de la etiqueta."
                     />
-                    <SelectField
-                      label="Condición de diseño"
-                      value={input.declaredApplication ?? ''}
-                      onChange={(value) =>
-                        updateInput({
-                          declaredApplication:
-                            value === ''
-                              ? undefined
-                              : (value as CompressorApplication),
-                        })
-                      }
-                      tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP o HBP)."
-                    >
-                      <option value="">Misma aplicación (actual)</option>
-                      <option value="LBP">LBP (congelación)</option>
-                      <option value="MBP">MBP (refrigeración)</option>
-                      <option value="HBP">HBP (alta)</option>
-                    </SelectField>
-                    {input.declaredApplication &&
-                      input.declaredApplication !== input.application && (
-                        <p
-                          role="status"
-                          className="flex items-start gap-1.5 rounded-lg border border-sky-200/70 bg-sky-50/70 px-2.5 py-2 text-[10px] font-medium leading-relaxed text-sky-800"
-                        >
-                          <Info
-                            size={12}
-                            className="mt-0.5 shrink-0 text-sky-600"
-                          />
-                          Se aplicará un factor de conversión por cambio de
-                          condición
-                        </p>
-                      )}
                   </div>
                   <NumberField
                     label="Desplazamiento"
@@ -504,13 +537,39 @@ export const CalculatorPage = () => {
                   </div>
               </div>
 
-              {result && (
-                <CapacityConversionBanner
-                  normalization={result.capacityNormalization}
-                  application={input.application}
-                  unit={input.capacityUnit}
-                />
-              )}
+              <div className="mt-4">
+                <SelectField
+                  label="Estándar de ensayo"
+                  value={input.standardId}
+                  onChange={(value) => {
+                    setManualReferenceValues(false)
+                    chooseStandard(value as StandardId)
+                  }}
+                  hint={standard.shortName === 'Personalizada' ? 'Define el punto exacto abajo.' : standard.reference}
+                >
+                  {standards.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              {input.declaredApplication &&
+                input.declaredApplication !== input.application && (
+                  <p
+                    role="status"
+                    className="mt-3 flex items-start gap-1.5 rounded-lg border border-sky-200/70 bg-sky-50/70 px-2.5 py-2 text-[10px] font-medium leading-relaxed text-sky-800"
+                  >
+                    <Info
+                      size={12}
+                      className="mt-0.5 shrink-0 text-sky-600"
+                    />
+                    {refrigerantChanged
+                      ? 'Cambio de condición y refrigerante: la capacidad se recalcula con las propiedades del refrigerante requerido, sin aplicar solo un factor empírico.'
+                      : 'Se aplicará un factor de conversión por cambio de condición'}
+                  </p>
+                )}
 
               <div className="mt-4 rounded-2xl border border-ink-900/[0.06] bg-frost-50/70 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -542,7 +601,7 @@ export const CalculatorPage = () => {
                       })
                     }
                     unit="°C"
-                    min={Math.max(-65, refrigerantLimits.minC)}
+                    min={Math.max(-65, designRefrigerantLimits.minC)}
                     max={30}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
@@ -562,7 +621,7 @@ export const CalculatorPage = () => {
                     }
                     unit="°C"
                     min={20}
-                    max={Math.min(67, refrigerantLimits.maxC)}
+                    max={Math.min(67, designRefrigerantLimits.maxC)}
                     step={0.1}
                     inputClassName="py-2 text-[13px]"
                   />
@@ -653,9 +712,9 @@ export const CalculatorPage = () => {
             <div className="p-5 sm:p-6">
               <SectionHeading
                 number="02"
-                eyebrow="Punto de diseño"
-                title="Condiciones de operación"
-                description="El capilar se dimensiona para el caudal real que el compresor puede entregar en este punto, no para la capacidad de etiqueta."
+                eyebrow="Bloque B"
+                title="Condición requerida"
+                description="Refrigerante y régimen de operación que debe cubrir el sistema. Si el fluido difiere del diseño, el motor recalcula densidad, ηv, caudal y capacidad con el refrigerante requerido."
                 right={
                   <div
                     className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-ink-900/10 bg-slate-100 px-2.5 py-1 text-[9px] leading-none text-ink-700 shadow-sm"
@@ -672,6 +731,106 @@ export const CalculatorPage = () => {
                 }
               />
 
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <SelectField
+                  label="Refrigerante requerido"
+                  value={requiredRefrigerantId}
+                  onChange={(value) =>
+                    chooseRequiredRefrigerant(value as RefrigerantId)
+                  }
+                  tip="Refrigerante con el que debe operar el sistema. Si difiere del de diseño, el motor recalcula propiedades, densidad de succión, ηv, caudal y capacidad."
+                >
+                  {refrigerants.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.id}
+                    </option>
+                  ))}
+                </SelectField>
+
+                <SelectField
+                  label="Condición requerida"
+                  value={input.application}
+                  onChange={(value) => {
+                    setManualReferenceValues(false)
+                    chooseApplication(value as CalculationInput['application'])
+                  }}
+                  tip="Régimen de operación necesario para el caso o aplicación requerida. La capacidad declarada se ajusta a esta condición."
+                >
+                  <option value="LBP">LBP · baja temperatura</option>
+                  <option value="MBP">MBP · media temperatura</option>
+                  <option value="HBP">HBP · alta temperatura</option>
+                </SelectField>
+              </div>
+
+              {refrigerantChanged && (
+                <div className="mt-3 space-y-2">
+                  {(!Number.isFinite(input.displacement) ||
+                    input.displacement <= 0) && (
+                    <p
+                      role="alert"
+                      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[10px] font-medium leading-relaxed text-red-800"
+                    >
+                      <AlertTriangle
+                        size={14}
+                        className="mt-0.5 shrink-0 text-red-600"
+                      />
+                      Sin desplazamiento volumétrico no se puede recalcular con
+                      precisión el cambio de densidad de succión ni la
+                      eficiencia volumétrica de {requiredRefrigerantId}. Completa
+                      el desplazamiento en el bloque de diseño.
+                    </p>
+                  )}
+                  <p
+                    role="alert"
+                    className="flex items-start gap-2 rounded-xl border border-ember-500/25 bg-ember-500/10 px-3.5 py-2.5 text-[10px] font-medium leading-relaxed text-[#8a4a0b]"
+                  >
+                    <AlertTriangle
+                      size={14}
+                      className="mt-0.5 shrink-0 text-[#a55a10]"
+                    />
+                    Retrofit: verifica compatibilidad de aceite/lubricante
+                    (mineral, POE o PAG), sellado y carga antes de operar con{' '}
+                    {requiredRefrigerantId}. No reutilices la carga de{' '}
+                    {input.refrigerantId} sin ajustar el circuito.
+                  </p>
+                </div>
+              )}
+
+              {refrigerantChanged && requiredRefrigerant.glideK >= 0.25 && (
+                <p
+                  role="status"
+                  className="mt-2 text-[11px] font-medium text-amber-700"
+                >
+                  ⚠️ {requiredRefrigerantId} es una mezcla zeotrópica. Cargar
+                  siempre en fase líquida.
+                </p>
+              )}
+
+              {result && (
+                <CapacityConversionBanner
+                  normalization={result.capacityNormalization}
+                  application={input.application}
+                  unit={input.capacityUnit}
+                  result={result}
+                />
+              )}
+
+              {(input.targetEvapC <
+                requiredRefrigerantLimits.minDesignEvapC ||
+                input.targetCondC >
+                  requiredRefrigerantLimits.maxDesignCondC) && (
+                <p
+                  role="alert"
+                  className="mt-3 text-[11px] font-medium text-red-700"
+                >
+                  El punto requerido está fuera del rango termofísico de{' '}
+                  {requiredRefrigerantId}. Ajusta la evaporación a ≥{' '}
+                  {fmt(requiredRefrigerantLimits.minDesignEvapC, 0)} °C y la
+                  condensación a ≤{' '}
+                  {fmt(requiredRefrigerantLimits.maxDesignCondC, 0)} °C.
+                </p>
+              )}
+
               <div className="mt-5 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                 <NumberField
                   label="Evaporación objetivo"
@@ -684,8 +843,8 @@ export const CalculatorPage = () => {
                     })
                   }
                   unit="°C"
-                  min={Math.max(-40, refrigerantLimits.minDesignEvapC)}
-                  max={Math.min(15, refrigerantLimits.maxC)}
+                  min={Math.max(-40, requiredRefrigerantLimits.minDesignEvapC)}
+                  max={Math.min(15, requiredRefrigerantLimits.maxC)}
                   step={0.1}
                 />
                 <NumberField
@@ -694,7 +853,7 @@ export const CalculatorPage = () => {
                   onChange={(targetCondC) => updateInput({ targetCondC })}
                   unit="°C"
                   min={25}
-                  max={Math.min(65, refrigerantLimits.maxDesignCondC)}
+                  max={Math.min(65, requiredRefrigerantLimits.maxDesignCondC)}
                   step={0.1}
                 />
                 <NumberField

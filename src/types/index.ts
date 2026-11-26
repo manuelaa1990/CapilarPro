@@ -72,7 +72,13 @@ export interface Compressor {
 }
 
 export interface CalculationInput {
+  /** Refrigerante con el que se declara la capacidad de placa. */
   refrigerantId: RefrigerantId
+  /**
+   * Refrigerante con el que debe operar el sistema. Si se omite, coincide con
+   * `refrigerantId` y no hay cambio de fluido.
+   */
+  requiredRefrigerantId?: RefrigerantId
   compressorId: string
   compressorLabel: string
   standardId: StandardId
@@ -215,7 +221,13 @@ export interface CapacityNormalization {
   capacityW: number
   ratioUsed: number
   declaredApplication: CompressorApplication
-  method: 'ratio-table' | 'none'
+  /** Refrigerante de diseño usado para el ancla de placa. */
+  designRefrigerant: RefrigerantId
+  /** Refrigerante requerido para el punto de operación. */
+  requiredRefrigerant: RefrigerantId
+  /** Verdadero cuando el fluido requerido difiere del de diseño. */
+  refrigerantChanged: boolean
+  method: 'ratio-table' | 'none' | 'refrigerant-change'
   warnings: CalculationWarning[]
 }
 
@@ -224,7 +236,13 @@ export interface CalculationResult {
   calculatedAt: string
   fingerprint: string
   input: CalculationInput
+  /** Refrigerante de diseño (ancla de placa). */
   refrigerant: Refrigerant
+  /** Alias explícito del refrigerante de diseño. */
+  designRefrigerant: Refrigerant
+  /** Refrigerante con el que se resuelve el punto requerido. */
+  requiredRefrigerant: Refrigerant
+  refrigerantChanged: boolean
   standard: StandardCondition
   referenceSaturation: SaturationPoint
   targetSaturation: SaturationPoint

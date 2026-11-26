@@ -82,7 +82,7 @@ describe('CapilarPro', () => {
     )
     expect(screen.getByLabelText('Longitud seleccionada')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: /Datos del compresor y placa/i }),
+      screen.getByRole('heading', { name: /Condición de diseño/i }),
     ).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Frecuencia de red' })).toHaveValue(
       '60',
@@ -98,7 +98,7 @@ describe('CapilarPro', () => {
       'placeholder',
       'Ingresa nombre o código del compresor',
     )
-    expect(screen.getByRole('combobox', { name: 'Refrigerante' })).toHaveValue(
+    expect(screen.getByRole('combobox', { name: 'Refrigerante de diseño' })).toHaveValue(
       'R134a',
     )
     expect(screen.getAllByText(/R134a/i).length).toBeGreaterThan(0)
@@ -333,7 +333,7 @@ describe('CapilarPro', () => {
     await user.type(screen.getByLabelText('Evap. referencia'), '-18')
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Refrigerante' }),
+      screen.getByRole('combobox', { name: 'Refrigerante de diseño' }),
       'R600a',
     )
 
@@ -347,21 +347,22 @@ describe('CapilarPro', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const refrigerant = screen.getByRole('combobox', { name: 'Refrigerante' })
+    const refrigerant = screen.getByRole('combobox', { name: 'Refrigerante de diseño' })
+    const refrigerantOptions = within(refrigerant)
     expect(
-      screen.getByRole('option', { name: 'R407C' }),
+      refrigerantOptions.getByRole('option', { name: 'R407C' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('option', { name: 'R417A' }),
+      refrigerantOptions.getByRole('option', { name: 'R417A' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('option', { name: 'R422D' }),
+      refrigerantOptions.getByRole('option', { name: 'R422D' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('option', { name: 'R427A' }),
+      refrigerantOptions.getByRole('option', { name: 'R427A' }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('option', { name: /R438A/i }),
+      refrigerantOptions.queryByRole('option', { name: /R438A/i }),
     ).not.toBeInTheDocument()
 
     await user.selectOptions(refrigerant, 'R407C')
@@ -454,6 +455,39 @@ describe('CapilarPro', () => {
     expect(requiredTooltip).toHaveTextContent(
       'Régimen de operación necesario para el caso o aplicación requerida',
     )
+  })
+
+  it('recalcula el balance al cambiar el refrigerante requerido', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const designRefrigerant = screen.getByRole('combobox', {
+      name: 'Refrigerante de diseño',
+    })
+    await user.selectOptions(designRefrigerant, 'R22')
+
+    const requiredRefrigerant = screen.getByRole('combobox', {
+      name: 'Refrigerante requerido',
+    })
+    expect(requiredRefrigerant).toHaveValue('R22')
+
+    await user.selectOptions(requiredRefrigerant, 'R134a')
+
+    expect(requiredRefrigerant).toHaveValue('R134a')
+    expect(await screen.findByText('Balance de capacidad')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Condición de diseño: HBP · R22 → Condición requerida: HBP · R134a',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Sin factor empírico/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Retrofit: verifica compatibilidad de aceite/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Cambio de refrigerante')).toBeInTheDocument()
+    expect(
+      screen.getByText('Retrofit: aceite, lubricante y carga'),
+    ).toBeInTheDocument()
   })
 
   it('muestra la base de normalización de capacidad y su aviso', async () => {
