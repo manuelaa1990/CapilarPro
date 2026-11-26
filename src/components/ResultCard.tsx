@@ -312,15 +312,12 @@ export const ResultCard = ({
   const formatCapacity = (watts: number) =>
     `${fmt(wattsToCapacity(watts, capacityUnit), 0)} ${capacityUnit}`
   const normalizedCapacityLabel = formatCapacity(capacityNormalization.capacityW)
-  const capacityMetricLabel =
-    capacityNormalization.method === 'refrigerant-change'
-      ? formatCapacity(result.compressor.capacityW)
-      : normalizedCapacityLabel
+  const capacityMetricLabel = formatCapacity(result.compressor.capacityW)
   const normalizationBase =
     capacityNormalization.method === 'refrigerant-change'
       ? `Condición de diseño ${capacityNormalization.declaredApplication} · ${capacityNormalization.designRefrigerant} → Condición requerida ${result.input.application} · ${capacityNormalization.requiredRefrigerant} · ${formatCapacity(capacityNormalization.originalCapacityW)} → ${formatCapacity(result.compressor.capacityW)}`
       : capacityNormalization.ratioUsed !== 1
-        ? `Condición de diseño ${capacityNormalization.declaredApplication} → Condición requerida ${result.input.application} · ${formatCapacity(capacityNormalization.originalCapacityW)} × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
+        ? `Conversión de placa ${capacityNormalization.declaredApplication} → ${result.input.application} · ${formatCapacity(capacityNormalization.originalCapacityW)} × ${Number(capacityNormalization.ratioUsed.toFixed(2))} = ${normalizedCapacityLabel}`
         : undefined
 
   return (

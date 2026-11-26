@@ -65,6 +65,8 @@ const compressorRows = (result: CalculationResult): PdfRow[] => {
     ['Capacidad de placa', `${fmt(input.ratedCapacity, 2)} ${input.capacityUnit}`],
     ['Velocidad', `${fmt(input.frequencyHz * 60, 0)} RPM (${input.frequencyHz} Hz)`],
     ['Estándar de ensayo', `${result.standard.name} (${result.standard.shortName})`],
+    ['Condición de diseño', input.declaredApplication ?? input.application],
+    ['Condición requerida', input.application],
     ['Evaporación de referencia', `${fmt(input.refEvapC, 1)} °C`],
     ['Condensación de referencia', `${fmt(input.refCondC, 1)} °C`],
     [

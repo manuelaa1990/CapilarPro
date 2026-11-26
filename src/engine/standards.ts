@@ -124,7 +124,7 @@ export const standardDeviation = (
   standard: StandardCondition,
 ): number => {
   const applicationStandard = getStandardConditions(
-    input.application,
+    input.declaredApplication ?? input.application,
     standardNameForId(input.standardId),
   )
   const reference = applicationStandard

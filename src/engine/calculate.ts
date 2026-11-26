@@ -301,8 +301,11 @@ export const calculate = (
     targetSaturation.pressureKPa,
   )
 
+  // La ηv se ancla en la placa real (condición de diseño) con la capacidad
+  // declarada. La conversión de capacidad es una referencia de placa hacia la
+  // condición requerida y no debe alterar el punto de anclaje.
   const rawEtaVolumetricRef =
-    capacityNormalization.capacityW /
+    capacityNormalization.originalCapacityW /
     (sweptVolumeM3s *
       referenceSuction.densityKgM3 *
       referenceEnthalpyDifference *

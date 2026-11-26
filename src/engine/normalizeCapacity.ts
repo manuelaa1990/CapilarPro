@@ -199,8 +199,8 @@ export const normalizeCapacity = (
       title: 'Capacidad ajustada por condición',
       message:
         method === 'physics'
-          ? `Capacidad normalizada de ${declared} a ${application} (factor ${ratio.toFixed(2)}) a partir de ρ·Δh del refrigerante, sin factor empírico. El capilar se calcula con ${normalizedW.toFixed(0)} W en lugar de ${originalCapacityW.toFixed(0)} W.`
-          : `Capacidad normalizada de ${declared} a ${application} (factor ${ratio.toFixed(2)}). El capilar se calcula con ${normalizedW.toFixed(0)} W en lugar de ${originalCapacityW.toFixed(0)} W.`,
+          ? `Conversión de placa de ${declared} a ${application} (factor ${ratio.toFixed(2)}) a partir de ρ·Δh del refrigerante, sin factor empírico: ${originalCapacityW.toFixed(0)} W → ${normalizedW.toFixed(0)} W. El motor ancla ηv en la placa de diseño y extrapola al punto requerido.`
+          : `Conversión de placa de ${declared} a ${application} (factor ${ratio.toFixed(2)}): ${originalCapacityW.toFixed(0)} W → ${normalizedW.toFixed(0)} W. El motor ancla ηv en la placa de diseño y extrapola al punto requerido.`,
     })
   }
 

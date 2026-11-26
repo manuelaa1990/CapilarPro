@@ -217,7 +217,11 @@ export interface CalculationWarning {
 export interface CapacityNormalization {
   /** Capacidad tal como se declaró en la placa, en W. */
   originalCapacityW: number
-  /** Capacidad llevada a la condición de aplicación, en W. */
+  /**
+   * Capacidad de placa convertida de la condición de diseño a la requerida,
+   * en W. Es una referencia de conversión; el motor ancla ηv con
+   * `originalCapacityW` en el punto de diseño.
+   */
   capacityW: number
   ratioUsed: number
   declaredApplication: CompressorApplication

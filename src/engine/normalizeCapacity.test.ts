@@ -80,6 +80,30 @@ describe('normalización de capacidad', () => {
     expect(toLbp.ratioUsed).toBeCloseTo(1 / 2.1, 8)
   })
 
+  it('convierte de diseño MBP a requerida LBP con el factor inverso', () => {
+    const result = normalizeCapacity(
+      inputWith({ declaredApplication: 'MBP' }),
+      'LBP',
+    )
+
+    expect(result.method).toBe('ratio-table')
+    expect(result.ratioUsed).toBeCloseTo(1 / 2.1, 8)
+    expect(result.ratioUsed).toBeLessThan(1)
+    expect(result.capacityW).toBeCloseTo(1300 / 2.1, 6)
+  })
+
+  it('convierte de diseño LBP a requerida MBP con el factor directo', () => {
+    const result = normalizeCapacity(
+      inputWith({ declaredApplication: 'LBP' }),
+      'MBP',
+    )
+
+    expect(result.method).toBe('ratio-table')
+    expect(result.ratioUsed).toBeCloseTo(2.1, 8)
+    expect(result.ratioUsed).toBeGreaterThan(1)
+    expect(result.capacityW).toBeCloseTo(1300 * 2.1, 6)
+  })
+
   it('convierte CBP con propiedades del refrigerante, sin factor empírico', () => {
     const toHbp = normalizeCapacity(
       inputWith({ declaredApplication: 'CBP' }),
@@ -151,16 +175,22 @@ describe('normalización de capacidad', () => {
 })
 
 describe('integración con el motor', () => {
-  it('ancla la eficiencia con la capacidad normalizada y publica el aviso', () => {
+  it('ancla la eficiencia en la capacidad original de placa y publica el aviso', () => {
     const base = calculate(inputWith({ declaredApplication: 'HBP' }), NOW)
     const normalized = calculate(
       inputWith({ declaredApplication: 'LBP' }),
       NOW,
     )
 
+    // La conversión de placa es solo una referencia: el ancla de ηv usa la
+    // capacidad declarada original en el punto de diseño, sin escalarla.
     expect(normalized.compressor.rawEtaVolumetricRef).toBeCloseTo(
-      base.compressor.rawEtaVolumetricRef * 2.75,
+      base.compressor.rawEtaVolumetricRef,
       8,
+    )
+    expect(normalized.capacityNormalization.capacityW).toBeCloseTo(
+      normalized.capacityNormalization.originalCapacityW * 2.75,
+      6,
     )
     expect(normalized.capacityNormalization).toMatchObject({
       declaredApplication: 'LBP',

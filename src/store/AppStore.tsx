@@ -72,6 +72,30 @@ const referenceConditionsFor = (
   }
 }
 
+/**
+ * Condiciones objetivo del régimen requerido. A diferencia de la referencia
+ * de placa, estos campos describen la operación en sitio y sí cambian cuando
+ * el usuario selecciona otra condición requerida.
+ */
+const targetConditionsFor = (
+  standardId: StandardId,
+  application: CalculationInput['application'],
+) => {
+  const conditions = getStandardConditions(
+    application,
+    standardNameForId(standardId),
+  )
+  if (!conditions) return {}
+  return {
+    targetEvapC: conditions.tEvapRef,
+    targetCondC: conditions.tCondRef,
+    targetAmbientTempC: conditions.ambientTempC,
+    targetReturnGasTempC: conditions.returnGasTempC,
+    targetSuperheatK: conditions.shRef,
+    targetSubcoolK: conditions.scRef,
+  }
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [input, setInput] = useState<CalculationInput>(() => defaultInput())
   const [tab, setTab] = useState<TabId>(() => parseTab())
@@ -244,16 +268,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setInput((current) => ({
       ...current,
       standardId: id,
-      ...referenceConditionsFor(id, current.application, current),
+      // El estándar de ensayo describe la placa: manda la condición de diseño.
+      ...referenceConditionsFor(
+        id,
+        current.declaredApplication ?? current.application,
+        current,
+      ),
     }))
   }, [])
+
+  const chooseDesignApplication = useCallback(
+    (application: CalculationInput['application']) => {
+      setInput((current) => ({
+        ...current,
+        declaredApplication: application,
+        ...referenceConditionsFor(current.standardId, application, current),
+      }))
+    },
+    [],
+  )
 
   const chooseApplication = useCallback(
     (application: CalculationInput['application']) => {
       setInput((current) => ({
         ...current,
         application,
-        ...referenceConditionsFor(current.standardId, application, current),
+        // La condición requerida describe la operación: manda el objetivo.
+        ...targetConditionsFor(current.standardId, application),
       }))
     },
     [],
@@ -271,6 +312,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     chooseRequiredRefrigerant,
     chooseCompressor,
     chooseStandard,
+    chooseDesignApplication,
     chooseApplication,
     navigate,
     dismissError,

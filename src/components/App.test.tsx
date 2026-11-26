@@ -506,16 +506,20 @@ describe('CapilarPro', () => {
         'Condición de diseño: LBP → Condición requerida: HBP',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('1300 W × 2.75 = 3575 W')).toBeInTheDocument()
-    expect(screen.getByText('3575 W')).toBeInTheDocument()
+    expect(
+      screen.getByText('Capacidad de placa: 1300 W × 2.75 = 3575 W'),
+    ).toBeInTheDocument()
     expect(
       screen.getByText('Capacidad ajustada por condición'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Condición de diseño LBP → Condición requerida HBP · 1300 W × 2.75 = 3575 W',
+        'Conversión de placa LBP → HBP · 1300 W × 2.75 = 3575 W',
       ),
     ).toBeInTheDocument()
+    // La tarjeta principal muestra la capacidad calculada del punto
+    // requerido; la capacidad de placa convertida queda en el aviso.
+    expect(screen.queryByText('3575 W')).not.toBeInTheDocument()
   })
 
   it('permite declarar y requerir CBP y convierte con física', async () => {
@@ -547,7 +551,7 @@ describe('CapilarPro', () => {
     await user.selectOptions(condition, 'CBP')
     expect(condition).toHaveValue('CBP')
     expect(
-      await screen.findByText('Capacidad convertida'),
+      await screen.findByText('Conversión de placa'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -585,15 +589,20 @@ describe('CapilarPro', () => {
     expect(application).toHaveValue('HBP')
     expect(condition).toHaveValue('LBP')
 
-    // Cambiar la aplicación actualiza el estándar, pero no la condición.
+    // Cambiar la condición requerida mueve el objetivo, no la referencia de
+    // diseño: la placa sigue anclada en LBP.
     await user.selectOptions(application, 'MBP')
     expect(condition).toHaveValue('LBP')
-    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-6.7)
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-23.3)
     expect(screen.getByLabelText('Cond. referencia')).toHaveValue(54.4)
     expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(35)
-    expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(18.3)
-    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(25)
-    expect(screen.getByText(/MBP · AHRI 540/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(32.2)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(55.5)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(19.4)
+    expect(screen.getByLabelText('Evaporación objetivo')).toHaveValue(-6.7)
+    expect(screen.getByLabelText('Condensación objetivo')).toHaveValue(54.4)
+    expect(screen.getByLabelText('Recalentamiento (SH)')).toHaveValue(25)
+    expect(screen.getByText(/LBP · AHRI 540/)).toBeInTheDocument()
 
     // La capacidad se declara en LBP y se muestra en BTU/h.
     await user.selectOptions(
@@ -612,15 +621,14 @@ describe('CapilarPro', () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('750 BTU/h × 2.10 = 1575 BTU/h'),
+      screen.getByText('Capacidad de placa: 750 BTU/h × 2.10 = 1575 BTU/h'),
     ).toBeInTheDocument()
-    expect(screen.getByText('1575 BTU/h')).toBeInTheDocument()
 
     // Banner de conversión sobre el cuadro de estándar de ensayo.
-    expect(screen.getByText('Capacidad convertida')).toBeInTheDocument()
+    expect(screen.getByText('Conversión de placa')).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Condición de diseño LBP → Condición requerida MBP · 750 BTU/h × 2.1 = 1575 BTU/h',
+        'Conversión de placa LBP → MBP · 750 BTU/h × 2.1 = 1575 BTU/h',
       ),
     ).toBeInTheDocument()
   })
@@ -638,14 +646,14 @@ describe('CapilarPro', () => {
     expect(evaporation).toHaveValue(-10.35)
   })
 
-  it('aplica las condiciones AHRI 540 al cambiar de aplicación', async () => {
+  it('aplica las condiciones AHRI 540 al objetivo sin mover la referencia de diseño', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     const application = screen.getByRole('combobox', {
       name: 'Condición requerida',
     })
-    const expectConditions = (
+    const expectReference = (
       evapC: number,
       condC: number,
       ambientC: number,
@@ -660,21 +668,46 @@ describe('CapilarPro', () => {
       expect(screen.getByLabelText('Recalentamiento')).toHaveValue(superheatK)
       expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(subcoolK)
     }
+    const expectTarget = (
+      evapC: number,
+      condC: number,
+      ambientC: number,
+      returnGasC: number,
+      superheatK: number,
+      subcoolK: number,
+    ) => {
+      expect(screen.getByLabelText('Evaporación objetivo')).toHaveValue(evapC)
+      expect(screen.getByLabelText('Condensación objetivo')).toHaveValue(condC)
+      expect(screen.getByLabelText('Temperatura Ambiente')).toHaveValue(ambientC)
+      expect(
+        screen.getByLabelText('Temperatura de Retorno de gas'),
+      ).toHaveValue(returnGasC)
+      expect(screen.getByLabelText('Recalentamiento (SH)')).toHaveValue(
+        superheatK,
+      )
+      expect(screen.getByLabelText('Subenfriamiento (SC)')).toHaveValue(
+        subcoolK,
+      )
+    }
 
-    // La entrada por defecto es AHRI 540 en HBP.
-    expectConditions(7.2, 54.4, 35, 18.3, 11.1, 19.4)
+    // La placa por defecto es AHRI 540 en HBP.
+    expectReference(7.2, 54.4, 35, 18.3, 11.1, 19.4)
 
     await user.selectOptions(application, 'LBP')
-    expectConditions(-23.3, 54.4, 35, 32.2, 55.5, 19.4)
+    expectTarget(-23.3, 54.4, 35, 32.2, 55.5, 19.4)
+    expectReference(7.2, 54.4, 35, 18.3, 11.1, 19.4)
 
     await user.selectOptions(application, 'MBP')
-    expectConditions(-6.7, 54.4, 35, 18.3, 25, 19.4)
+    expectTarget(-6.7, 54.4, 35, 18.3, 25, 19.4)
+    expectReference(7.2, 54.4, 35, 18.3, 11.1, 19.4)
 
     await user.selectOptions(application, 'CBP')
-    expectConditions(0, 54.4, 35, 18.3, 18.3, 19.4)
+    expectTarget(0, 54.4, 35, 18.3, 18.3, 19.4)
+    expectReference(7.2, 54.4, 35, 18.3, 11.1, 19.4)
 
     await user.selectOptions(application, 'HBP')
-    expectConditions(7.2, 54.4, 35, 18.3, 11.1, 19.4)
+    expectTarget(7.2, 54.4, 35, 18.3, 11.1, 19.4)
+    expectReference(7.2, 54.4, 35, 18.3, 11.1, 19.4)
   })
 
   it('actualiza las condiciones de referencia por norma y aplicación', async () => {
@@ -712,20 +745,30 @@ describe('CapilarPro', () => {
       screen.getByRole('combobox', { name: 'Condición requerida' }),
       'LBP',
     )
-    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(-35)
-    expect(screen.getByLabelText('Cond. referencia')).toHaveValue(40)
+    // La condición requerida mueve el objetivo (EN 12900 LBP)...
+    expect(screen.getByLabelText('Evaporación objetivo')).toHaveValue(-35)
+    expect(screen.getByLabelText('Condensación objetivo')).toHaveValue(40)
+    expect(screen.getByLabelText('Temperatura Ambiente')).toHaveValue(32.2)
+    expect(
+      screen.getByLabelText('Temperatura de Retorno de gas'),
+    ).toHaveValue(32.2)
+    expect(screen.getByLabelText('Recalentamiento (SH)')).toHaveValue(67.2)
+    expect(screen.getByLabelText('Subenfriamiento (SC)')).toHaveValue(7.8)
+    // ...y la referencia de diseño sigue en EN 12900 HBP.
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(5)
+    expect(screen.getByLabelText('Cond. referencia')).toHaveValue(50)
     expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(32.2)
     expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(32.2)
-    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(67.2)
-    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(7.8)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(27.2)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(17.8)
 
     await user.clear(screen.getByLabelText('Temp. Retorno'))
     await user.type(screen.getByLabelText('Temp. Retorno'), '31')
-    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(66)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(26)
 
     await user.clear(screen.getByLabelText('Temp. Ambiente'))
     await user.type(screen.getByLabelText('Temp. Ambiente'), '30')
-    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(10)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(20)
 
     await user.clear(screen.getByLabelText('Evap. referencia'))
     await user.type(screen.getByLabelText('Evap. referencia'), '-30')

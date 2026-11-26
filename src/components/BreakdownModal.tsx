@@ -86,7 +86,7 @@ export const BreakdownModal = ({
       <div className="grid gap-3 rounded-2xl bg-frost-50 p-4 sm:grid-cols-4">
         <div>
           <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-ink-600">
-            Capacidad diseño
+            Capacidad requerida
           </div>
           <div className="mt-1 font-mono text-[16px] font-semibold">
             {fmtKW(comp.capacityW)}
@@ -173,7 +173,7 @@ export const BreakdownModal = ({
             </span>
             <br />
             <span className="text-mint-700">
-              ηv,diseño = 1 − λ − c[(Pd/Ps)^(1/n) − 1] ={' '}
+              ηv,requerida = 1 − λ − c[(Pd/Ps)^(1/n) − 1] ={' '}
               {fmt(comp.etaVolumetricTarget * 100, 2)} %
             </span>
           </div>
@@ -194,7 +194,7 @@ export const BreakdownModal = ({
               {fmt(comp.enthalpyDifference, 1)} kJ/kg
             </div>
             <div className="rounded-lg bg-white p-2.5">
-              Pd/Ps placa = {fmt(comp.referencePressureRatio, 2)} · diseño ={' '}
+              Pd/Ps placa = {fmt(comp.referencePressureRatio, 2)} · requerida ={' '}
               {fmt(comp.targetPressureRatio, 2)}
             </div>
             <div className="rounded-lg bg-white p-2.5">

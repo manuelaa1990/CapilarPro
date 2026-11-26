@@ -17,6 +17,9 @@ export interface AppStore {
   chooseRequiredRefrigerant: (id: RefrigerantId) => void
   chooseCompressor: (id: string) => void
   chooseStandard: (id: StandardId) => void
+  chooseDesignApplication: (
+    application: CalculationInput['application'],
+  ) => void
   chooseApplication: (application: CalculationInput['application']) => void
   navigate: (tab: TabId) => void
   dismissError: () => void

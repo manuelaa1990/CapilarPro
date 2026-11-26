@@ -19,8 +19,8 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 ## Funciones principales
 
 - **Anclaje a placa**: capacidad en W o BTU/h, desplazamiento en cm³/rev o in³/rev, frecuencia de red (50/60 Hz) y condiciones de referencia editables. El motor normaliza las unidades antes del cálculo.
-- **Condiciones por aplicación**: perfiles LBP, MBP y HBP ajustan evap. y cond. según ASHRAE, EN 12900 o GB/T. El recalentamiento de ensayo se deriva de temperatura de retorno menos evaporación y el subenfriamiento de condensación menos ambiente; ambos son de solo lectura salvo que el usuario habilite la edición manual.
-- **Punto de diseño**: evaporación y condensación objetivo con deslizadores e introducción exacta, temperatura de retorno y ambiente; el motor deriva el SH operativo y avisa si el salto térmico del condensador es bajo.
+- **Condiciones por aplicación**: perfiles LBP, MBP, CBP y HBP ajustan evap. y cond. según ASHRAE, EN 12900 o GB/T. La **condición de diseño** fija la referencia de placa; la **condición requerida** fija el objetivo de operación. El recalentamiento de ensayo se deriva de temperatura de retorno menos evaporación y el subenfriamiento de condensación menos ambiente; ambos son de solo lectura salvo que el usuario habilite la edición manual.
+- **Punto requerido**: evaporación y condensación objetivo con deslizadores e introducción exacta, temperatura de retorno y ambiente; el motor deriva el SH operativo y avisa si el salto térmico del condensador es bajo.
 - **Intercambiador SLHX opcional**: el modelo ε-NTU aplica una efectividad configurable y recalcula el estado de succión, el caudal y el capilar en vivo.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
 - **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.

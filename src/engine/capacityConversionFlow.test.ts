@@ -1,9 +1,42 @@
 import { describe, expect, it } from 'vitest'
 import { defaultInput } from '../store/schemas'
-import type { CalculationInput, CalculationResult } from '../types'
+import type {
+  CalculationInput,
+  CalculationResult,
+  CompressorApplication,
+} from '../types'
 import { calculate } from './calculate'
+import { getStandardConditions } from './standards'
 
 const NOW = { now: new Date('2026-10-25T12:00:00.000Z') }
+
+/** Condiciones de referencia de placa para un régimen (condición de diseño). */
+const referenceFor = (application: CompressorApplication) => {
+  const conditions = getStandardConditions(application, 'ASHRAE')
+  if (!conditions) throw new Error(`Sin condiciones para ${application}`)
+  return {
+    refEvapC: conditions.tEvapRef,
+    refCondC: conditions.tCondRef,
+    ambientTempC: conditions.ambientTempC,
+    returnGasTempC: conditions.returnGasTempC,
+    refSuperheatK: conditions.shRef,
+    refSubcoolK: conditions.scRef,
+  }
+}
+
+/** Condiciones objetivo para un régimen (condición requerida). */
+const targetFor = (application: CompressorApplication) => {
+  const conditions = getStandardConditions(application, 'ASHRAE')
+  if (!conditions) throw new Error(`Sin condiciones para ${application}`)
+  return {
+    targetEvapC: conditions.tEvapRef,
+    targetCondC: conditions.tCondRef,
+    targetAmbientTempC: conditions.ambientTempC,
+    targetReturnGasTempC: conditions.returnGasTempC,
+    targetSuperheatK: conditions.shRef,
+    targetSubcoolK: conditions.scRef,
+  }
+}
 
 const inputWith = (
   patch: Partial<CalculationInput> = {},
@@ -24,11 +57,21 @@ const lengthForDiameter = (
 describe('conversión LBP -> MBP y caudal', () => {
   it('multiplica la capacidad por el factor directo (> 1), sin invertirlo', () => {
     const base = calculate(
-      inputWith({ application: 'MBP', declaredApplication: 'MBP' }),
+      inputWith({
+        application: 'MBP',
+        declaredApplication: 'MBP',
+        ...referenceFor('MBP'),
+        ...targetFor('MBP'),
+      }),
       NOW,
     )
     const converted = calculate(
-      inputWith({ application: 'MBP', declaredApplication: 'LBP' }),
+      inputWith({
+        application: 'MBP',
+        declaredApplication: 'LBP',
+        ...referenceFor('LBP'),
+        ...targetFor('MBP'),
+      }),
       NOW,
     )
     const normalization = converted.capacityNormalization
@@ -47,11 +90,21 @@ describe('conversión LBP -> MBP y caudal', () => {
 
   it('aumenta el caudal y recomienda mayor diámetro (o menos longitud al mismo diámetro)', () => {
     const base = calculate(
-      inputWith({ application: 'MBP', declaredApplication: 'MBP' }),
+      inputWith({
+        application: 'MBP',
+        declaredApplication: 'MBP',
+        ...referenceFor('MBP'),
+        ...targetFor('MBP'),
+      }),
       NOW,
     )
     const converted = calculate(
-      inputWith({ application: 'MBP', declaredApplication: 'LBP' }),
+      inputWith({
+        application: 'MBP',
+        declaredApplication: 'LBP',
+        ...referenceFor('LBP'),
+        ...targetFor('MBP'),
+      }),
       NOW,
     )
 
@@ -73,7 +126,12 @@ describe('conversión LBP -> MBP y caudal', () => {
 
   it('al subir la capacidad declarada también crece el caudal y el diámetro', () => {
     const base = calculate(
-      inputWith({ application: 'MBP', declaredApplication: 'MBP' }),
+      inputWith({
+        application: 'MBP',
+        declaredApplication: 'MBP',
+        ...referenceFor('MBP'),
+        ...targetFor('MBP'),
+      }),
       NOW,
     )
     const higher = calculate(
@@ -81,6 +139,8 @@ describe('conversión LBP -> MBP y caudal', () => {
         application: 'MBP',
         declaredApplication: 'MBP',
         ratedCapacity: 2600,
+        ...referenceFor('MBP'),
+        ...targetFor('MBP'),
       }),
       NOW,
     )

@@ -211,14 +211,14 @@ const CapacityConversionBanner = ({
       <CircleCheck size={16} className="mt-0.5 shrink-0 text-mint-700" />
       <div className="min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mint-700">
-          Capacidad convertida
+          Conversión de placa
         </p>
         <p className="mt-1 text-[11px] font-semibold text-ink-800">
           Condición de diseño: {normalization.declaredApplication} → Condición
           requerida: {application}
         </p>
         <p className="mt-1 font-mono text-[12px] leading-relaxed text-ink-800">
-          {fmt(originalCapacity, 0)} {unit} ×{' '}
+          Capacidad de placa: {fmt(originalCapacity, 0)} {unit} ×{' '}
           {normalization.ratioUsed.toFixed(2)} ={' '}
           {fmt(normalizedCapacity, 0)} {unit}
         </p>
@@ -242,6 +242,7 @@ export const CalculatorPage = () => {
     chooseRefrigerant,
     chooseRequiredRefrigerant,
     chooseStandard,
+    chooseDesignApplication,
     chooseApplication,
     updateInput,
     dismissError,
@@ -398,11 +399,9 @@ export const CalculatorPage = () => {
                   label="Condición de diseño"
                   value={input.declaredApplication ?? input.application}
                   onChange={(value) =>
-                    updateInput({
-                      declaredApplication: value as CompressorApplication,
-                    })
+                    chooseDesignApplication(value as CompressorApplication)
                   }
-                  tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP, CBP o HBP)."
+                  tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP, CBP o HBP). Define las temperaturas de referencia del bloque de diseño."
                 >
                   <option value="LBP">LBP (congelación)</option>
                   <option value="MBP">MBP (refrigeración)</option>
@@ -569,11 +568,11 @@ export const CalculatorPage = () => {
                       className="mt-0.5 shrink-0 text-sky-600"
                     />
                     {refrigerantChanged
-                      ? 'Cambio de condición y refrigerante: la capacidad se recalcula con las propiedades del refrigerante requerido, sin aplicar solo un factor empírico.'
+                      ? 'Cambio de condición y refrigerante: el motor ancla ηv en el punto de diseño y recalcula el punto requerido con las propiedades del refrigerante requerido.'
                       : input.declaredApplication === 'CBP' ||
                           input.application === 'CBP'
-                        ? 'La capacidad se convierte con las propiedades del refrigerante (ρ·Δh) en cada régimen, sin factor empírico fijo.'
-                        : 'Se aplicará un factor de conversión por cambio de condición'}
+                        ? `La capacidad de placa se convierte de ${input.declaredApplication} a ${input.application} con ρ·Δh del refrigerante, sin factor empírico fijo. El motor ancla ηv en el diseño.`
+                        : `La capacidad de placa se convierte de ${input.declaredApplication} a ${input.application}; el motor ancla ηv en el diseño y extrapola al punto requerido.`}
                   </p>
                 )}
 
@@ -585,11 +584,11 @@ export const CalculatorPage = () => {
                     Estándar de ensayo
                     </div>
                     <p className="mt-1 text-[10px] text-ink-600">
-                      Los valores se asignan según el estándar y la aplicación seleccionados.
+                      Los valores se asignan según el estándar y la condición de diseño seleccionados.
                     </p>
                   </div>
                   <span className="rounded-full bg-white px-2.5 py-1 font-mono text-[9px] text-ink-600">
-                    {input.application} · {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
+                    {input.declaredApplication ?? input.application} · {standard.shortName} · {fmt(input.refEvapC, 1)} / {fmt(input.refCondC, 1)} °C
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -760,7 +759,7 @@ export const CalculatorPage = () => {
                     setManualReferenceValues(false)
                     chooseApplication(value as CalculationInput['application'])
                   }}
-                  tip="Régimen de operación necesario para el caso o aplicación requerida. La capacidad declarada se ajusta a esta condición."
+                  tip="Régimen de operación necesario para el caso o aplicación requerida. Define las temperaturas objetivo del bloque requerido; la conversión de placa va siempre de diseño a requerida."
                 >
                   <option value="LBP">LBP · baja temperatura</option>
                   <option value="MBP">MBP · media temperatura</option>
