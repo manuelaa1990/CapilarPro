@@ -16,6 +16,17 @@ describe('validación del formulario', () => {
     expect(defaultInput().slhxActivo).toBe(false)
     expect(defaultInput().slhxPorcentaje).toBe(50)
     expect(defaultInput().slhxDiametroSuccion).toBe('5/16')
+    expect(defaultInput().application).toBe('HBP')
+    expect(defaultInput().declaredApplication).toBe('HBP')
+  })
+
+  it('acepta CBP como condición de diseño y requerida', () => {
+    const result = calculationInputSchema.safeParse({
+      ...defaultInput(),
+      application: 'CBP',
+      declaredApplication: 'CBP',
+    })
+    expect(result.success).toBe(true)
   })
 
   it('rechaza porcentajes SLHX fuera de 30-70', () => {

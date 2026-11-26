@@ -4,6 +4,7 @@ import { defaultInput } from '../store/schemas'
 import type { CalculationInput } from '../types'
 import { calculate } from './calculate'
 import { normalizeCapacity } from './normalizeCapacity'
+import { getStandardConditions } from './standards'
 
 const inputWith = (
   patch: Partial<CalculationInput> = {},
@@ -30,7 +31,7 @@ describe('normalización de capacidad', () => {
   })
 
   it('usa la aplicación actual cuando no se declara condición', () => {
-    const input = defaultInput()
+    const input = { ...defaultInput(), declaredApplication: undefined }
     const result = normalizeCapacity(input, input.application)
 
     expect(result.capacityW).toBe(1300)
@@ -77,6 +78,45 @@ describe('normalización de capacidad', () => {
 
     expect(toHbp.ratioUsed).toBe(1.3)
     expect(toLbp.ratioUsed).toBeCloseTo(1 / 2.1, 8)
+  })
+
+  it('convierte CBP con propiedades del refrigerante, sin factor empírico', () => {
+    const toHbp = normalizeCapacity(
+      inputWith({ declaredApplication: 'CBP' }),
+      'HBP',
+    )
+    const toCbp = normalizeCapacity(
+      inputWith({ declaredApplication: 'HBP' }),
+      'CBP',
+    )
+    const toMbp = normalizeCapacity(
+      inputWith({ declaredApplication: 'CBP' }),
+      'MBP',
+    )
+
+    expect(toHbp.method).toBe('physics')
+    expect(toCbp.method).toBe('physics')
+    expect(toHbp.ratioUsed).toBeGreaterThan(1)
+    expect(toHbp.ratioUsed).toBeLessThan(1.5)
+    expect(toCbp.ratioUsed).toBeCloseTo(1 / toHbp.ratioUsed, 8)
+    expect(toMbp.ratioUsed).toBeLessThan(1)
+    expect(toHbp.capacityW).toBeCloseTo(
+      toHbp.originalCapacityW * toHbp.ratioUsed,
+      6,
+    )
+    expect(
+      toHbp.warnings.map((warning) => warning.code),
+    ).toContain('capacity-normalized')
+    expect(
+      toHbp.warnings.find(
+        (warning) => warning.code === 'capacity-normalized',
+      )?.message,
+    ).toMatch(/sin factor empírico/i)
+    expect(
+      toHbp.warnings.some(
+        (warning) => warning.code === 'capacity-normalization-missing',
+      ),
+    ).toBe(false)
   })
 
   it('advierte y conserva la capacidad para refrigerantes sin ratios', () => {
@@ -137,5 +177,43 @@ describe('integración con el motor', () => {
         (warning) => warning.code === 'capacity-normalized',
       ),
     ).toBe(false)
+  })
+
+  it('integra CBP en el motor con la referencia estándar alineada', () => {
+    const cbp = getStandardConditions('CBP', 'ASHRAE')
+    if (!cbp) throw new Error('CBP sin condiciones estándar')
+    const reference = {
+      refEvapC: cbp.tEvapRef,
+      refCondC: cbp.tCondRef,
+      ambientTempC: cbp.ambientTempC,
+      returnGasTempC: cbp.returnGasTempC,
+      refSuperheatK: cbp.shRef,
+      refSubcoolK: cbp.scRef,
+    }
+    const base = calculate(
+      inputWith({
+        application: 'CBP',
+        declaredApplication: 'CBP',
+        ...reference,
+      }),
+      NOW,
+    )
+    const converted = calculate(
+      inputWith({
+        application: 'CBP',
+        declaredApplication: 'HBP',
+        ...reference,
+      }),
+      NOW,
+    )
+
+    expect(base.capacityNormalization.method).toBe('none')
+    expect(converted.capacityNormalization.method).toBe('physics')
+    expect(converted.capacityNormalization.ratioUsed).toBeLessThan(1)
+    expect(converted.capacityNormalization.capacityW).toBeLessThan(
+      converted.capacityNormalization.originalCapacityW,
+    )
+    expect(converted.compressor.etaVolumetricRef).toBeGreaterThan(0)
+    expect(converted.compressor.capacityW).toBeGreaterThan(0)
   })
 })

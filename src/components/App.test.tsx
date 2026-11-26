@@ -416,7 +416,7 @@ describe('CapilarPro', () => {
     )
 
     expect(screen.getByTestId('declared-application')).toHaveTextContent(
-      'none / none',
+      'HBP / HBP',
     )
     await user.click(screen.getByRole('button', { name: 'Declare MBP' }))
     expect(screen.getByTestId('declared-application')).toHaveTextContent(
@@ -433,7 +433,7 @@ describe('CapilarPro', () => {
     const requiredCondition = screen.getByRole('combobox', {
       name: 'Condición requerida',
     })
-    expect(condition).toHaveValue('')
+    expect(condition).toHaveValue('HBP')
     expect(requiredCondition).toHaveValue('HBP')
     const designHelp = screen.getByRole('button', {
       name: 'Más información sobre Condición de diseño',
@@ -516,6 +516,57 @@ describe('CapilarPro', () => {
         'Condición de diseño LBP → Condición requerida HBP · 1300 W × 2.75 = 3575 W',
       ),
     ).toBeInTheDocument()
+  })
+
+  it('permite declarar y requerir CBP y convierte con física', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const condition = screen.getByRole('combobox', {
+      name: 'Condición de diseño',
+    })
+    const application = screen.getByRole('combobox', {
+      name: 'Condición requerida',
+    })
+
+    expect(
+      within(condition).getByRole('option', {
+        name: 'CBP (comercial media-alta)',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(condition).queryByRole('option', { name: /Misma aplicación/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(application).getByRole('option', {
+        name: 'CBP · comercial media-alta',
+      }),
+    ).toBeInTheDocument()
+
+    // La aplicación por defecto es HBP: declarar CBP exige convertir.
+    await user.selectOptions(condition, 'CBP')
+    expect(condition).toHaveValue('CBP')
+    expect(
+      await screen.findByText('Capacidad convertida'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Condición de diseño: CBP → Condición requerida: HBP',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Factor derivado de la densidad de succión/),
+    ).toBeInTheDocument()
+
+    // Al requerir CBP, la referencia estándar también pasa a CBP.
+    await user.selectOptions(application, 'CBP')
+    expect(application).toHaveValue('CBP')
+    expect(screen.getByLabelText('Evap. referencia')).toHaveValue(0)
+    expect(screen.getByLabelText('Cond. referencia')).toHaveValue(54.4)
+    expect(screen.getByLabelText('Temp. Ambiente')).toHaveValue(35)
+    expect(screen.getByLabelText('Temp. Retorno')).toHaveValue(18.3)
+    expect(screen.getByLabelText('Recalentamiento')).toHaveValue(18.3)
+    expect(screen.getByLabelText('Subenfriamiento')).toHaveValue(19.4)
   })
 
   it('mantiene la condición declarada al cambiar la aplicación', async () => {
@@ -618,6 +669,9 @@ describe('CapilarPro', () => {
 
     await user.selectOptions(application, 'MBP')
     expectConditions(-6.7, 54.4, 35, 18.3, 25, 19.4)
+
+    await user.selectOptions(application, 'CBP')
+    expectConditions(0, 54.4, 35, 18.3, 18.3, 19.4)
 
     await user.selectOptions(application, 'HBP')
     expectConditions(7.2, 54.4, 35, 18.3, 11.1, 19.4)

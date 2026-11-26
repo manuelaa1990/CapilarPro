@@ -46,16 +46,19 @@ const applicationConditions: Record<
   ASHRAE: {
     LBP: { tEvapRef: -23.3, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 32.2 },
     MBP: { tEvapRef: -6.7, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 18.3 },
+    CBP: { tEvapRef: 0.0, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 18.3 },
     HBP: { tEvapRef: 7.2, tCondRef: 54.4, ambientTempC: 35.0, returnGasTempC: 18.3 },
   },
   'EN 12900': {
     LBP: { tEvapRef: -35, tCondRef: 40, ambientTempC: 32.2, returnGasTempC: 32.2 },
     MBP: { tEvapRef: -10, tCondRef: 40, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    CBP: { tEvapRef: 0, tCondRef: 40, ambientTempC: 32.2, returnGasTempC: 32.2 },
     HBP: { tEvapRef: 5, tCondRef: 50, ambientTempC: 32.2, returnGasTempC: 32.2 },
   },
   'GB/T': {
     LBP: { tEvapRef: -25, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
     MBP: { tEvapRef: -7, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
+    CBP: { tEvapRef: 0, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
     HBP: { tEvapRef: 7, tCondRef: 55, ambientTempC: 32.2, returnGasTempC: 32.2 },
   },
 }
@@ -65,7 +68,7 @@ export const getStandardConditions = (
   norma: string,
 ): StandardConditions | null => {
   if (
-    (app !== 'LBP' && app !== 'MBP' && app !== 'HBP') ||
+    (app !== 'LBP' && app !== 'MBP' && app !== 'CBP' && app !== 'HBP') ||
     (norma !== 'ASHRAE' && norma !== 'EN 12900' && norma !== 'GB/T')
   ) {
     return null

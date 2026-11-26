@@ -460,6 +460,14 @@ describe('normas', () => {
       shRef: 25.0,
       scRef: 19.4,
     })
+    expect(getStandardConditions('CBP', 'ASHRAE')).toEqual({
+      tEvapRef: 0,
+      tCondRef: 54.4,
+      ambientTempC: 35.0,
+      returnGasTempC: 18.3,
+      shRef: 18.3,
+      scRef: 19.4,
+    })
     expect(getStandardConditions('HBP', 'ASHRAE')).toEqual({
       tEvapRef: 7.2,
       tCondRef: 54.4,
@@ -475,6 +483,22 @@ describe('normas', () => {
       returnGasTempC: 32.2,
       shRef: 42.2,
       scRef: 7.8,
+    })
+    expect(getStandardConditions('CBP', 'EN 12900')).toEqual({
+      tEvapRef: 0,
+      tCondRef: 40,
+      ambientTempC: 32.2,
+      returnGasTempC: 32.2,
+      shRef: 32.2,
+      scRef: 7.8,
+    })
+    expect(getStandardConditions('CBP', 'GB/T')).toEqual({
+      tEvapRef: 0,
+      tCondRef: 55,
+      ambientTempC: 32.2,
+      returnGasTempC: 32.2,
+      shRef: 32.2,
+      scRef: 22.8,
     })
     expect(getStandardConditions('HBP', 'GB/T')).toEqual({
       tEvapRef: 7,

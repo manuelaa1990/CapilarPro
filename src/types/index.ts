@@ -20,7 +20,7 @@ export type StandardId =
   | 'gb-t'
   | 'custom'
 
-export type CompressorApplication = 'LBP' | 'MBP' | 'HBP'
+export type CompressorApplication = 'LBP' | 'MBP' | 'CBP' | 'HBP'
 
 export type TabId = 'calculator' | 'model'
 
@@ -227,7 +227,7 @@ export interface CapacityNormalization {
   requiredRefrigerant: RefrigerantId
   /** Verdadero cuando el fluido requerido difiere del de diseño. */
   refrigerantChanged: boolean
-  method: 'ratio-table' | 'none' | 'refrigerant-change'
+  method: 'ratio-table' | 'physics' | 'none' | 'refrigerant-change'
   warnings: CalculationWarning[]
 }
 

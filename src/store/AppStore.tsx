@@ -20,7 +20,7 @@ import type {
   TabId,
 } from '../types'
 import { AppContext, type AppStore } from './useApp'
-import { defaultInput } from './schemas'
+import { applicationForEvap, defaultInput } from './schemas'
 import {
   wattsToCapacity,
   cubicCentimetersToDisplacement,
@@ -34,10 +34,6 @@ const parseTab = (): TabId => {
 
 const tabHash = (tab: TabId) => (tab === 'calculator' ? '#/' : `#/${tab}`)
 
-const applicationForEvap = (
-  temperatureC: number,
-): CalculationInput['application'] =>
-  temperatureC <= -20 ? 'LBP' : temperatureC <= 0 ? 'MBP' : 'HBP'
 const frequencyForRpm = (rpm: number) =>
   Math.abs(rpm - 3000) <= Math.abs(rpm - 3600) ? 50 : 60
 
@@ -134,6 +130,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ? input.refrigerantId
       : compressor.refrigerants[0]
     const standard = getStandard(compressor.standardId)
+    const application = applicationForEvap(compressor.ratedEvapC)
     setInput((current) => {
       const targetEvapC =
         compressor.standardId === 'custom'
@@ -145,7 +142,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         compressorLabel: `${compressor.brand} ${compressor.model}`,
         refrigerantId,
         standardId: compressor.standardId,
-        application: applicationForEvap(compressor.ratedEvapC),
+        application,
+        declaredApplication: application,
         frequencyHz: frequencyForRpm(compressor.rpm),
         ratedCapacity: wattsToCapacity(
           compressor.ratedCapacityW,
@@ -195,6 +193,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return
     }
     const standard = getStandard(replacement.standardId)
+    const application = applicationForEvap(replacement.ratedEvapC)
     setInput((current) => {
       const targetEvapC =
         replacement.standardId === 'custom'
@@ -206,7 +205,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         compressorId: replacement.id,
         compressorLabel: `${replacement.brand} ${replacement.model}`,
         standardId: replacement.standardId,
-        application: applicationForEvap(replacement.ratedEvapC),
+        application,
+        declaredApplication: application,
         frequencyHz: frequencyForRpm(replacement.rpm),
         ratedCapacity: wattsToCapacity(
           replacement.ratedCapacityW,

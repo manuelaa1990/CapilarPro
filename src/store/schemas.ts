@@ -35,7 +35,22 @@ const standardEnum = z.enum([
   'gb-t',
   'custom',
 ])
-const applicationEnum = z.enum(['LBP', 'MBP', 'HBP'])
+const applicationEnum = z.enum(['LBP', 'MBP', 'CBP', 'HBP'])
+
+/**
+ * Régimen de fábrica implícito en la temperatura de evaporación de placa.
+ * CBP (comercial media-alta) cubre el tramo entre MBP y HBP.
+ */
+export const applicationForEvap = (
+  temperatureC: number,
+): CalculationInput['application'] =>
+  temperatureC <= -20
+    ? 'LBP'
+    : temperatureC <= -5
+      ? 'MBP'
+      : temperatureC <= 2
+        ? 'CBP'
+        : 'HBP'
 
 /** Límites compartidos por el formulario y la validación del cálculo. */
 export const inputLimits = {
@@ -124,8 +139,7 @@ export const calculationInputSchema = calculationInputObjectSchema.superRefine((
 
 export const defaultInput = (): CalculationInput => {
   const seed = defaults.defaults
-  const application: CalculationInput['application'] =
-    seed.refEvapC <= -20 ? 'LBP' : seed.refEvapC <= 0 ? 'MBP' : 'HBP'
+  const application = applicationForEvap(seed.refEvapC)
   const referenceConditions = getStandardConditions(
     application,
     standardNameForId(seed.standardId as StandardId),
@@ -146,6 +160,7 @@ export const defaultInput = (): CalculationInput => {
     compressorLabel: '',
     standardId: seed.standardId as StandardId,
     application,
+    declaredApplication: application,
     ratedCapacity: seed.ratedCapacityW,
     capacityUnit: 'W',
     displacement: seed.displacementCm3Rev,

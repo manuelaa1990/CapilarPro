@@ -222,6 +222,12 @@ const CapacityConversionBanner = ({
           {normalization.ratioUsed.toFixed(2)} ={' '}
           {fmt(normalizedCapacity, 0)} {unit}
         </p>
+        {normalization.method === 'physics' && (
+          <p className="mt-1 text-[10px] leading-relaxed text-ink-600">
+            Factor derivado de la densidad de succión y el salto entálpico
+            (ρ·Δh) de cada régimen; sin factor empírico fijo.
+          </p>
+        )}
       </div>
     </div>
   )
@@ -390,20 +396,17 @@ export const CalculatorPage = () => {
 
                 <SelectField
                   label="Condición de diseño"
-                  value={input.declaredApplication ?? ''}
+                  value={input.declaredApplication ?? input.application}
                   onChange={(value) =>
                     updateInput({
-                      declaredApplication:
-                        value === ''
-                          ? undefined
-                          : (value as CompressorApplication),
+                      declaredApplication: value as CompressorApplication,
                     })
                   }
-                  tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP o HBP)."
+                  tip="Régimen de fábrica o estándar del compresor en el que se declara la capacidad de placa (LBP, MBP, CBP o HBP)."
                 >
-                  <option value="">Misma aplicación (actual)</option>
                   <option value="LBP">LBP (congelación)</option>
                   <option value="MBP">MBP (refrigeración)</option>
+                  <option value="CBP">CBP (comercial media-alta)</option>
                   <option value="HBP">HBP (alta)</option>
                 </SelectField>
               </div>
@@ -567,7 +570,10 @@ export const CalculatorPage = () => {
                     />
                     {refrigerantChanged
                       ? 'Cambio de condición y refrigerante: la capacidad se recalcula con las propiedades del refrigerante requerido, sin aplicar solo un factor empírico.'
-                      : 'Se aplicará un factor de conversión por cambio de condición'}
+                      : input.declaredApplication === 'CBP' ||
+                          input.application === 'CBP'
+                        ? 'La capacidad se convierte con las propiedades del refrigerante (ρ·Δh) en cada régimen, sin factor empírico fijo.'
+                        : 'Se aplicará un factor de conversión por cambio de condición'}
                   </p>
                 )}
 
@@ -758,6 +764,7 @@ export const CalculatorPage = () => {
                 >
                   <option value="LBP">LBP · baja temperatura</option>
                   <option value="MBP">MBP · media temperatura</option>
+                  <option value="CBP">CBP · comercial media-alta</option>
                   <option value="HBP">HBP · alta temperatura</option>
                 </SelectField>
               </div>
