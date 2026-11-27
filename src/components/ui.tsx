@@ -93,7 +93,7 @@ export const NumberField = ({
   className,
   inputClassName,
 }: {
-  label: string
+  label: ReactNode
   value: number
   onChange: (value: number) => void
   unit: string
@@ -193,7 +193,7 @@ export const SelectField = ({
   tip,
   className,
 }: {
-  label: string
+  label: ReactNode
   value: string
   onChange: (value: string) => void
   children: ReactNode

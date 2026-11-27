@@ -146,9 +146,9 @@ export const ModelPage = () => {
               ηv,ref = Q<sub>placa</sub> / (V̄ · ρ<sub>asp,ref</sub> · Δh<sub>ref</sub>)
             </Formula>
             <Formula>
-              ηv = 1 − λ − c · [(Pd/Ps)<sup>1/n</sup> − 1]
+              ηv = k · [1 − c · ((Pd/Ps)<sup>1/n</sup> − 1)]
               <br />
-              c = (1 − λ − ηv,ref) / [(Pd/Ps)<sub>ref</sub><sup>1/n</sup> − 1]
+              k = ηv,ref / [1 − c · ((Pd/Ps)<sub>ref</sub><sup>1/n</sup> − 1)]
             </Formula>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
@@ -160,11 +160,11 @@ export const ModelPage = () => {
               <p className="mt-1 text-ink-600">Exponente politrópico de volumen nocivo.</p>
             </div>
             <div className="rounded-xl bg-frost-50 p-3">
-              <span className="font-semibold text-ink-900">λ</span>
+              <span className="font-semibold text-ink-900">c</span>
               <span className="ml-2 font-mono text-ink-600">
-                {fmt(correlations.compressor.residualLoss * 100, 1)} %
+                {fmt(correlations.compressor.clearanceRatioTypical * 100, 1)} %
               </span>
-              <p className="mt-1 text-ink-600">Pérdidas residuales asumidas.</p>
+              <p className="mt-1 text-ink-600">Volumen nocivo típico asumido.</p>
             </div>
           </div>
           <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-ink-600">
@@ -178,22 +178,22 @@ export const ModelPage = () => {
           <p className="text-[12px] leading-relaxed text-ink-600">
             El capilar se integra sobre la curva de saturación. La calidad local
             sale del balance de energía de estancamiento, no de una calidad media
-            impuesta. La fricción usa viscosidad homogénea y un multiplicador de
-            deslizamiento bifásico.
+            impuesta. La fricción usa el factor de Churchill con la rugosidad del
+            tubo y viscosidad homogénea.
           </p>
           <div className="mt-4 space-y-2.5">
             <Formula>
               h₀ = h<sub>f</sub> + x·h<sub>fg</sub> + G²[v<sub>f</sub> + x·v<sub>fg</sub>]² / 2
             </Formula>
             <Formula>
-              dP/dz = − Φ² · f · G² · v / (2D)
+              dP/dz = − f · G² · v / (2D)
               <br />
-              f = 0,316 · Re<sup>−0,25</sup> · (Re &gt; 2300)
+              f = f<sub>Churchill</sub>(Re, ε/D)
             </Formula>
             <Formula>
               μ<sub>tp</sub> = 1 / [x/μ<sub>v</sub> + (1−x)/μ<sub>l</sub>]
               <br />
-              Φ² = 1 + {correlations.capillary.twoPhaseMultiplierCoefficient} · x · √(v<sub>v</sub>/v<sub>l</sub>)
+              ε = {correlations.capillary.tubeRoughnessMm} mm
             </Formula>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-[9px]">

@@ -27,12 +27,9 @@ describe('SLHX acoplado al capilar (integración)', () => {
 
     expect(Number.isFinite(epsilon)).toBe(true)
     expect(epsilon).toBeGreaterThanOrEqual(0.1)
-    // Momentum acceleration and inlet loss alter the converged capillary length.
-    // Con el catálogo comercial el diámetro/longitud cambian, pero ε debe seguir
-    // por debajo de la efectividad de diseño.
-    expect(epsilon).toBeLessThanOrEqual(0.5)
-    // El bug de unidades hacía que ε fuese siempre 0.70.
-    expect(Math.abs(epsilon - 0.7)).toBeGreaterThan(0.2)
+    // El filtro de bloqueo sónico alarga el capilar recomendado y con él el
+    // enrollado; ε debe seguir por debajo de la efectividad de diseño (0,70).
+    expect(epsilon).toBeLessThan(0.7)
   })
 
   it('la efectividad aumenta con el enrollado y la longitud convergida', () => {

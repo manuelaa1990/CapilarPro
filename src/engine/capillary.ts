@@ -31,6 +31,25 @@ export interface Simulation {
   choked: boolean
 }
 
+/**
+ * Factor de fricción de Churchill (1977) en convención Darcy.
+ *
+ * Cubre laminar, transición y turbulento con una sola expresión continua y
+ * usa la rugosidad relativa del tubo (antes se configuraba y no se usaba).
+ * Churchill devuelve el factor de Fanning, de ahí el factor 4.
+ */
+const darcyFrictionFactor = (reynolds: number, relativeRoughness: number) => {
+  const re = Math.max(reynolds, 1)
+  const bigA = Math.pow(
+    2.457 * Math.log(1 / Math.pow(7 / re, 0.9) + 0.27 * relativeRoughness),
+    16,
+  )
+  const bigB = Math.pow(37530 / re, 16)
+  const fanning =
+    2 * Math.pow(Math.pow(8 / re, 12) + 1 / Math.pow(bigA + bigB, 1.5), 1 / 12)
+  return 4 * fanning
+}
+
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value))
 
@@ -184,20 +203,11 @@ export const simulateCapillaryLength = (
           1e-12,
         )
       const reynolds = (massFlux * diameterM) / Math.max(viscosity, 1e-9)
-      const friction =
-        reynolds > config.criticalReynolds
-          ? config.frictionTurbulentCoefficient *
-            Math.pow(reynolds, -config.frictionTurbulentExponent)
-          : config.frictionLaminarCoefficient / Math.max(reynolds, 1)
-
-      const slipMultiplier =
-        1 +
-        config.twoPhaseMultiplierCoefficient *
-          averageQuality *
-          Math.sqrt(Math.max(1, volume1 / Math.max(volume0, 1e-12)))
-
+      const relativeRoughness = config.tubeRoughnessMm / diameterMm
       const frictionPressureGradient =
-        (slipMultiplier * friction * massFluxSquared * averageVolume) /
+        (darcyFrictionFactor(reynolds, relativeRoughness) *
+          massFluxSquared *
+          averageVolume) /
         (2 * diameterM)
 
       if (
@@ -318,7 +328,7 @@ export const assembleCapillaryResult = (
     choked: selected.choked,
     status: selected.status,
     note: selected.note,
-    alternatives: ranked.slice(1, 6),
+    alternatives: ranked.slice(1),
   }
 }
 
@@ -331,7 +341,7 @@ export const computeCapillary = (
 ): CapillaryResult => {
   const config = correlations.capillary
   const operating: OperatingPoint = {
-    fluid: input.refrigerantId,
+    fluid: input.requiredRefrigerantId ?? input.refrigerantId,
     pressureInKPa,
     pressureOutKPa,
     subcoolK: input.targetSubcoolK,
@@ -365,7 +375,7 @@ export const predictLengthForDiameter = (
   diameterMm: number,
 ): number | null => {
   const simulation = simulateCapillaryLength(diameterMm, {
-    fluid: input.refrigerantId,
+    fluid: input.requiredRefrigerantId ?? input.refrigerantId,
     pressureInKPa,
     pressureOutKPa,
     subcoolK: input.targetSubcoolK,

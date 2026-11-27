@@ -139,6 +139,22 @@ const warningsFor = (
     })
   }
 
+  const targetEvapPressureKPa = saturationAtTemperature(
+    result.requiredRefrigerant.id,
+    result.input.targetEvapC,
+    'dew',
+  ).pressureKPa
+  const chokeExcessKPa =
+    result.capillary.outletPressureKPa - targetEvapPressureKPa
+  if (result.capillary.choked && chokeExcessKPa > 5) {
+    warnings.push({
+      code: 'capillary-choked',
+      severity: 'warning',
+      title: 'Capilar bloqueado antes de la presión de evaporación',
+      message: `Con ${result.capillary.diameterMm.toFixed(2)} mm el tubo alcanza velocidad sónica a ${result.capillary.outletPressureKPa.toFixed(0)} kPa, ${chokeExcessKPa.toFixed(0)} kPa por encima de la presión de evaporación objetivo (${targetEvapPressureKPa.toFixed(0)} kPa). La longitud indicada es la del punto de bloqueo, no la que alcanza el evaporador: sube de diámetro o reduce el caudal másico.`,
+    })
+  }
+
   if (
     !result.refrigerantChanged &&
     result.requiredRefrigerant.glideK >= 0.25

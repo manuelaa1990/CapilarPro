@@ -9,6 +9,10 @@ export interface VolumetricEfficiencyParams {
 export interface VolumetricEfficiencyResult {
   etaRef: number
   etaTarget: number
+  /** ηv que pedía la extrapolación antes de aplicar el límite físico. */
+  etaTargetRaw: number
+  /** `true` cuando la extrapolación chocó con etaMin/etaMax y se recortó. */
+  targetClamped: boolean
   rawEtaRef: number
   clearanceRatio: number
   ratioTermRef: number
@@ -26,11 +30,14 @@ const ratioTerm = (ratio: number, exponent: number) =>
  * Eficiencia volumétrica anclada a un punto medido de la placa.
  *
  * Modelo de volumen nocivo:
- *   ηv = 1 − λ − c · [(Pd/Ps)^(1/n) − 1]
+ *   ηv(r) = k · [1 − c · (r^(1/n) − 1)]
  *
- * c se despeja del punto de catálogo. Así la extrapolación conserva la
- * eficiencia real del compresor en la referencia y solo escala por relación
- * de presiones. No se usan tablas genéricas de ηv.
+ * `c` es una constante de la máquina (volumen nocivo típico) y `k` el resto
+ * de pérdidas, que se despeja del punto de catálogo para reproducir la
+ * eficiencia medida exactamente en la referencia. Despejar `c` del único
+ * dato disponible, como se hacía antes, le hacía absorber todas las demás
+ * pérdidas y convertía la extrapolación en una caída explosiva en LBP
+ * (ηv → 0 a relaciones de presión altas). No se usan tablas genéricas de ηv.
  */
 export const anchorVolumetricEfficiency = ({
   measuredEtaRef,
@@ -39,25 +46,26 @@ export const anchorVolumetricEfficiency = ({
 }: VolumetricEfficiencyParams): VolumetricEfficiencyResult => {
   const config = correlations.compressor
   const exponent = config.clearanceExponent
-  const residual = config.residualLoss
   const rawEtaRef = measuredEtaRef
   const etaRef = clamp(measuredEtaRef, config.etaMin, config.etaMax)
   const refTerm = ratioTerm(referencePressureRatio, exponent)
   const targetTerm = ratioTerm(targetPressureRatio, exponent)
 
-  const clearanceRatio = clamp(
-    (1 - residual - etaRef) / Math.max(refTerm, 1e-6),
-    0.002,
-    0.45,
-  )
+  const clearanceRatio = clamp(config.clearanceRatioTypical, 0.002, 0.45)
+  const clearanceFactor = (term: number) =>
+    Math.max(0.02, 1 - clearanceRatio * term)
+  const otherEfficiency = etaRef / clearanceFactor(refTerm)
 
-  const etaTargetRaw = 1 - residual - clearanceRatio * targetTerm
+  const etaTargetRaw = otherEfficiency * clearanceFactor(targetTerm)
   const etaTarget = clamp(etaTargetRaw, config.etaMin, config.etaMax)
+  const targetClamped = Math.abs(etaTarget - etaTargetRaw) > 1e-6
   const anchored = Math.abs(etaRef - rawEtaRef) < 0.002
 
   return {
     etaRef,
     etaTarget,
+    etaTargetRaw,
+    targetClamped,
     rawEtaRef,
     clearanceRatio,
     ratioTermRef: refTerm,

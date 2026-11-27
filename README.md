@@ -23,7 +23,7 @@ El resultado es una recomendación de diámetro interior comercial × longitud, 
 - **Punto requerido**: evaporación y condensación objetivo con deslizadores e introducción exacta, temperatura de retorno y ambiente; el motor deriva el SH operativo y avisa si el salto térmico del condensador es bajo.
 - **Intercambiador SLHX opcional**: el modelo ε-NTU aplica una efectividad configurable y recalcula el estado de succión, el caudal y el capilar en vivo.
 - **Extrapolación física**: eficiencia volumétrica con volumen nocivo efectivo derivado del punto medido.
-- **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Darcy, viscosidad homogénea y multiplicador bifásico.
+- **Modelo de capilar**: integración 1D, calidad local por balance de energía, fricción de Churchill con rugosidad, viscosidad homogénea y criterio sónico HEM.
 - **Incertidumbre honesta**: propagación RSS de modelo, capacidad, tolerancia dimensional, evidencia y propiedades.
 - **Sesión efímera**: entradas y resultados viven solo en memoria; al recargar, vuelven los valores de fábrica.
 - **Interfaz en español**, responsive y con panel de resultados fijo en escritorio.
@@ -46,15 +46,18 @@ Con el caudal barrido y las propiedades de aspiración/líquido en la referencia
 RPM   = frecuencia [Hz] · 60 (compresor de 2 polos)
 V̇    = Vd · RPM / 60
 ηv,ref = Q0,ref / [V̇ · ρs · (hs − hl)]
+
+ρs, hs = vapor recalentado en (Ps, Tg)      hl = líquido en (Pc, Tc − SC)
 ```
 
-Después se despeja el volumen nocivo efectivo `c` del modelo:
+El volumen nocivo `c` es una constante de la máquina (5 % típico, `clearanceRatioTypical`); del punto de placa se despeja el resto de pérdidas `k`:
 
 ```text
-ηv = 1 − λ − c · [(Pd/Ps)^(1/n) − 1]
+ηv(r) = k · [1 − c · (r^(1/n) − 1)]
+k     = ηv,ref / [1 − c · (r_ref^(1/n) − 1)]
 ```
 
-Así la extrapolación conserva la eficiencia real del compresor en la placa y solo escala por relación de presiones. No se usa una tabla genérica de ηv. Si la capacidad de placa implica una eficiencia fuera del rango físico, la app la limita y **avisa** en lugar de ocultarlo.
+Así la extrapolación conserva la eficiencia real del compresor en la placa y solo escala por relación de presiones. No se usa una tabla genérica de ηv. Si la capacidad de placa implica una eficiencia fuera del rango físico, la app la limita y **avisa** en lugar de ocultarlo. Lo mismo ocurre con la extrapolación: cuando el ηv del punto requerido choca con `etaMin`/`etaMax`, el resultado lo declara (`targetEfficiencyClamped`), expone el valor pedido (`etaVolumetricTargetRaw`) y emite un aviso con la capacidad derivada frente a la de placa.
 
 ### 2. Intercambiador succión-líquido (SLHX)
 
@@ -76,8 +79,8 @@ Para cada diámetro comercial se integra la caída de presión a lo largo del tu
 - balance de energía de estancamiento para la calidad local;
 - densidad de mezcla homogénea;
 - viscosidad dinámica ponderada por masa;
-- factor de fricción de Darcy (laminar/turbulento);
-- pérdida de entrada y multiplicador bifásico documentado.
+- factor de fricción de Churchill (una sola expresión continua en laminar, transición y turbulento) con la rugosidad del tubo;
+- pérdida de entrada y criterio sónico de equilibrio; si el tubo se bloquea antes de la presión de evaporación, la longitud devuelta es la del punto de bloqueo y el resultado lo declara.
 
 La longitud que agota la presión objetivo es la predicción. El motor compara los diámetros comerciales, descarta longitudes fuera de la ventana práctica y ordena las alternativas.
 

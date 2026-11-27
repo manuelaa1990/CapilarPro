@@ -33,6 +33,17 @@ const noteFor = (
   candidate: CapillaryCandidate,
   options: RankOptions,
 ): Pick<CapillaryCandidate, 'status' | 'note'> => {
+  if (candidate.choked) {
+    return {
+      status:
+        candidate.lengthM < options.minViableLengthM
+          ? 'short'
+          : candidate.lengthM > options.maxViableLengthM
+            ? 'long'
+            : 'alternative',
+      note: 'Flujo sónico: se bloquea antes de la presión de evaporación. La longitud es la del punto de bloqueo.',
+    }
+  }
   if (candidate.lengthM < options.minViableLengthM) {
     return {
       status: 'short',
@@ -58,6 +69,9 @@ export const rankCandidates = (
   if (candidates.length === 0) return []
   const ranked = [...candidates].sort(
     (a, b) => {
+      // Un tubo bloqueado no alcanza la presión de evaporación: solo puede
+      // recomendarse si no queda ninguna alternativa que sí llegue.
+      if (a.choked !== b.choked) return a.choked ? 1 : -1
       if (options.preferredDiameterMm !== undefined) {
         const aPreferred =
           a.diameterMm === options.preferredDiameterMm && isViable(a, options)
@@ -71,6 +85,9 @@ export const rankCandidates = (
   return ranked.map((candidate, index) => {
     const base = noteFor(candidate, options)
     if (index === 0) {
+      if (candidate.choked) {
+        return { ...candidate, ...base, status: 'recommended' }
+      }
       if (base.status === 'alternative') {
         return {
           ...candidate,

@@ -1,8 +1,22 @@
 {
   "schemaVersion": 1,
   "updatedAt": "2026-10-25",
-  "note": "Catálogo de referencia de diámetros interiores comerciales (0.026\" a 0.100\"). No sustituye la ficha dimensional del proveedor.",
-  "capillaryIdsMm": [0.66, 0.787, 0.914, 1.067, 1.219, 1.372, 1.626, 1.778, 1.905, 2.032, 2.159, 2.286, 2.54],
+  "note": "Diámetros interiores comerciales en pulgadas con su equivalencia en mm (pulgada x 25,4). El motor solo elige entre estas medidas.",
+  "capillaryIdsMm": [
+    0.66,
+    0.787,
+    0.914,
+    1.067,
+    1.219,
+    1.372,
+    1.626,
+    1.778,
+    1.905,
+    2.032,
+    2.159,
+    2.286,
+    2.54
+  ],
   "recommendedLengthRangeM": [0.6, 3.5],
   "designTargetLengthM": 1.8
 }
