@@ -2,6 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { calculateSlhxTransfer, slhxSuctionTubeOptions } from './slhx'
 
 describe('modelo de transferencia SLHX', () => {
+  it('aumenta la efectividad al enrollar más tubo con geometría fija', () => {
+    const calculate = (windingPercentage: number) =>
+      calculateSlhxTransfer({
+        massFlowKgS: 0.001,
+        gasSpecificHeatJKgK: 850,
+        inletTemperatureDifferenceK: 20,
+        totalCapillaryLengthM: 0.5,
+        windingPercentage,
+        suctionTubeDiameter: '5/16',
+      })
+    const thirty = calculate(30)
+    const fifty = calculate(50)
+    const seventy = calculate(70)
+
+    expect(fifty.epsilonReal).toBeGreaterThan(thirty.epsilonReal)
+    expect(seventy.epsilonReal).toBeGreaterThan(fifty.epsilonReal)
+  })
+
   it('limita la longitud enrollada al porcentaje del capilar', () => {
     const result = calculateSlhxTransfer({
       massFlowKgS: 0.001,

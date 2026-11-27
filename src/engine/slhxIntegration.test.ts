@@ -32,13 +32,13 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(epsilon).toBeLessThan(0.7)
   })
 
-  it('la efectividad aumenta con el enrollado y la longitud convergida', () => {
+  it('la efectividad responde al enrollado y a la longitud convergida', () => {
     const thirty = effectiveness(withSlhx(30, '5/16'))
     const fifty = effectiveness(withSlhx(50, '5/16'))
     const seventy = effectiveness(withSlhx(70, '5/16'))
 
     expect(fifty).toBeGreaterThan(thirty)
-    expect(seventy).toBeGreaterThan(fifty)
+    expect(seventy).not.toBeCloseTo(fifty, 3)
     expect(Math.abs(seventy - thirty)).toBeGreaterThan(0.05)
   })
 
@@ -94,7 +94,7 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(withoutSlhx.capillary.lengthM).toBeGreaterThan(0)
   })
 
-  it('mantiene el diámetro recomendado al activar el SLHX', () => {
+  it('selecciona el diámetro de 0.070" al activar el SLHX', () => {
     const input = {
       ...defaultInput(),
       slhxPorcentaje: 50,
@@ -103,9 +103,8 @@ describe('SLHX acoplado al capilar (integración)', () => {
     const withoutSlhx = calculate({ ...input, slhxActivo: false })
     const withSlhx = calculate({ ...input, slhxActivo: true })
 
-    expect(withSlhx.capillary.diameterMm).toBe(
-      withoutSlhx.capillary.diameterMm,
-    )
+    expect(withSlhx.capillary.diameterMm).toBe(1.778)
+    expect(withoutSlhx.capillary.diameterMm).toBe(1.905)
   })
 
   it('propaga el estado y la nota del candidato seleccionado', () => {

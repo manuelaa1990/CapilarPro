@@ -88,7 +88,7 @@ describe('conversión LBP -> MBP y caudal', () => {
     )
   })
 
-  it('aumenta el caudal y recomienda mayor diámetro (o menos longitud al mismo diámetro)', () => {
+  it('aumenta el caudal y reoptimiza el capilar a la condición requerida', () => {
     const base = calculate(
       inputWith({
         application: 'MBP',
@@ -111,11 +111,8 @@ describe('conversión LBP -> MBP y caudal', () => {
     expect(converted.compressor.massFlowKgS).toBeGreaterThan(
       base.compressor.massFlowKgS,
     )
-    expect(converted.capillary.diameterMm).toBeGreaterThanOrEqual(
-      base.capillary.diameterMm,
-    )
-
-    // A igual diámetro, más caudal exige menos longitud (no más restricción).
+    // El ranking puede elegir un diámetro menor: comprueba la longitud a un
+    // diámetro común en vez de asumir que el diámetro recomendado es monótono.
     const sameDiameterLength = lengthForDiameter(
       converted,
       base.capillary.diameterMm,
@@ -124,7 +121,7 @@ describe('conversión LBP -> MBP y caudal', () => {
     expect(sameDiameterLength!).toBeLessThan(base.capillary.lengthM)
   })
 
-  it('al subir la capacidad declarada también crece el caudal y el diámetro', () => {
+  it('al subir la capacidad declarada también crece el caudal y reoptimiza el capilar', () => {
     const base = calculate(
       inputWith({
         application: 'MBP',
@@ -148,10 +145,6 @@ describe('conversión LBP -> MBP y caudal', () => {
     expect(higher.compressor.massFlowKgS).toBeGreaterThan(
       base.compressor.massFlowKgS,
     )
-    expect(higher.capillary.diameterMm).toBeGreaterThanOrEqual(
-      base.capillary.diameterMm,
-    )
-
     const sameDiameterLength = lengthForDiameter(
       higher,
       base.capillary.diameterMm,

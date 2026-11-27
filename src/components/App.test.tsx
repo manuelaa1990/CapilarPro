@@ -173,7 +173,10 @@ describe('CapilarPro', () => {
       ).not.toBe(selectedLength)
       expect(
         screen.getByLabelText('Diámetro seleccionado').textContent,
-      ).toBe(selectedDiameter)
+      ).not.toBe(selectedDiameter)
+      expect(
+        screen.getByLabelText('Diámetro seleccionado').textContent,
+      ).toBe('0,070"')
     })
     expect(screen.getByText(/Total: .* \| Enrollar:/)).toBeInTheDocument()
     const slhxResults = screen.getByRole('group', { name: 'Resultados del SLHX' })
