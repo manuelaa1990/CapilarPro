@@ -150,9 +150,9 @@ describe('embraco end-to-end probe', () => {
         out.push(line)
       }
     }
-    // eslint-disable-next-line no-console
+     
     console.table(out)
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(out))
   })
 })

@@ -152,9 +152,9 @@ describe('embraco probe', () => {
         }
       }
     }
-    // eslint-disable-next-line no-console
+     
     console.table(rows)
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(rows))
   })
 })

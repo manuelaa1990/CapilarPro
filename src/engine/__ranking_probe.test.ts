@@ -117,9 +117,9 @@ describe('ranking target probe', () => {
         t30: at(3.0),
       })
     }
-    // eslint-disable-next-line no-console
+     
     console.table(out)
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(out))
   })
 
@@ -133,7 +133,7 @@ describe('ranking target probe', () => {
       refSuperheatK: input.targetSuperheatK,
       refSubcoolK: input.targetSubcoolK,
     })
-    // eslint-disable-next-line no-console
+     
     console.log(
       JSON.stringify(
         {
