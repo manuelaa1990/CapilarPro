@@ -13,6 +13,8 @@ import {
   saturationAtPressure,
   saturationSpecificVolumeDerivativesAtPressure,
   saturationAtTemperature,
+  subcooledLiquidState,
+  superheatedVaporState,
 } from './properties'
 import { applyStandard, getStandardConditions } from './standards'
 import { estimateUncertainty } from './uncertainty'
@@ -159,6 +161,88 @@ describe('cálculo completo', () => {
     expect(
       result.warnings.some((warning) => warning.code === 'eta-outlier'),
     ).toBe(!result.compressor.anchored)
+  })
+
+  describe('balance de energía R404A LBP', () => {
+    const input = {
+      ...defaultInput(),
+      refrigerantId: 'R404A' as const,
+      ratedCapacity: 1900,
+      capacityUnit: 'BTU/h' as const,
+      application: 'LBP' as const,
+      declaredApplication: 'LBP' as const,
+      refEvapC: -23.3,
+      refCondC: 54.4,
+      refSuperheatK: 55.5,
+      refSubcoolK: 0,
+      targetEvapC: -23.3,
+      targetCondC: 54.4,
+      targetReturnGasTempC: 32.2,
+      targetSubcoolK: 0,
+    }
+
+    it('usa el efecto del evaporador para obtener el caudal másico', () => {
+      const result = calculate(input)
+      const capacityW = result.capacityNormalization.capacityW
+
+      expect(result.compressor.enthalpyDifference).toBeGreaterThanOrEqual(67)
+      expect(result.compressor.enthalpyDifference).toBeLessThanOrEqual(117)
+      expect(result.compressor.massFlowKgS).toBeCloseTo(
+        capacityW / (result.compressor.enthalpyDifference * 1000),
+        10,
+      )
+      expect(result.compressor.suctionDensity).toBeGreaterThan(0)
+
+      const evapPressureKPa = saturationAtTemperature(
+        'R404A',
+        input.targetEvapC,
+        'dew',
+      ).pressureKPa
+      const condPressureKPa = saturationAtTemperature(
+        'R404A',
+        input.targetCondC,
+        'bubble',
+      ).pressureKPa
+      const saturatedVapor = superheatedVaporState(
+        'R404A',
+        evapPressureKPa,
+        input.targetEvapC,
+      )
+      const saturatedLiquid = subcooledLiquidState(
+        'R404A',
+        condPressureKPa,
+        input.targetCondC,
+      )
+      const zeroSuperheatEffect =
+        saturatedVapor.enthalpyKJkg - saturatedLiquid.enthalpyKJkg
+      expect(zeroSuperheatEffect).toBeGreaterThanOrEqual(67)
+      expect(zeroSuperheatEffect).toBeLessThan(68)
+    })
+
+    it('predice menos de 5 m para el capilar R404A de 0.036"', () => {
+      const result = calculate(input)
+      const inletPressureKPa = saturationAtTemperature(
+        'R404A',
+        input.targetCondC,
+        'bubble',
+      ).pressureKPa
+      const outletPressureKPa = saturationAtTemperature(
+        'R404A',
+        input.targetEvapC,
+        'dew',
+      ).pressureKPa
+      const simulation = simulateCapillaryLength(0.036 * 25.4, {
+        fluid: 'R404A',
+        pressureInKPa: inletPressureKPa,
+        pressureOutKPa: outletPressureKPa,
+        subcoolK: 0,
+        massFlowKgS: result.compressor.massFlowKgS,
+      })
+
+      expect(simulation).not.toBeNull()
+      expect(simulation!.lengthM).toBeGreaterThan(1)
+      expect(simulation!.lengthM).toBeLessThan(5)
+    })
   })
 
   it('es determinista para la misma entrada y el mismo instante', () => {

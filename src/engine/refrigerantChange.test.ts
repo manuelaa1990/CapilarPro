@@ -52,14 +52,6 @@ describe('cambio de refrigerante de diseño a requerido', () => {
       design.compressor.referencePressureRatio,
       10,
     )
-    expect(changed.compressor.etaVolumetricTarget).toBeLessThan(
-      design.compressor.etaVolumetricTarget,
-    )
-    expect(changed.compressor.etaVolumetricTarget).not.toBeCloseTo(
-      design.compressor.etaVolumetricTarget,
-      6,
-    )
-
     // El punto requerido usa las propiedades de R134a.
     const input = inputWith({
       refrigerantId: 'R22',
@@ -99,9 +91,14 @@ describe('cambio de refrigerante de diseño a requerido', () => {
 
     // Caudal y capacidad se recalculan con el fluido requerido.
     expect(changed.compressor.massFlowKgS).toBeCloseTo(
-      changed.compressor.sweptVolumeM3s *
-        changed.compressor.suctionDensity *
-        changed.compressor.etaVolumetricTarget,
+      changed.capacityNormalization.capacityW /
+        (changed.compressor.enthalpyDifference * 1000),
+      10,
+    )
+    expect(changed.compressor.etaVolumetricTarget).toBeCloseTo(
+      changed.compressor.massFlowKgS /
+        (changed.compressor.sweptVolumeM3s *
+          changed.compressor.suctionDensity),
       10,
     )
     expect(changed.compressor.capacityW).toBeCloseTo(
@@ -114,9 +111,9 @@ describe('cambio de refrigerante de diseño a requerido', () => {
       design.compressor.massFlowKgS,
       6,
     )
-    expect(changed.compressor.capacityW).not.toBeCloseTo(
-      design.compressor.capacityW,
-      3,
+    expect(changed.compressor.capacityW).toBeCloseTo(
+      changed.capacityNormalization.capacityW,
+      6,
     )
   })
 

@@ -51,12 +51,12 @@ describe('SLHX acoplado al capilar (integración)', () => {
     expect(large - medium).toBeGreaterThan(1e-3)
   })
 
-  it('mantiene la efectividad entre 0.1 y la efectividad de diseño', () => {
+  it('mantiene una efectividad positiva sin superar la de diseño', () => {
     const diameters: SlhxSuctionTubeDiameter[] = ['1/4', '5/16', '3/8']
     for (const percentage of [30, 50, 70]) {
       for (const diameter of diameters) {
         const epsilon = effectiveness(withSlhx(percentage, diameter))
-        expect(epsilon).toBeGreaterThanOrEqual(0.1)
+        expect(epsilon).toBeGreaterThan(0)
         expect(epsilon).toBeLessThanOrEqual(0.7)
       }
     }

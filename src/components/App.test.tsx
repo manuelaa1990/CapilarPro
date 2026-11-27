@@ -517,9 +517,9 @@ describe('CapilarPro', () => {
         'Conversión de placa LBP → HBP · 1300 W × 2.75 = 3575 W',
       ),
     ).toBeInTheDocument()
-    // La tarjeta principal muestra la capacidad calculada del punto
-    // requerido; la capacidad de placa convertida queda en el aviso.
-    expect(screen.queryByText('3575 W')).not.toBeInTheDocument()
+    // Con el balance energético, la capacidad del punto coincide con la
+    // capacidad requerida normalizada.
+    expect(screen.getByText('3575 W')).toBeInTheDocument()
   })
 
   it('permite declarar y requerir CBP y convierte con física', async () => {

@@ -4,6 +4,7 @@ import { rankCandidates } from './grid'
 import {
   saturationAtPressure,
   saturationSpecificVolumeDerivativesAtPressure,
+  subcooledLiquidState,
 } from './properties'
 
 export interface OperatingPoint {
@@ -124,12 +125,16 @@ export const simulateCapillaryLength = (
   if (operating.pressureInKPa <= operating.pressureOutKPa) return null
 
   const inletSubcoolK = operating.inletSubcoolK ?? operating.subcoolK
+  const inletLiquid = subcooledLiquidState(
+    operating.fluid,
+    operating.pressureInKPa,
+    inlet.temperatureC - inletSubcoolK,
+  )
   const inletEnthalpyKJkg =
     operating.inletEnthalpyKJkg ??
-    inlet.liquidEnthalpyKJkg - inlet.cpL * inletSubcoolK
+    inletLiquid.enthalpyKJkg
   const inletEnthalpy = inletEnthalpyKJkg * 1000
-  const inletDensity =
-    inlet.liquidDensity * (1 + 0.0016 * inletSubcoolK)
+  const inletDensity = inletLiquid.densityKgM3
   const inletSpecificVolume = 1 / inletDensity
   const massFluxSquared = massFlux * massFlux
   const inletLossPa =

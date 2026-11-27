@@ -28,6 +28,15 @@ interface FluidTable {
   molarMass: number
   tripleC: number | null
   rows: FluidRow[]
+  superheated: OffsetPropertyTable
+  subcooled: OffsetPropertyTable
+}
+
+interface OffsetPropertyTable {
+  stepK: number
+  maxOffsetK: number
+  rows: [number, number, number][][]
+  rowMaxOffsetsK: number[]
 }
 
 interface DetailedSaturation extends SaturationPoint {
@@ -42,10 +51,6 @@ interface DetailedSaturation extends SaturationPoint {
 }
 
 const tables = tablesJson.fluids as unknown as Record<string, FluidTable>
-const R_UNIVERSAL = 8314.462618
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value))
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
@@ -287,15 +292,88 @@ export const saturationSpecificVolumeDerivativesAtPressure = (
   }
 }
 
-const compressibilityAtSaturation = (saturation: DetailedSaturation) => {
-  const specificGasConstant = R_UNIVERSAL / saturation.molarMass
-  return (
-    saturation.pressureKPa *
-      1000 /
-      (saturation.vaporDensity *
-        specificGasConstant *
-        (saturation.temperatureC + 273.15))
+const interpolateOffsetState = (
+  fluid: RefrigerantId,
+  pressureKPa: number,
+  offsetK: number,
+  phase: 'superheated' | 'subcooled',
+): [number, number, number] => {
+  const table = fluidTable(fluid)
+  const propertyTable = table[phase]
+  if (!Number.isFinite(offsetK) || offsetK < 0 || offsetK > propertyTable.maxOffsetK) {
+    throw new Error(
+      `${fluid}: ${phase === 'superheated' ? 'sobrecalentamiento' : 'subenfriamiento'} de ${offsetK.toFixed(1)} K fuera de la tabla (0…${propertyTable.maxOffsetK} K)`,
+    )
+  }
+
+  const pressureIndex: 1 | 2 = phase === 'subcooled' ? 1 : 2
+  const pressures = table.rows.map((row) => row[pressureIndex])
+  if (pressureKPa < pressures[0] || pressureKPa > pressures[pressures.length - 1]) {
+    throw new Error(
+      `${fluid}: ${pressureKPa.toFixed(0)} kPa está fuera del rango de propiedades ${phase}`,
+    )
+  }
+
+  const [lowPressure, highPressure, pressureFraction] = findBracket(
+    pressures,
+    pressureKPa,
   )
+  if (
+    offsetK > propertyTable.rowMaxOffsetsK[lowPressure] ||
+    offsetK > propertyTable.rowMaxOffsetsK[highPressure]
+  ) {
+    throw new Error(
+      `${fluid}: ${phase === 'superheated' ? 'sobrecalentamiento' : 'subenfriamiento'} fuera del rango de propiedades tabulado`,
+    )
+  }
+  const offsetPosition = offsetK / propertyTable.stepK
+  const offsetLow = Math.floor(offsetPosition)
+  const offsetHigh = Math.min(
+    offsetLow + 1,
+    Math.round(propertyTable.maxOffsetK / propertyTable.stepK),
+  )
+  const offsetFraction = offsetPosition - offsetLow
+  const stateAtPressureRow = (rowIndex: number) => {
+    const row = propertyTable.rows[rowIndex]
+    const lowState = row[offsetLow]
+    const highState = row[offsetHigh]
+    return lowState.map((value, propertyIndex) =>
+      lerp(value, highState[propertyIndex], offsetFraction),
+    )
+  }
+  const lowState = stateAtPressureRow(lowPressure)
+  const highState = stateAtPressureRow(highPressure)
+  return lowState.map((value, propertyIndex) =>
+    lerp(value, highState[propertyIndex], pressureFraction),
+  ) as [number, number, number]
+}
+
+const stateFromProperties = (
+  pressureKPa: number,
+  temperatureC: number,
+  [enthalpyJkg, densityKgM3, entropyJkgK]: [number, number, number],
+): ThermoState => {
+  const enthalpyKJkg = enthalpyJkg / 1000
+  if (
+    !Number.isFinite(pressureKPa) ||
+    pressureKPa <= 0 ||
+    !Number.isFinite(temperatureC) ||
+    temperatureC <= -273.15 ||
+    !Number.isFinite(enthalpyKJkg) ||
+    enthalpyKJkg < 0 ||
+    !Number.isFinite(densityKgM3) ||
+    densityKgM3 <= 0 ||
+    !Number.isFinite(entropyJkgK)
+  ) {
+    throw new Error('El estado termodinámico interpolado no es físicamente válido')
+  }
+  return {
+    pressureKPa,
+    temperatureC,
+    densityKgM3,
+    enthalpyKJkg,
+    entropyKJKgK: entropyJkgK / 1000,
+  }
 }
 
 export const superheatedVaporState = (
@@ -305,25 +383,16 @@ export const superheatedVaporState = (
 ): ThermoState => {
   const saturation = saturationAtPressure(fluid, pressureKPa, 'dew')
   const superheat = temperatureC - saturation.temperatureC
-  if (superheat < -0.25) {
+  if (!Number.isFinite(superheat) || superheat < 0) {
     throw new Error(
       `La temperatura de aspiración (${temperatureC.toFixed(1)} °C) es inferior a la de saturación (${saturation.temperatureC.toFixed(1)} °C)`,
     )
   }
-  const z = clamp(compressibilityAtSaturation(saturation), 0.55, 1.15)
-  const specificGasConstant = R_UNIVERSAL / saturation.molarMass
-  const density =
-    (pressureKPa * 1000) / (z * specificGasConstant * (temperatureC + 273.15))
-  const cpAverage = (saturation.cpV + 1.75) / 2
-
-  return {
+  return stateFromProperties(
     pressureKPa,
     temperatureC,
-    densityKgM3: density,
-    enthalpyKJkg:
-      saturation.vaporEnthalpyKJkg + cpAverage * Math.max(0, superheat),
-    entropyKJKgK: 0,
-  }
+    interpolateOffsetState(fluid, pressureKPa, superheat, 'superheated'),
+  )
 }
 
 export const subcooledLiquidState = (
@@ -333,20 +402,16 @@ export const subcooledLiquidState = (
 ): ThermoState => {
   const saturation = saturationAtPressure(fluid, pressureKPa, 'bubble')
   const subcooling = saturation.temperatureC - temperatureC
-  if (subcooling < -0.25) {
+  if (!Number.isFinite(subcooling) || subcooling < 0) {
     throw new Error(
       `El líquido (${temperatureC.toFixed(1)} °C) está por encima de la saturación (${saturation.temperatureC.toFixed(1)} °C)`,
     )
   }
-  const expansion = clamp(1 + 0.0016 * subcooling, 0.94, 1.08)
-  return {
+  return stateFromProperties(
     pressureKPa,
     temperatureC,
-    densityKgM3: saturation.liquidDensity * expansion,
-    enthalpyKJkg:
-      saturation.liquidEnthalpyKJkg - saturation.cpL * Math.max(0, subcooling),
-    entropyKJKgK: 0,
-  }
+    interpolateOffsetState(fluid, pressureKPa, subcooling, 'subcooled'),
+  )
 }
 
 export interface CapillarySaturation {

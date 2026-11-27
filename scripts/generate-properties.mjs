@@ -8,7 +8,7 @@
  * Uso: npm run data:properties
  */
 import { writeFile } from 'node:fs/promises'
-import { PropsSI } from 'coolprop-wasm/simple'
+import { getCoolProp, PropsSI } from 'coolprop-wasm/simple'
 
 const FLUIDS = {
   R134a: { minC: -70, criticalC: 101.06 },
@@ -39,6 +39,10 @@ const FLUIDS = {
 }
 
 const STEP = 1
+const SUPERHEAT_STEP = 5
+const MAX_SUPERHEAT_K = 160
+const SUBCOOL_STEP = 1
+const MAX_SUBCOOL_K = 30
 const OUTPUT = new URL('../src/data/refrigerantTables.json', import.meta.url)
 
 const props = {
@@ -82,6 +86,8 @@ const fluidForBlend = async (components) => {
   return {
     name: `HEOS::${fluids.map((name, index) => `${name}[${moleFractions[index]}]`).join('&')}`,
     molarMass: 1 / totalMoles,
+    fluids,
+    moleFractions,
   }
 }
 
@@ -180,6 +186,54 @@ for (const [fluid, range] of Object.entries(FLUIDS)) {
     throw new Error(`Tabla insuficiente para ${fluid}`)
   }
 
+  const fluidName = mixture?.name ?? fluid
+  const coolprop = await getCoolProp()
+  const propertyState = coolprop.factory(
+    'HEOS',
+    mixture ? mixture.fluids.join('&') : fluid,
+  )
+  if (mixture) {
+    const fractions = new coolprop.VectorDouble()
+    mixture.moleFractions.forEach((fraction) => fractions.push_back(fraction))
+    propertyState.set_mole_fractions(fractions)
+  }
+  const stateGrid = async (rows, pressureIndex, direction, step, maxOffset) => {
+    const grid = []
+    const rowMaxOffsetsK = []
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const row = rows[rowIndex]
+      const pressurePa = row[pressureIndex] * 1000
+      const states = []
+      const rowMaxOffset =
+        direction < 0
+          ? Math.min(maxOffset, row[0] - rows[0][0])
+          : maxOffset
+      rowMaxOffsetsK.push(rowMaxOffset)
+      for (let offset = 0; offset <= rowMaxOffset; offset += step) {
+        const temperatureK = row[0] + 273.15 + direction * offset
+        if (offset === 0) {
+          const quality = pressureIndex === 2 ? 1 : 0
+          const entropy = await PropsSI('S', 'T', row[0] + 273.15, 'Q', quality, fluidName)
+          const enthalpyIndex = pressureIndex === 2 ? 6 : 5
+          const densityIndex = pressureIndex === 2 ? 4 : 3
+          states.push([
+            row[enthalpyIndex],
+            row[densityIndex],
+            round(entropy, 3),
+          ])
+        } else {
+          propertyState.update(coolprop.input_pairs.PT_INPUTS, pressurePa, temperatureK)
+          const enthalpy = propertyState.hmass()
+          const density = propertyState.rhomass()
+          const entropy = propertyState.smass()
+          states.push([round(enthalpy, 1), round(density, 5), round(entropy, 3)])
+        }
+      }
+      grid.push(states)
+    }
+    return { rows: grid, rowMaxOffsetsK }
+  }
+
   fluids[fluid] = {
     minC: rows[0][0],
     maxC: rows.at(-1)[0],
@@ -194,6 +248,16 @@ for (const [fluid, range] of Object.entries(FLUIDS)) {
       ? null
       : round((await PropsSI('Ttriple', '', 0, '', 0, fluid)) - 273.15, 3),
     rows,
+    superheated: {
+      stepK: SUPERHEAT_STEP,
+      maxOffsetK: MAX_SUPERHEAT_K,
+      ...await stateGrid(rows, 2, 1, SUPERHEAT_STEP, MAX_SUPERHEAT_K),
+    },
+    subcooled: {
+      stepK: SUBCOOL_STEP,
+      maxOffsetK: MAX_SUBCOOL_K,
+      ...await stateGrid(rows, 1, -1, SUBCOOL_STEP, MAX_SUBCOOL_K),
+    },
   }
   console.log(
     `${fluid}: ${rows.length} filas · ${rows[0][0]}…${rows.at(-1)[0]} °C`,

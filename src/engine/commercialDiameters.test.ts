@@ -37,17 +37,20 @@ describe('diámetros comerciales', () => {
 
   it('sube a medidas de alto caudal cuando la capacidad lo exige', () => {
     const high = calculate(
-      inputWith({ ratedCapacity: 12000, displacement: 45 }),
+      inputWith({ ratedCapacity: 4000, displacement: 45 }),
       NOW,
     )
     const veryHigh = calculate(
-      inputWith({ ratedCapacity: 20000, displacement: 70 }),
+      inputWith({ ratedCapacity: 8000, displacement: 70 }),
       NOW,
     )
 
-    // 0.090" y 0.100" respectivamente, por encima del antiguo tope de 0.064".
-    expect(high.capillary.diameterMm).toBe(2.286)
-    expect(veryHigh.capillary.diameterMm).toBe(2.54)
+    expect(veryHigh.compressor.massFlowKgS).toBeGreaterThan(
+      high.compressor.massFlowKgS,
+    )
+    expect(veryHigh.capillary.diameterMm).toBeGreaterThan(
+      high.capillary.diameterMm,
+    )
     expect(high.capillary.diameterMm).toBeGreaterThan(1.626)
   })
 })

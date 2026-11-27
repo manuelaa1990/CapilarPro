@@ -284,11 +284,14 @@ export const calculate = (
     input.targetCondC - input.targetSubcoolK,
   )
 
-  const referenceEnthalpyDifference =
+  const referenceEvaporatorEffectKJkg =
     referenceSuction.enthalpyKJkg - referenceLiquid.enthalpyKJkg
 
-  if (referenceEnthalpyDifference <= 0) {
-    throw new Error('El salto entálpico calculado no es válido')
+  if (
+    !Number.isFinite(referenceEvaporatorEffectKJkg) ||
+    referenceEvaporatorEffectKJkg <= 0
+  ) {
+    throw new Error('El efecto frigorífico de referencia no es válido')
   }
 
   const rpm = rpmFromFrequency(input.frequencyHz)
@@ -324,7 +327,7 @@ export const calculate = (
     capacityNormalization.originalCapacityW /
     (sweptVolumeM3s *
       referenceSuction.densityKgM3 *
-      referenceEnthalpyDifference *
+      referenceEvaporatorEffectKJkg *
       1000)
 
   const efficiency = anchorVolumetricEfficiency({
@@ -349,8 +352,16 @@ export const calculate = (
   ) {
     throw new Error('No hay capacidades caloríficas válidas para calcular el SLHX')
   }
+  const initialEvaporatorEffect =
+    targetSuctionIn.enthalpyKJkg - targetLiquidIn.enthalpyKJkg
+  if (
+    !Number.isFinite(initialEvaporatorEffect) ||
+    initialEvaporatorEffect <= 0
+  ) {
+    throw new Error('El efecto frigorífico del evaporador no es válido')
+  }
   const massFlowGuess =
-    sweptVolumeM3s * targetSuctionIn.densityKgM3 * efficiency.etaTarget
+    capacityNormalization.capacityW / (initialEvaporatorEffect * 1000)
   let capillary: CapillaryResult
   let targetSuction = targetSuctionIn
   let targetLiquidEnthalpyKJkg = targetLiquidIn.enthalpyKJkg
@@ -402,23 +413,26 @@ export const calculate = (
         const heatTransferPerMass = currentSlhx.heatTransferPerMassJKg
         const adjustedSuctionTemperature =
           input.targetReturnGasTempC + heatTransferPerMass / cpSuction
-        const suctionForIteration = {
-          ...superheatedVaporState(
-            requiredRefrigerantId,
-            targetSaturation.pressureKPa,
-            adjustedSuctionTemperature,
-          ),
-          enthalpyKJkg:
-            targetSuctionIn.enthalpyKJkg + heatTransferPerMass / 1000,
-        }
-        const adjustedLiquidEnthalpy =
-          targetLiquidIn.enthalpyKJkg - heatTransferPerMass / 1000
+        const suctionForIteration = superheatedVaporState(
+          requiredRefrigerantId,
+          targetSaturation.pressureKPa,
+          adjustedSuctionTemperature,
+        )
         const adjustedSubcooling =
           input.targetSubcoolK + heatTransferPerMass / cpLiquid
+        const liquidForIteration = subcooledLiquidState(
+          requiredRefrigerantId,
+          targetCondSaturation.pressureKPa,
+          targetLiquidIn.temperatureC - heatTransferPerMass / cpLiquid,
+        )
+        const adjustedLiquidEnthalpy = liquidForIteration.enthalpyKJkg
+        const evaporatorEffect =
+          suctionForIteration.enthalpyKJkg - adjustedLiquidEnthalpy
+        if (!Number.isFinite(evaporatorEffect) || evaporatorEffect <= 0) {
+          throw new Error('El efecto frigorífico del evaporador no es válido')
+        }
         const nextMassFlow =
-          sweptVolumeM3s *
-          suctionForIteration.densityKgM3 *
-          efficiency.etaTarget
+          capacityNormalization.capacityW / (evaporatorEffect * 1000)
         const nextSimulation = simulateCapillaryLength(diameterMm, {
           ...operatingBase,
           massFlowKgS: nextMassFlow,
@@ -496,13 +510,18 @@ export const calculate = (
     )
   }
 
-  const targetEnthalpyDifference =
+  const targetEvaporatorEffectKJkg =
     targetSuction.enthalpyKJkg - targetLiquidEnthalpyKJkg
-  if (targetEnthalpyDifference <= 0) {
-    throw new Error('El salto entálpico calculado no es válido')
+  if (
+    !Number.isFinite(targetEvaporatorEffectKJkg) ||
+    targetEvaporatorEffectKJkg <= 0
+  ) {
+    throw new Error('El efecto frigorífico del evaporador no es válido')
   }
 
-  const capacityW = massFlow * targetEnthalpyDifference * 1000
+  const capacityW = massFlow * targetEvaporatorEffectKJkg * 1000
+  const etaVolumetricTarget =
+    massFlow / (sweptVolumeM3s * targetSuction.densityKgM3)
   const uncertainty = estimateUncertainty({
     lengthM: capillary.lengthM,
     diameterMm: capillary.diameterMm,
@@ -528,14 +547,14 @@ export const calculate = (
       massFlowKgS: massFlow,
       capacityW,
       etaVolumetricRef: efficiency.etaRef,
-      etaVolumetricTarget: efficiency.etaTarget,
+      etaVolumetricTarget,
       clearanceRatio: efficiency.clearanceRatio,
       referencePressureRatio,
       targetPressureRatio,
       suctionDensity: targetSuction.densityKgM3,
       suctionEnthalpy: targetSuction.enthalpyKJkg,
       liquidEnthalpy: targetLiquidEnthalpyKJkg,
-      enthalpyDifference: targetEnthalpyDifference,
+      enthalpyDifference: targetEvaporatorEffectKJkg,
       anchored: efficiency.anchored,
       rawEtaVolumetricRef,
     },
