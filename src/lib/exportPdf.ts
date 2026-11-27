@@ -34,12 +34,6 @@ const workRows = (result: CalculationResult): PdfRow[] => {
     ['Temp. ambiente', `${fmt(input.targetAmbientTempC, 1)} °C`],
     ['Recalentamiento (SH)', `${fmt(input.targetSuperheatK, 1)} K`],
     ['Subenfriamiento (SC)', `${fmt(input.targetSubcoolK, 1)} K`],
-    [
-      'SLHX',
-      input.slhxActivo
-        ? `Activo · ${fmt(input.slhxPorcentaje, 0)} % enrollado`
-        : 'No activo',
-    ],
   ]
 }
 

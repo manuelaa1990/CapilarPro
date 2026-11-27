@@ -45,10 +45,6 @@ import { ResultCard } from '../components/ResultCard'
 import { BreakdownModal } from '../components/BreakdownModal'
 import { CompressorSearch } from '../components/CompressorSearch'
 import { deriveReferenceSuperheatAndSubcooling } from '../engine/standards'
-import {
-  isSlhxSuctionTubeDiameter,
-  slhxSuctionTubeOptions,
-} from '../engine/slhx'
 
 const pressureAt = (
   refrigerantId: RefrigerantId,
@@ -921,94 +917,6 @@ export const CalculatorPage = () => {
                   hint={`Entre ${inputLimits.targetSubcoolK.min} y ${inputLimits.targetSubcoolK.max} K.`}
                 />
               </div>
-              <div className="mt-4 rounded-xl border border-ink-900/[0.06] bg-frost-50/70 px-3.5 py-3">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[12px] font-semibold text-ink-900">
-                      Intercambiador Capilar/Succión (SLHX)
-                    </p>
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-ink-600">
-                      Ajusta el intercambio térmico entre el capilar y la succión.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={input.slhxActivo}
-                    aria-label="Intercambiador Capilar/Succión (SLHX)"
-                    onClick={() => updateInput({ slhxActivo: !input.slhxActivo })}
-                    className={clsx(
-                      'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 focus-visible:ring-offset-2',
-                      input.slhxActivo ? 'bg-mint-500' : 'bg-ink-900/15',
-                    )}
-                  >
-                    <span
-                      className={clsx(
-                        'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                        input.slhxActivo ? 'translate-x-5' : 'translate-x-0',
-                      )}
-                    />
-                  </button>
-                </div>
-                {input.slhxActivo && (
-                  <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <div className="mb-1 flex items-center justify-between gap-3">
-                        <label
-                          htmlFor="slhx-winding-percentage"
-                          className="field-label mb-0"
-                        >
-                          % de Intercambio
-                        </label>
-                        <output
-                          htmlFor="slhx-winding-percentage"
-                          className="font-mono text-[12px] font-semibold text-ink-900"
-                        >
-                          {input.slhxPorcentaje}%
-                        </output>
-                      </div>
-                      <input
-                        id="slhx-winding-percentage"
-                        type="range"
-                        aria-label="Porcentaje de capilar enrollado"
-                        min={30}
-                        max={70}
-                        step={5}
-                        value={input.slhxPorcentaje}
-                        onChange={(event) =>
-                          updateInput({
-                            slhxPorcentaje: Number(event.target.value),
-                          })
-                        }
-                        className="range-input w-full"
-                      />
-                      <p className="mt-1 text-[10px] text-ink-600">
-                        Porcentaje de longitud del capilar enrollada en la succión.
-                      </p>
-                    </div>
-                    <SelectField
-                      label="Diámetro del tubo de succión"
-                      value={input.slhxDiametroSuccion}
-                      onChange={(value) => {
-                        if (!isSlhxSuctionTubeDiameter(value)) {
-                          throw new Error(
-                            `Diámetro de succión SLHX no reconocido: ${value}`,
-                          )
-                        }
-                        updateInput({
-                          slhxDiametroSuccion: value,
-                        })
-                      }}
-                    >
-                      {slhxSuctionTubeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </SelectField>
-                  </div>
-                )}
-              </div>
               {input.targetCondC - input.targetAmbientTempC < 5 && (
                 <p role="alert" className="mt-2 text-[11px] font-medium text-amber-700">
                   Salto térmico bajo entre ambiente y condensación. Verifica la
@@ -1034,37 +942,9 @@ export const CalculatorPage = () => {
                 onShowDetails={() => setShowDetails(true)}
                 diameterUnit={diameterUnit}
                 lengthUnit={lengthUnit}
-                slhxActivo={input.slhxActivo}
-                onSlhxToggle={() =>
-                  updateInput({ slhxActivo: !input.slhxActivo })
-                }
                 onDiameterUnitChange={setDiameterUnit}
                 onLengthUnitChange={setLengthUnit}
               />
-              {input.slhxActivo && result.slhx && (
-                <div
-                  role="group"
-                  aria-label="Resultados del SLHX"
-                  className="mt-3 grid grid-cols-2 gap-3 rounded-xl border border-ink-900/[0.08] bg-white px-4 py-3"
-                >
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-ink-600">
-                      Longitud enrollada
-                    </p>
-                    <p className="mt-1 font-mono text-[14px] font-semibold text-ink-950">
-                      {fmt(result.slhx.lengthWoundM, 2)} m
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-ink-600">
-                      Efectividad real
-                    </p>
-                    <p className="mt-1 font-mono text-[14px] font-semibold text-ink-950">
-                      {fmt(result.slhx.epsilonReal, 2)}
-                    </p>
-                  </div>
-                </div>
-              )}
               <div className="mt-4">
                 <WarningList warnings={result.warnings} />
               </div>
